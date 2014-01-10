@@ -1,0 +1,40 @@
+OneOS.ToolBarColour = colours.black
+OneOS.ToolBarTextColour = colours.white
+
+local backgroundColour = colours.black
+local mainTextColour = colours.white
+local highlightTextColour = colours.yellow
+
+term.setBackgroundColour(backgroundColour)
+term.setTextColour(highlightTextColour)
+--term.setCursorPos(1,2)
+print(os.version())
+
+local commandHistory = {}
+while true do
+	term.setTextColour(highlightTextColour)
+	term.setBackgroundColour(backgroundColour)
+	term.write("> ")
+	term.setTextColour(mainTextColour)
+	local cursorPosX, cursorPosY = term.getCursorPos()
+	term.setCursorPos(cursorPosX, cursorPosY)
+	local command = read(nil, commandHistory)
+	
+	if command then
+		local args = {}
+		for arg in command:gmatch('%S+') do
+			table.insert(args, arg)
+		end
+
+		if not args[1] or args[1] == '' then
+
+		elseif shell.resolveProgram(args[1]) then
+			shell.run(unpack(args))
+		else
+			printError("The file '"..args[1].."' does not exist")
+		end
+
+		table.insert(commandHistory, command)
+	end
+end
+

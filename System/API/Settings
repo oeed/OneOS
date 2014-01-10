@@ -1,0 +1,67 @@
+	Defaults = {
+		ComputerName = {
+			Type = 'Text',
+			Label = 'Computer Name',
+			Default = 'OneOS Computer'
+		},
+		DesktopColour = {
+			Type = 'Colour',
+			Label = 'Desktop Colour',
+			Default = colours.cyan,
+			Controls = {}
+		},
+		UseMonitor = {
+			Type = 'Bool',
+			Label = 'Use Monitor',
+			Default = false,
+		},
+		UseAnimations = {
+			Type = 'Bool',
+			Label = 'Use Animations',
+			Default = true,
+		}	
+	}
+
+	function WriteDefaults(self)
+		local file = fs.open('/System/.OneOS.settings', 'w')
+		local defaults = {}
+		for k, v in pairs(self.Defaults) do
+			defaults[k] = v.Default
+			UpdateInterfaceForKey(k, v)
+		end
+		file.write(textutils.serialize(defaults))
+		file.close()
+	end
+
+	function GetValues(self)
+		if not fs.exists('/System/.OneOS.settings') then
+			self:WriteDefaults()
+		end
+
+		local file = fs.open('/System/.OneOS.settings','r')
+		local values = textutils.unserialize(file.readAll())
+		for k, v in pairs(self.Defaults) do
+			if values[k] == nil then
+				values[k] = v.Default
+			end
+		end
+		file.close()
+		return values
+	end
+
+	function UpdateInterfaceForKey(key, value)
+		if key == 'DesktopColour' then
+			Desktop.LoadSettings()
+		elseif key == 'ComputerName' then
+			os.setComputerLabel(value)
+		end
+	end
+
+	function SetValue(self, key, value)
+		local currentValues = self:GetValues()
+		currentValues[key] = value
+		local file = fs.open('/System/.OneOS.settings', 'w')
+		file.write(textutils.serialize(currentValues))
+		file.close()
+		UpdateInterfaceForKey(key, value)
+	end

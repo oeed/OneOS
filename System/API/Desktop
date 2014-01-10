@@ -1,0 +1,287 @@
+local files = {}
+local settings = {}
+local selectedFile = nil
+local dragRelPos = nil
+local lastClick = nil
+local dragOverItem = nil
+desktopDragOverTimer = nil
+local dragOverSource = nil
+
+
+local function IconLocation(i)
+	local y, x = 3, 5
+	local slotHeight = 5
+	local slotWidth = 11
+	local maxRow = math.floor((Drawing.Screen.Height - 2) / slotHeight)
+	i = i - 1
+	local collumn = math.ceil((i / maxRow)+0.1) - 1
+	x = x + (slotWidth * collumn)
+	y = y + (i % maxRow) * slotHeight
+	return x, y
+end
+
+function RefreshFiles()
+	files = {}
+	local layout = {}
+	local count = 0
+	for i, file in ipairs(fs.list('Desktop/')) do
+		if string.sub( file, 1, 1 ) ~= '.' and settings.layout[file] then
+			count = count + 1
+		end
+	end
+
+	for i, file in ipairs(fs.list('Desktop/')) do
+		if string.sub( file, 1, 1 ) ~= '.' then
+			table.insert(files, file)
+			if not settings.layout[file] then
+				local x, y = IconLocation(count)
+				count = count + 1
+				layout[file] = {x = x, y = y}
+			else
+				layout[file] = settings.layout[file]
+			end
+		end
+	end
+	settings.layout = layout
+	settings.colour = Settings:GetValues()['DesktopColour']
+end
+
+function LoadSettings()
+	local h = fs.open('Desktop/.Desktop.settings', 'r')
+	if h then
+		settings = textutils.unserialize(h.readAll())
+		if not settings or not settings.layout then
+			settings = {layout = {}}
+		end
+	
+		h.close()
+	else
+		settings = {layout = {}}
+	end
+	settings.colour = Settings:GetValues()['DesktopColour']
+end
+
+function SaveSettings()
+	local h = fs.open('Desktop/.Desktop.settings', 'w')
+	h.write(textutils.serialize(settings))
+	h.close()
+end
+
+function Draw()
+	Drawing.Clear(settings.colour)
+
+	for i, file in ipairs(files) do
+		DrawFile(file)
+	end
+end
+
+function FileHitTest(file, name, x, y)
+	local shortenedName = Helpers.RemoveExtension(name)
+	return (y >= file.y and y <= file.y + 2 and x >= file.x and x <= file.x + 3) or (y == file.y + 3 and x >= math.floor(file.x+2-(#shortenedName/2)) and x <= math.floor(file.x+1+(#shortenedName/2)))
+end
+
+function DragOverUpdate()
+	if dragOverItem then
+		ButtonDialogueWindow:Initialise("Move '"..Helpers.TruncateString(Helpers.RemoveExtension(dragOverSource), 16).."'?", "Are you sure you want to move '"..dragOverSource.."' to '"..dragOverItem.."'?", 'Yes', 'Cancel', function(success)
+			if success then
+				fs.move('Desktop/'..dragOverSource, 'Desktop/'..dragOverItem..'/'..dragOverSource)
+				RefreshFiles()
+			end
+		end):Show()
+	end
+end
+
+function Click(event, side, x, y)
+	local found = false
+	for name, file in pairs(settings.layout) do
+		if event == 'mouse_drag' and selectedFile == name then
+			settings.layout[name].x = x + dragRelPos.x
+			settings.layout[name].y = y + dragRelPos.y
+			local foundDrag = false
+			for n, f in pairs(settings.layout) do
+				if n ~= name and FileHitTest(f, n, x, y) and fs.isDir('/Desktop/'..n) then
+					foundDrag = true
+					dragOverItem = n
+					dragOverSource = name
+					Desktop.desktopDragOverTimer = os.startTimer(0.5)
+					break
+				end
+			end
+			if not foundDrag then
+				dragOverItem = nil
+				dragOverSource = nil
+			end
+			found = true
+			MainDraw()
+			SaveSettings()
+		elseif event == 'mouse_click' and FileHitTest(file, name, x, y) then
+			dragRelPos = {x = file.x - x,  y = file.y - y}
+			
+			if selectedFile == name and lastClick and (os.clock() - lastClick) < 0.5 then
+				Helpers.OpenFile('Desktop/'..name)
+			end
+			lastClick = os.clock()
+			selectedFile = name
+			found = true
+
+			if side == 2 then
+				Menu:Initialise(x, y, nil, nil, self,{ 
+					{
+						Title = 'Open',
+						Click = function()
+							Helpers.OpenFile('Desktop/'..name)
+						end
+					},
+					{
+						Separator = true
+					},
+					{
+						Title = 'Rename...',
+						Click = function()
+							TextDialogueWindow:Initialise("Rename '"..Helpers.TruncateString(Helpers.RemoveExtension(name), 17).."'", function(success, value)
+								if success then
+									fs.move('Desktop/'..name, 'Desktop/'..value..Helpers.Extension(name, true))
+
+									settings.layout[value..Helpers.Extension(name, true)] = settings.layout[name]
+									settings.layout[name] = nil
+									SaveSettings()
+									RefreshFiles()
+								end
+							end):Show()
+						end
+					},
+					{
+						Title = 'Delete...',
+						Click = function()
+							ButtonDialogueWindow:Initialise("Delete '"..Helpers.TruncateString(Helpers.RemoveExtension(name), 16).."'?", "Are you sure you want to delete '"..name.."'?", 'Yes', 'Cancel', function(success)
+								if success then
+									fs.delete('Desktop/'..name)
+									settings.layout[name] = nil
+									SaveSettings()
+									RefreshFiles()
+								end
+							end):Show()
+						end
+					},
+					{
+						Separator = true
+					},
+					{
+						Title = 'New Folder...',
+						Click = function()
+							TextDialogueWindow:Initialise("Create a Folder", function(success, value)
+								if success then
+									fs.makeDir('Desktop/'..value)
+									RefreshFiles()
+								end
+							end):Show()
+						end
+					},
+					{
+						Title = 'Clean Up',
+						Click = function()
+							Clean()
+						end
+					}}):Show()
+			end
+
+			MainDraw()
+		end
+	end
+
+	if not found and selectedFile then
+		selectedFile = nil
+		MainDraw()
+	elseif not found then
+		if event == 'mouse_click' and side == 2 then
+			Menu:Initialise(x, y, nil, nil, self,{ 
+				{
+					Title = 'New Folder...',
+					Click = function()
+					TextDialogueWindow:Initialise("Create a Folder", function(success, value)
+						if success then
+							fs.makeDir('Desktop/'..value)
+							RefreshFiles()
+						end
+					end):Show()
+					end
+				},
+				{
+					Title = 'Clean Up',
+					Click = function()
+						Clean()
+					end
+			}}):Show()
+		end
+		
+		MainDraw()
+	end
+end
+
+function Clean()
+	for i, file in ipairs(files) do
+		local x, y = IconLocation(i)
+		settings.layout[file] = {x = x, y = y}
+	end
+	SaveSettings()
+end
+
+function DrawFile(fileName)
+	if not settings.layout[fileName] then
+		for i, v in ipairs(files) do
+			if v == fileName then
+				table.remove(files, i)
+				return
+			end
+		end
+	end
+
+	local layout = settings.layout[fileName]
+
+	local backgroundColour = settings.colour
+	local textColour = colours.black
+
+	if selectedFile and selectedFile == fileName then
+		backgroundColour = colours.blue
+		textColour = colours.white
+	end
+
+	--Drawing.DrawArea(layout.x, layout.y, 4, 3, " ", colours.black, colours.grey)
+	local shortenedName = Helpers.RemoveExtension(fileName)
+	shortenedName = Helpers.TruncateString(shortenedName, 10)
+
+	Drawing.DrawImage(layout.x, layout.y, Helpers.IconForFile('Desktop/'..fileName), 4, 3)
+
+	--shortcut indicator, not sure about thsi
+	if Helpers.Extension(fileName) == 'shortcut' then
+		Drawing.WriteToBuffer(layout.x+3, layout.y+2, '>', colours.black, colours.white)
+	end
+
+	Drawing.DrawCharacters(math.floor(layout.x+2-(#shortenedName/2)), layout.y+3, shortenedName, textColour, backgroundColour)
+end
+
+function OpenSelected()
+	if selectedFile then
+		Helpers.OpenFile('Desktop/'..selectedFile)
+		return true
+	else
+		return false
+	end
+end
+
+function DeleteSelected()
+	if selectedFile then
+		ButtonDialogueWindow:Initialise("Delete '"..Helpers.TruncateString(Helpers.RemoveExtension(selectedFile), 16).."'?", "Are you sure you want to delete '"..selectedFile.."'?", 'Yes', 'Cancel', function(success)
+			if success then
+				fs.delete('Desktop/'..selectedFile)
+				settings.layout[selectedFile] = nil
+				SaveSettings()
+				RefreshFiles()
+			end
+		end):Show()
+		MainDraw()
+		return true
+	else
+		return false
+	end
+end

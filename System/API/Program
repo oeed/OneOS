@@ -1,0 +1,159 @@
+	Process = nil
+	EventQueue = {}
+	Timers = {}
+	AppRedirect = nil
+	Running = true
+
+	Initialise = function(self, shell, path, title, args)
+		local new = {}    -- the new instance
+		setmetatable( new, {__index = self} )
+		new.Title = title or path
+		new.Path = path
+		new.AppRedirect = AppRedirect:Initialise(1, 2, Drawing.Screen.Width, Drawing.Screen.Height-1, nil)
+		new.Environment = Environment:Initialise(new, shell, path)
+		new.Running = true
+		
+		local executable = function()
+			local _, err = pcall(function()
+				--os.run(new.Environment, path, unpack(args))
+
+				local fnFile, err = loadfile( path )
+		        local tEnv = new.Environment
+				setmetatable( tEnv, { __index = _G } )
+				setfenv( fnFile, tEnv )
+
+				if err then
+					term.setTextColour(colours.red)
+					term.setBackgroundColour(colours.black)
+					print(err)
+					if err == 'File not found' then
+						term.clear()
+						term.setTextColour(colours.white)
+						term.setCursorPos(1,2)
+						print('The program could not be found or is corrupt.')
+						print()
+						print('Try running the program again or reinstalling it.')
+						print()
+						print()
+					end
+					log(err)
+					return false
+				end
+
+				local ok, err = pcall( function()
+		        	fnFile( unpack( args ) )
+		        end )
+		        if not ok then
+		        	if err and err ~= "" then
+						term.setTextColour(colours.red)
+						term.setBackgroundColour(colours.black)
+						print(err)
+			        	log( err )
+			        end
+		        end
+			end)
+
+        	if not _ and err and err ~= "" then
+				term.setTextColour(colours.red)
+				term.setBackgroundColour(colours.black)
+				print(err)
+			end
+		end
+		if executable then
+			setfenv(executable, new.Environment)
+			new.Process = coroutine.create(executable)
+			new:Resume()
+		else
+			printError('Failed to load program: '..path)
+			-- Program functions...
+			--local _, err = pcall(function()shell.run(path)end)
+			--log(err)
+		end
+
+		table.insert(Current.Programs, new)
+		Current.Program = new
+		Overlay.UpdateButtons()
+		MainDraw()
+		return new
+	end
+
+	QueueEvent = function(self, ...)
+		table.insert(self.EventQueue, {...})
+	end
+
+	Click = function(self, event, button, x, y)
+		if self.Running and self.Process and coroutine.status(self.Process) ~= "dead" then
+			self:QueueEvent(event, button, x, y)
+		else
+			self:Close()
+		end
+	end
+
+	Resume = function(self, ...)
+		if not self.Process or coroutine.status(self.Process) == "dead" then
+			return false
+		end
+
+		local event = {...}
+		term.redirect(self.AppRedirect.Term)
+		local response = {coroutine.resume(self.Process, unpack(event))}
+		if not response[1] and response[2] then
+			print()
+	    	term.setTextColour(colours.red)
+	    	print('The program has crashed.')
+	    	print(response[2])
+	    	self:Kill(1)
+		elseif coroutine.status(self.Process) == "dead" then
+	    	print()
+	    	term.setTextColour(colours.red)
+	    	print('The program has finnished.')
+	    	self:Kill(0)
+	    end
+	    term.restore()
+	    Drawing.DrawBuffer()
+	    term.setCursorPos(Current.CursorPos[1], Current.CursorPos[2])
+		term.setCursorBlink(self.AppRedirect.CursorBlink)
+		term.setTextColour(Current.CursorColour)
+	    return unpack(response)
+	end
+
+	Kill = function(self, code)
+		log('Kill '..code)
+		term.setBackgroundColour(colours.black)
+		term.setTextColour(colours.white)
+		Current.CursorPos[1] = 1
+		Current.CursorPos[2] = 1
+		term.setCursorBlink(false)
+		print('Click anywhere to close this program.')
+		for i, program in ipairs(Current.Programs) do
+			if program == self then
+				Current.Programs[i].Running = false
+				if code ~= 0 then
+					coroutine.yield(Current.Programs[i].Process)
+				end
+				Current.Programs[i].Process = nil
+			end
+		end
+	end
+
+	Close = function(self)
+		if self == Current.Program then
+			Current.Program = nil
+		end
+
+		for i, program in ipairs(Current.Programs) do
+			if program == self then
+				table.remove(Current.Programs, i)
+
+				if Current.Programs[i] then
+					Current.Program = Current.Programs[i]
+				elseif Current.Programs[i-1] then
+					Current.Program = Current.Programs[i-1]
+				end
+
+				Overlay.UpdateButtons()
+				break
+			end
+		end
+						
+	end

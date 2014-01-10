@@ -1,0 +1,200 @@
+LongestString = function(input, key)
+	local length = 0
+	for i = 1, #input do
+		local value = input[i]
+		if key then
+			if value[key] then
+				value = value[key]
+			else
+				value = ''
+			end
+		end
+		local titleLength = string.len(value)
+		if titleLength > length then
+			length = titleLength
+		end
+	end
+	return length
+end
+
+OpenFile = function(path, args)
+	args = args or {}
+	if fs.exists(path) then
+		local extension = path:gmatch('\.[0-9a-z]+$')()
+		if extension then
+			extension = extension:sub(2)
+		else
+			extension = nil
+		end
+		if extension == 'shortcut' then
+			h = fs.open(path, 'r')
+			local shortcutPointer = h.readLine()
+			local sArgs = h.readLine()
+			local tArgs = {}
+			if sArgs then
+				for match in string.gmatch( sArgs, "[^ \t]+" ) do
+					table.insert(tArgs, match)
+				end
+			end
+			h.close()
+
+			Helpers.OpenFile(shortcutPointer, tArgs)
+		elseif path:lower():find('programs') and #path > 11 then
+			if fs.isDir(path) and fs.exists(path..'/startup') then
+				LaunchProgram(path..'/startup', args, fs.getName(path))
+			elseif not fs.isDir(path) then
+				LaunchProgram(path, args, fs.getName(path))
+			end
+		elseif fs.isDir(path) then
+			LaunchProgram('/Programs/Files/startup', {path}, 'Files')
+		elseif extension == 'nfp' or extension == 'nft' or extension == 'pik' then
+			LaunchProgram('/Programs/Pik/startup', {path}, 'Pik')
+		else
+			LaunchProgram('/Programs/LuaIDE/startup', {path}, 'LuaIDE')
+		end
+	end
+end
+
+Beep = function()
+	redstone.setOutput('bottom', true)
+	--sleep(0.05)
+	--redstone.setOutput('bottom', false)
+end
+
+ListPrograms = function()
+	local programs = {}
+
+	for i, v in ipairs(fs.list('Programs/')) do
+		if string.sub( v, 1, 1 ) ~= '.' then
+			table.insert(programs, v)
+		end
+	end
+
+	return programs
+end
+
+ReadIcon = function(path)
+	if not Current.IconCache[path] then
+		Current.IconCache[path] = Drawing.LoadImage(path)
+	end
+	return Current.IconCache[path]
+end
+
+Split = function(str,sep)
+    sep=sep or'/'
+    return str:match("(.*"..sep..")")
+end
+
+Extension = function(path, addDot)
+	if not string.find(path, '%.') then
+		if not addDot then
+			return fs.getName(path)
+		else
+			return ''
+		end
+	else
+		local extension = path:gmatch('\.[0-9a-z]+$')()
+		if extension then
+			extension = extension:sub(2)
+		else
+			extension = path
+		end
+		if addDot then
+			extension = '.'..extension
+		end
+		return extension
+	end
+end
+
+RemoveExtension = function(path)
+	local extension = Helpers.Extension(path)
+	if extension == path then
+		return fs.getName(path)
+	end
+	return string.gsub(path, extension, ''):sub(1, -2)
+end
+
+RemoveFileName = function(path)
+	return string.match(path, "(.-)([^\\/]-%.?([^%.\\/]*))$")[1]
+end
+
+IconForFile = function(path)
+	path = TidyPath(path)
+	local extension = Helpers.Extension(path)
+	if extension and extension == 'shortcut' then
+		h = fs.open(path, 'r')
+		local shortcutPointer = h.readLine()
+		h.close()
+		return Helpers.IconForFile(shortcutPointer)
+	elseif path:lower():sub(1,12):find('programs') and path ~= '/Programs/' then
+		if fs.isDir(path) and fs.exists(path..'/startup') and fs.exists(path..'/icon') then
+			return ReadIcon(path..'/icon')
+		elseif not fs.isDir(path) or (fs.isDir(path) and fs.exists(path..'/startup') and not fs.exists(path..'/icon')) then
+			return ReadIcon('System/Images/Icons/program')
+		else
+			return ReadIcon('System/Images/Icons/folder')
+		end
+	elseif fs.isDir(path) then
+		return ReadIcon('System/Images/Icons/folder')
+	elseif extension and fs.exists('System/Images/Icons/'..extension) then
+		return ReadIcon('System/Images/Icons/'..extension)
+	else
+		return ReadIcon('System/Images/Icons/unknown')
+	end
+end
+
+TruncateString = function(sString, maxLength)
+	if #sString > maxLength then
+		sString = sString:sub(1,maxLength-3)
+		if sString:sub(-1) == ' ' then
+			sString = sString:sub(1,maxLength-4)
+		end
+		sString = sString  .. '...'
+	end
+	return sString
+end
+
+WrapText = function(text, maxWidth)
+	local lines = {''}
+    for word, space in text:gmatch('(%S+)(%s*)') do
+            local temp = lines[#lines] .. word .. space:gsub('\n','')
+            if #temp > maxWidth then
+                    table.insert(lines, '')
+            end
+            if space:find('\n') then
+                    lines[#lines] = lines[#lines] .. word
+                    
+                    space = space:gsub('\n', function()
+                            table.insert(lines, '')
+                            return ''
+                    end)
+            else
+                    lines[#lines] = lines[#lines] .. word .. space
+            end
+    end
+	return lines
+end
+
+MakeShortcut = function(path)
+	path = TidyPath(path)
+	local name = Helpers.RemoveExtension(path)
+	if fs.isDir(path) then
+		name = fs.getName(path)
+	end
+	local f = fs.open('Desktop/'..name..'.shortcut', 'w')
+	f.write(path)
+	f.close()
+end
+
+TidyPath = function(path)
+	path = '/'..path
+	if fs.isDir(path) then
+		path = path .. '/'
+	end
+
+	path, n = path:gsub("//", "/")
+	while n > 0 do
+		path, n = path:gsub("//", "/")
+	end
+	return path
+end

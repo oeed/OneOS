@@ -1,0 +1,180 @@
+	
+	--buffer item: text, text colour, background colour
+
+	X = 1
+	Y = 1
+	Buffer = {}
+	TextColour = colours.white
+	BackgroundColour = colours.black
+	CursorPos = {1, 1}
+	Size = {1, 1}
+	CursorBlink = false
+
+	Initialise = function(self, x, y, width, height)
+		local new = {}    -- the new instance
+		setmetatable( new, {__index = self} )
+		new.X = x
+		new.Y = y
+		new.Size = {width, height}
+		new.CursorPos = {1, 1}
+		new.Buffer = {}
+		new.TextColour = colours.white
+		new.BackgroundColour = colours.black
+		new.CursorBlink = false
+		new.Term = _term(new)
+		new:ResizeBuffer()
+		return new
+	end
+
+	Draw = function(self)
+		local pos = GetAbsolutePosition(self)
+		for y, row in ipairs(self.Buffer) do
+			for x, pixel in pairs(row) do
+				Drawing.WriteToBuffer(pos.X+x-1, pos.Y+y-1, pixel[1], pixel[2], pixel[3])
+			end
+		end
+		Current.CursorPos = {pos.X+self.CursorPos[1]-1, pos.Y+self.CursorPos[2]-1}
+		Current.CursorColour = self.TextColour
+		term.setCursorBlink(self.CursorBlink)
+	end
+
+	ResizeBuffer = function(self)
+		if #self.Buffer ~= self.Size[2] then
+			while #self.Buffer < self.Size[2] do
+				table.insert(self.Buffer, {})
+			end
+
+			while #self.Buffer > self.Size[2] do
+				table.remove(self.Buffer, #self.Buffer)
+			end
+		end
+
+		for i, row in ipairs(self.Buffer) do
+			while #row < self.Size[1] do
+				table.insert(row, {' ', self.TextColour, self.BackgroundColour})
+			end
+
+			while #row < self.Size[1] do
+				table.remove(row, #row)
+			end
+		end
+	end
+
+	local _w, _h = term.getSize()
+
+	WriteToBuffer = function(self, character, textColour, backgroundColour)
+		local pos = GetAbsolutePosition(self)
+		local x = math.floor(self.CursorPos[1])
+		local y = math.floor(self.CursorPos[2])
+		if x > self.Size[1] or y > self.Size[2] then
+			return
+		end
+
+		self.Buffer[y] = self.Buffer[y] or {}
+		self.Buffer[y][x] = {character, textColour, backgroundColour}
+		if not Current.Menu then
+			Drawing.WriteToBuffer(pos.X+x-1, pos.Y+y-1, character, textColour, backgroundColour)
+		end
+	end
+	
+	-- 'term' methods
+	_term = function(self)
+		local _term = {}
+		_term.write = function(characters)
+			if type(characters) == 'number' then
+				characters = tostring(characters)
+			elseif type(characters) ~= 'string' then
+				return
+			end
+			self.CursorPos[1] = self.CursorPos[1] - 1
+			for i = 1, #characters do
+				local character = characters:sub(i,i)
+				self.CursorPos[1] = self.CursorPos[1] + 1
+				self:WriteToBuffer(character, self.TextColour, self.BackgroundColour)
+			end
+			self.CursorPos[1] = self.CursorPos[1] + 1
+		end
+
+		_term.clear = function()
+			for x = 1, self.Size[1] do
+				self.CursorPos[1] = x
+				for y = 1, self.Size[2] do
+					self.CursorPos[2] = y
+					self:WriteToBuffer(' ', self.TextColour, self.BackgroundColour)
+				end
+			end
+		end	
+
+		_term.clearLine = function()
+			for x = 1, self.Size[1] do
+				self.CursorPos[1] = x
+				self:WriteToBuffer(' ', self.TextColour, self.BackgroundColour)
+			end
+		end	
+
+		_term.getCursorPos = function()
+			return self.CursorPos[1], self.CursorPos[2]
+		end
+
+		_term.setCursorPos = function(x, y)
+			local pos = GetAbsolutePosition(self)
+			self.CursorPos[1] = math.floor( tonumber(x) ) or self.CursorPos[1]
+			self.CursorPos[2] = math.floor( tonumber(y) ) or self.CursorPos[2]
+			Current.CursorPos = {pos.X+self.CursorPos[1]-1, pos.Y+self.CursorPos[2]-1}
+		end
+
+		_term.setCursorBlink = function(blink)
+			self.CursorBlink = blink
+		end
+
+		_term.isColour = function()
+			return true
+		end
+
+		_term.isColor = _term.isColour
+
+		_term.setTextColour = function(colour)
+			if colour and colour <= 32768 and colour >= 1 then
+				self.TextColour = colour
+				Current.CursorColour = self.TextColour
+			end
+		end
+
+		_term.setTextColor = _term.setTextColour
+
+		_term.setBackgroundColour = function(colour)
+			if colour and colour <= 32768 and colour >= 1 then
+				self.BackgroundColour = colour
+			end
+		end
+
+		_term.setBackgroundColor = _term.setBackgroundColour
+
+		_term.getSize = function()
+			return self.Size[1], self.Size[2]
+		end
+
+		_term.scroll = function(amount)
+			if amount == nil then
+				error("Expected number", 2)
+			end
+			if amount > 0 then
+				for _ = 1, amount do
+					table.remove(self.Buffer, 1)
+				end
+			elseif amount < 0 then
+				for _ = 1, amount do
+					table.remove(self.Buffer, #self.Buffer)
+					local row = {}
+					for i = 1, self.Size[1] do
+						table.insert(row, {' ', self.TextColour, self.BackgroundColour})
+					end
+					table.insert(self.Buffer, 1, row)
+				end
+			end
+			self:ResizeBuffer()
+			self:Draw()
+		end
+
+		return _term
+	end 
