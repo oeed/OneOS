@@ -5,7 +5,10 @@ This essentially allows the programs to run in sandbox. For example, os.shutdown
 ]]
 
 	local errorHandler = function(apiName, name, value)
-		return  function(...)local ok, err = pcall(value, ...)
+		if type(value) ~= 'function' then
+			return value
+		end
+		return function(...)local ok, err = pcall(value, ...)
 					if ok then
 						return err
 					else
@@ -45,7 +48,8 @@ This essentially allows the programs to run in sandbox. For example, os.shutdown
 			OpenFile = Helpers.OpenFile,
 			Helpers = Helpers,
 			Desktop = Desktop,
-			Settings = Settings
+			Settings = Settings,
+			Version = OneOSVersion
 		}
 	end
 
