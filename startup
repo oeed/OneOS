@@ -179,6 +179,12 @@ os.run(getfenv(), '/System/main')
 local ok, err = pcall(Initialise)
 
 if not ok then
+	term.setBackgroundColor(colours.red)
+	term.setCursorPos(1,1)
+	term.write(' ')
+	term.setBackgroundColor(colours.lightGrey)
+	term.setTextColor(colours.black)
+	print('Error')
 	--[[
 term.setBackgroundColor(colours.lightGrey)
 	term.setTextColor(colours.black)

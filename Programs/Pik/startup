@@ -1079,11 +1079,6 @@ Menu = {
 		if not self.RemoveTop then
 			Drawing.DrawBlankArea(self.X, self.Y, self.Width, self.Height, UIColours.MenuBackground)
 			for i, item in ipairs(self.Items) do
-				log(item)
-				for k, v in pairs(item) do
-					log(k)
-				end
-				log(item.Title)
 				if item.Separator then
 					Drawing.DrawArea(self.X, self.Y + i, self.Width, 1, '-', colours.grey, UIColours.MenuBackground)
 				else
@@ -1196,8 +1191,6 @@ Menu = {
 
 		new.Y = y
 		new.X = x
-		log(':')
-		log(items[2])
 		new.Items = items
 		new.Owner = owner
 		return new
@@ -1220,8 +1213,6 @@ Menu = {
 			i = y
 		end
 		if i >= 1 and y < self.Height then
-			log(self.Items[i].Title)
-			log(self.Items[i].Click)
 			if self.Items[i].Click then
 				self.Items[i]:Click()
 				if Current.Menu.Owner and Current.Menu.Owner.Toggle then
@@ -1484,7 +1475,6 @@ Tools = {
 					if replacing == replaceColour then
 						if side == 1 then
 							Current.Layer.Pixels[node.X][node.Y].BackgroundColour = Current.BackgroundColour
-							log('set')
 						elseif side == 2 then
 							Current.Layer.Pixels[node.X][node.Y].TextColour = Current.TextColour
 						end
@@ -2222,7 +2212,6 @@ ResizeDocumentWindow = {
 		Drawing.DrawCharactersCenter(self.X, self.Y, self.Width, 1, self.Title, colours.black, colours.lightGrey)
 
 		Drawing.DrawCharacters(self.X+1, self.Y+2, "New Size", colours.lightGrey, colours.white)
-		log(tonumber(self.HeightTextBox.TextInput.Value))
 		if (#self.WidthTextBox.TextInput.Value > 0 and tonumber(self.WidthTextBox.TextInput.Value) < Current.Artboard.Width) or (#self.HeightTextBox.TextInput.Value > 0 and tonumber(self.HeightTextBox.TextInput.Value) < Current.Artboard.Height) then
 			Drawing.DrawCharacters(self.X+1, self.Y+8, "Clipping will occur!", colours.red, colours.white)
 		end
@@ -2593,7 +2582,7 @@ function OpenDocument(path)
 		end
 
 		if not layers[1] then
-			log('File could not be read.')
+			--log('File could not be read.')
 			return
 		end
 

@@ -36,7 +36,6 @@
 						print()
 						print()
 					end
-					log(err)
 					return false
 				end
 
@@ -48,7 +47,6 @@
 						term.setTextColour(colours.red)
 						term.setBackgroundColour(colours.black)
 						print(err)
-			        	log( err )
 			        end
 		        end
 			end)
@@ -65,9 +63,6 @@
 			new:Resume()
 		else
 			printError('Failed to load program: '..path)
-			-- Program functions...
-			--local _, err = pcall(function()shell.run(path)end)
-			--log(err)
 		end
 
 		table.insert(Current.Programs, new)
@@ -118,7 +113,6 @@
 	end
 
 	Kill = function(self, code)
-		log('Kill '..code)
 		term.setBackgroundColour(colours.black)
 		term.setTextColour(colours.white)
 		Current.CursorPos[1] = 1
@@ -149,6 +143,10 @@
 					Current.Program = Current.Programs[i]
 				elseif Current.Programs[i-1] then
 					Current.Program = Current.Programs[i-1]
+				end
+
+				if Current.Program then
+					Current.Program.AppRedirect:Draw()
 				end
 
 				Overlay.UpdateButtons()

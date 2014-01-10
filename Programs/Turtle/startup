@@ -105,7 +105,7 @@ function LoadPage(page)
 		local buttonX = 1
 		local yStart = (Drawing.Screen.Height - 6)/2 + 1
 		Button:Initialise(Drawing.Screen.Width - (#'Start'+3) - 3, Drawing.Screen.Height - 1, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function() if Current.Miner.useChest then Current.NextPage = 'miner2' else Current.NextPage = 'miner3' end LoadPage('refuel') end, 'Start'):Register()
-		Button:Initialise(2, yStart, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function() log('click') end, 'Auto Refuel', Current.Miner.autoRefuel):Register()
+		Button:Initialise(2, yStart, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function() end, 'Auto Refuel', Current.Miner.autoRefuel):Register()
 		Button:Initialise(2, yStart+3, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function()  end, 'Use Chest', Current.Miner.useChest):Register()
 		Button:Initialise(2, yStart+6, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function()  end, 'Safe Return', Current.Miner.safeReturn):Register()
 	elseif page == 'refuel' then

@@ -27,7 +27,6 @@
 	end
 
 	local function transmit(channel, replyChannel, message)
-		--log('Transmit ('..channel..'): '..textutils.serialize(message))
 		Peripheral.Call('wireless_modem', 'transmit', channel, replyChannel, textutils.serialize(message))
 	end
 
@@ -46,12 +45,11 @@
 		time = time or 1
 		parallel.waitForAny(func, function()
 			sleep(time)
-			log('Timeout!'..time)
+			--log('Timeout!'..time)
 		end)
 	end
 
 	RecieveMessage = function(_channel, messageID, timeout)
-		--log('Recieving...')
 		open(_channel)
 		local event, side, channel, replyChannel, message = nil
 		Timeout(function()
