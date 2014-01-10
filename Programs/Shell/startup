@@ -7,7 +7,7 @@ local highlightTextColour = colours.yellow
 
 term.setBackgroundColour(backgroundColour)
 term.setTextColour(highlightTextColour)
---term.setCursorPos(1,2)
+term.setCursorPos(1,2)
 print(os.version())
 
 local commandHistory = {}
