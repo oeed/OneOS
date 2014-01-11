@@ -11,199 +11,121 @@ term.clear()
 local tAPIsLoading = {}
 
 
-	function LoadAPI(_sPath)
-		local sName = fs.getName( _sPath )
-		if tAPIsLoading[sName] == true then
-			printError( "API "..sName.." is already being loaded" )
-			return false
-		end
-		tAPIsLoading[sName] = true
-			
-		local tEnv = {}
-		setmetatable( tEnv, { __index = getfenv() } )
-		local fnAPI, err = loadfile( _sPath )
-		if fnAPI then
-			setfenv( fnAPI, tEnv )
-			fnAPI()
-		else
-			printError( err )
-	        tAPIsLoading[sName] = nil
-			return false
-		end
-		
-		local tAPI = {}
-		for k,v in pairs( tEnv ) do
-			tAPI[k] =  v
-		end
-		
-		getfenv()[sName] = tAPI
-
-		tAPIsLoading[sName] = nil
-		return true
+function LoadAPI(_sPath)
+	local sName = fs.getName( _sPath )
+	if tAPIsLoading[sName] == true then
+		printError( "API "..sName.." is already being loaded" )
+		return false
 	end
-
-
-
-
-
-	function LoadAPIs()
-		for _, file in pairs(fs.list(root .. 'System/API/')) do
-			if string.sub(file,1,1) ~= "." then
-				print('Loading: ' .. file)
-				if not LoadAPI(root .. 'System/API/' .. file) then
-					sleep(3)
-				end
-			end
-		end
-	end
-
-	term.setCursorPos(1,1)
-	root = ''
-
-	LoadAPIs()
-
-	DebugMonitor = peripheral.wrap('monitor_1')
-
-	if not DebugMonitor then
-		DebugMonitor = peripheral.wrap('left')
+	tAPIsLoading[sName] = true
+		
+	local tEnv = {}
+	setmetatable( tEnv, { __index = getfenv() } )
+	local fnAPI, err = loadfile( _sPath )
+	if fnAPI then
+		setfenv( fnAPI, tEnv )
+		fnAPI()
+	else
+		printError( err )
+        tAPIsLoading[sName] = nil
+		return false
 	end
 	
-	if DebugMonitor then
-		--DebugMonitor.setTextScale(0.75)	
-		DebugMonitor.clear()
-		DebugMonitor.setCursorPos(1,1)
-
-		function _write( sText )
-			local w,h = DebugMonitor.getSize()		
-			local x,y = DebugMonitor.getCursorPos()
-			
-			local nLinesPrinted = 0
-			local function newLine()
-				if y + 1 <= h then
-					DebugMonitor.setCursorPos(1, y + 1)
-				else
-					DebugMonitor.setCursorPos(1, h)
-					DebugMonitor.scroll(1)
-				end
-				x, y = DebugMonitor.getCursorPos()
-				nLinesPrinted = nLinesPrinted + 1
-			end
-			
-			-- Print the line with proper word wrapping
-			while string.len(sText) > 0 do
-				local whitespace = string.match( sText, "^[ \t]+" )
-				if whitespace then
-					-- Print whitespace
-					DebugMonitor.write( whitespace )
-					x,y = DebugMonitor.getCursorPos()
-					sText = string.sub( sText, string.len(whitespace) + 1 )
-				end
-				
-				local newline = string.match( sText, "^\n" )
-				if newline then
-					-- Print newlines
-					newLine()
-					sText = string.sub( sText, 2 )
-				end
-				
-				local text = string.match( sText, "^[^ \t\n]+" )
-				if text then
-					sText = string.sub( sText, string.len(text) + 1 )
-					if string.len(text) > w then
-						-- Print a multiline word				
-						while string.len( text ) > 0 do
-							if x > w then
-								newLine()
-							end
-							DebugMonitor.write( text )
-							text = string.sub( text, (w-x) + 2 )
-							x,y = DebugMonitor.getCursorPos()
-						end
-					else
-						-- Print a word normally
-						if x + string.len(text) - 1 > w then
-							newLine()
-						end
-						DebugMonitor.write( text )
-						x,y = DebugMonitor.getCursorPos()
-					end
-				end
-			end
-			
-			return nLinesPrinted
-		end
-
-		_G.log = function(...)
-		 	if DebugMonitor then
-				local nLinesPrinted = 0
-				for n,v in ipairs( { ... } ) do
-					nLinesPrinted = nLinesPrinted + _write( tostring( v ) )
-				end
-				nLinesPrinted = nLinesPrinted + _write( "\n" )
-				return nLinesPrinted
-			end
-		end
-	else
-		_G.log = function()
-		end
+	local tAPI = {}
+	for k,v in pairs( tEnv ) do
+		tAPI[k] =  v
 	end
+	
+	getfenv()[sName] = tAPI
+
+	tAPIsLoading[sName] = nil
+	return true
+end
+
+term.setCursorPos(1,1)
+root = ''
+
+function PrintCentered(text, y)
+    local w, h = term.getSize()
+    x = math.ceil(math.ceil((w / 2) - (#text / 2)), 0)+1
+    term.setCursorPos(x, y)
+    print(text)
+end
 
 function LoadingScreen()
+	local screenWidth, screenHeight = term.getSize()
 	term.setBackgroundColour(colours.white)	
 	term.clear()
-	local x = (Drawing.Screen.Width - 14) / 2
-	local y = (Drawing.Screen.Height - 9) / 2
+	local x = (screenWidth - 14) / 2
+	local y = (screenHeight - 9) / 2
 
 	local text = 'OneOS by oeed'
-	term.setCursorPos((Drawing.Screen.Width - #text) / 2, y + 11)
+	term.setCursorPos((screenWidth - #text) / 2, y + 13)
 	term.setTextColour(colours.blue)
 	term.write(text)
 
-	for i = 0, 8 do
-		local image = paintutils.loadImage('System/Images/Boot/boot'..i)
-		paintutils.drawImage(image, x, y)
-		sleep(0.05)
+	local currentImage = -1
+	local totalAPIs = #fs.list(root .. 'System/API/')
+
+	for _, file in pairs(fs.list(root .. 'System/API/')) do
+		if string.sub(file,1,1) ~= "." then
+			--print('Loading: ' .. file)
+			if math.floor(_*(8/totalAPIs)) ~= currentImage then
+				currentImage = math.floor(_*(8/totalAPIs))
+				local image = paintutils.loadImage('System/Images/Boot/boot'..currentImage)
+				paintutils.drawImage(image, x, y)
+			end
+			term.setBackgroundColor(colours.white)
+			term.setCursorPos(1, y + 11)
+			
+			term.clearLine()
+			PrintCentered('Loading API '..file, y + 11)
+			--sleep(0)
+			if not LoadAPI(root .. 'System/API/' .. file) then
+				term.setTextColour(colours.red)
+				PrintCentered('Error While Loading API '..file, y + 11)
+				term.setCursorPos(1, 1)
+				return false
+			end
+		end
 	end
 	sleep(0.1)
+	return true
 end
 
+if LoadingScreen() then
 
+	os.run(getfenv(), '/System/main')
 
-log('Online')
+	local ok, err = pcall(Initialise)
 
-
-LoadingScreen()
-
-os.run(getfenv(), '/System/main')
-
-local ok, err = pcall(Initialise)
-
-if not ok then
-	term.setBackgroundColor(colours.red)
-	term.setCursorPos(1,1)
-	term.write(' ')
+	if not ok then
+		term.setBackgroundColor(colours.red)
+		term.setCursorPos(1,1)
+		term.write(' ')
+		term.setBackgroundColor(colours.lightGrey)
+		term.setTextColor(colours.black)
+		print('Error')
+		--[[
 	term.setBackgroundColor(colours.lightGrey)
-	term.setTextColor(colours.black)
-	print('Error')
-	--[[
-term.setBackgroundColor(colours.lightGrey)
-	term.setTextColor(colours.black)
-	term.clear()
-	print('Error')
-	print(err)
-]]--
+		term.setTextColor(colours.black)
+		term.clear()
+		print('Error')
+		print(err)
+	]]--
+	end
+	--[[end)
+	if err then
+		local w, h = term.getSize()
+		local x = w/2
+		local y = h/2
+		local warning = "A fatal error occured"
+		term.setCursorPos(x-(#warning/2), y)
+		term.clearLine()
+		term.write(warning)
+		print()
+		print()
+		term.setTextColour(colours.red)
+		print(err)
+	end]]
 end
---[[end)
-if err then
-	local w, h = term.getSize()
-	local x = w/2
-	local y = h/2
-	local warning = "A fatal error occured"
-	term.setCursorPos(x-(#warning/2), y)
-	term.clearLine()
-	term.write(warning)
-	print()
-	print()
-	term.setTextColour(colours.red)
-	print(err)
-end]]

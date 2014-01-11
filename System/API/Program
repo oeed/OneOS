@@ -144,14 +144,14 @@
 				elseif Current.Programs[i-1] then
 					Current.Program = Current.Programs[i-1]
 				end
-
-				if Current.Program then
-					Current.Program.AppRedirect:Draw()
-				end
-
-				Overlay.UpdateButtons()
 				break
 			end
 		end
-						
+
+		if Current.Program then
+			Current.Program.AppRedirect:Draw()
+		end
+
+		Overlay.UpdateButtons()
+		MainDraw()
 	end

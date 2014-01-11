@@ -249,14 +249,14 @@ Current = {
 	Tool = nil,
 	ToolSize = 1,
 	Toolbar = nil,
-	Colour = colours.green,
+	TextColour = colours.black,
+	BackgroundColour = colours.green,
 	Menu = nil,
 	MenuBar = nil,
 	Window = nil,
 	Input = nil,
 	CursorPos = {1,1},
 	CursorColour = colours.black,
-	InterfaceVisible = true
 }
 
 Lists = {
@@ -272,8 +272,13 @@ Events = {
 
 --Setters--
 
-function SetColour(colour)
-	Current.Colour = colour
+function SetBackgroundColour(colour)
+	Current.BackgroundColour = colour
+	Draw()
+end
+
+function SetTextColour(colour)
+	Current.TextColour = colour
 	Draw()
 end
 
@@ -359,16 +364,6 @@ Layer = {
 		end
 	end,
 
-	Remove = function(self)
-		for i, v in ipairs(self.Artboard.Layers) do
-			if v == Current.Layer then
-				Current.Artboard.Layers[i] = nil
-				Current.Layer = Current.Artboard.Layers[1]
-				ModuleNamed('Layers'):Update()
-			end
-		end
-	end,
-
 	Initialise = function(self, name, backgroundColour, artboard, index, pixels)
 		local new = {}    -- the new instance
 		setmetatable( new, {__index = self} )
@@ -392,8 +387,8 @@ Layer = {
 	end,
 
 	SetPixel = function(self, x, y, textColour, backgroundColour, character)
-		textColour = textColour or Current.Colour
-		backgroundColour = backgroundColour or Current.Colour
+		textColour = textColour or Current.TextColour
+		backgroundColour = backgroundColour or Current.BackgroundColour
 		character = character or " "
 
 		if x < 1 or y < 1 or x > self.Artboard.Width or y > self.Artboard.Height then
@@ -999,9 +994,9 @@ TextInput = {
 			-- Backspace
 			if self.CursorPos > 0 then
 				self.Value = string.sub( self.Value, 1, self.CursorPos - 1 ) .. string.sub( self.Value, self.CursorPos + 1 )
-				self.CursorPos = self.CursorPos - 1
+				self.CursorPos = self.CursorPos - 1					
+				self.Change(key)
 			end
-			self.Change(key)
 		elseif key == keys.home then
 			-- Home
 			self.CursorPos = 0
@@ -1338,7 +1333,11 @@ Modules = {
 							Height = 1,
 							BackgroundColour = colour,
 							Click = function(self, side, x, y)
-								SetColour(self.BackgroundColour)
+								if side == 1 then
+									SetBackgroundColour(self.BackgroundColour)
+								else
+									SetTextColour(self.BackgroundColour)
+								end
 							end
 						}
 					)
@@ -1351,8 +1350,10 @@ Modules = {
 			end
 			
 			table.insert(self.ToolbarItem.ContentView.Views, 
-					Button:Initialise(1, 1, 4, 3, function()return Current.Colour end, self.ToolbarItem.ContentView, nil))
-		
+					Button:Initialise(1, 1, 3, 2, function()return Current.TextColour end, self.ToolbarItem.ContentView, nil))
+			--table.insert(self.ToolbarItem.ContentView.Views, 
+			--		Button:Initialise(1, 3, 3, 2, function()return Current.BackgroundColour end, self.ToolbarItem.ContentView, nil))
+
 			Current.Toolbar:AddToolbarItem(self.ToolbarItem)
 		end
 	},
@@ -1390,7 +1391,6 @@ Modules = {
 		ToolbarItem = nil,
 		Update = function(self)
 			if Current.Artboard then
-				self.ToolbarItem.ContentView.Views = {}
 				for i = 1, #Current.Artboard.Layers do
 					table.insert(self.ToolbarItem.ContentView.Views, LayerItem:Initialise(Current.Artboard.Layers[#Current.Artboard.Layers-i+1], self.ToolbarItem.ContentView))
 				end					
@@ -1431,9 +1431,9 @@ Tools = {
 		Use = function(self, x, y, side, artboard)
 			Current.Input = nil
 			if side == 1 then
-				Current.Layer.Pixels[x][y].BackgroundColour = Current.Colour
+				Current.Layer.Pixels[x][y].BackgroundColour = Current.BackgroundColour
 			elseif side == 2 then
-				Current.Layer.Pixels[x][y].TextColour = Current.Colour
+				Current.Layer.Pixels[x][y].TextColour = Current.TextColour
 			end
 			Current.Layer.Pixels[x][y]:Draw(x, y)
 		end,
@@ -1445,7 +1445,7 @@ Tools = {
 	{
 		Name = "Eraser",
 		Size = 1,
-		Use = function(self, x, y, side)
+		Use = function(self, x, y, side, artboard)
 			Current.Input = nil
 			Current.Layer:SetPixel(x, y, nil, Current.Layer.BackgroundColour, nil)
 		end,
@@ -1474,9 +1474,9 @@ Tools = {
 					end
 					if replacing == replaceColour then
 						if side == 1 then
-							Current.Layer.Pixels[node.X][node.Y].BackgroundColour = Current.Colour
+							Current.Layer.Pixels[node.X][node.Y].BackgroundColour = Current.BackgroundColour
 						elseif side == 2 then
-							Current.Layer.Pixels[node.X][node.Y].TextColour = Current.Colour
+							Current.Layer.Pixels[node.X][node.Y].TextColour = Current.TextColour
 						end
 						table.insert(nodes, {X = node.X, Y = node.Y + 1})
 						table.insert(nodes, {X = node.X + 1, Y = node.Y})
@@ -1500,7 +1500,7 @@ Tools = {
 	{
 		Name = "Select",
 		Size = 1,
-		Use = function(self, x, y, side)
+		Use = function(self, x, y, artboard)
 			Current.Input = nil
 			Current.Layer:SetPixel(x, y, nil, Current.Layer.BackgroundColour, nil)
 		end,
@@ -1512,7 +1512,7 @@ Tools = {
 	{
 		Name = "Move",
 		Size = 1,
-		Use = function(self, x, y, side)
+		Use = function(self, x, y, artboard)
 			Current.Input = nil
 			Current.Layer:SetPixel(x, y, nil, Current.Layer.BackgroundColour, nil)
 		end,
@@ -1524,17 +1524,10 @@ Tools = {
 	{
 		Name = "Eye Dropper",
 		Size = 1,
-		Use = function(self, x, y, side)
+		Use = function(self, x, y, artboard)
 			Current.Input = nil
-			if side == 1 then
-				if Current.Layer.Pixels[x][y].BackgroundColour ~= -1 then
-					Current.Colour = Current.Layer.Pixels[x][y].BackgroundColour
-				end
-			else
-				if Current.Layer.Pixels[x][y].TextColour ~= 1 then
-					Current.Colour = Current.Layer.Pixels[x][y].TextColour
-				end
-			end
+			Current.BackgroundColour = Current.Layer.Pixels[x][y].BackgroundColour
+			Current.TextColour = Current.Layer.Pixels[x][y].TextColour
 		end,
 		Select = function(self)
 			return true
@@ -1544,32 +1537,26 @@ Tools = {
 	{
 		Name = "Text",
 		Size = 1,
-		Use = function(self, x, y)
+		Use = function(self, x, y, artboard)
 			Current.Input = TextInput:Initialise('', function(key)
-				if key == keys.delete or key == keys.backspace then
-					if #Current.Input.Value == 0 then
-						Current.Layer.Pixels[x-1][y]:Set(nil, nil, ' ')
-						Current.Tool:Use(Current.CursorPos[1] - Current.Artboard.X, Current.CursorPos[2] - Current.Artboard.Y + 1)
-						Draw()
-						return
-					else
-						Current.Layer.Pixels[x+#Current.Input.Value][y]:Set(nil, nil, ' ')
-					end
-				else
-					local i = #Current.Input.Value
+				for i = 1, #Current.Input.Value do
 					if Current.Layer.Pixels[x+i-1] then
-						Current.Layer.Pixels[x+i-1][y]:Set(Current.Colour, nil, Current.Input.Value:sub(i,i))
+						Current.Layer.Pixels[x+i-1][y]:Set(Current.TextColour, nil, Current.Input.Value:sub(i,i))
 						Current.Layer.Pixels[x+i-1][y]:Draw(x+i-1, y)
 					end
 				end
 
+				if key == keys.delete or key == keys.backspace then
+					Current.Layer.Pixels[x+#Current.Input.Value][y]:Set(nil, nil, ' ')
+				end
+
 				Current.CursorPos = {x+Current.Input.CursorPos + Current.Artboard.X - 1, y + Current.Artboard.Y - 1}
-				Current.CursorColour = Current.Colour
+				Current.CursorColour = Current.TextColour
 				Draw()
 			end)
 
 			Current.CursorPos = {x + Current.Artboard.X - 1, y + Current.Artboard.Y - 1}
-			Current.CursorColour = Current.Colour
+			Current.CursorColour = Current.TextColour		
 		end,
 		Select = function(self)
 			if Current.Artboard.Format == '.nfp' then
@@ -2718,56 +2705,6 @@ function ResizeDocument()
 	end):Show()
 end
 
-function RenameLayer()
-	if not CheckOpenArtboard() then
-		return
-	end
-	if Current.Artboard.Format == '.pik' then
-		TextDialougeWindow:Initialise("Rename Layer '"..Current.Layer.Name.."'", 'Enter the new name you want the layer to be called.', 'Ok', 'Cancel', function(window, success, value)
-			if success then
-				Current.Layer.Name = value
-			end
-			window:Close()
-		end):Show()	
-	else
-		local format = 'NFP'
-		if Current.Artboard.Format == '.nft' then
-			format = 'NFT'
-		end
-		ButtonDialougeWindow:Initialise(format..' do not support layers!', 'The format you are using, '..format..', does not support renaming layers. Use PIK to rename layers.', 'Ok', nil, function(window)
-			window:Close()
-		end):Show()
-	end
-end
-
-function DeleteLayer()
-	if not CheckOpenArtboard() then
-		return
-	end
-	if Current.Artboard.Format == '.pik' then
-		if #Current.Artboard.Layers > 1 then
-			ButtonDialougeWindow:Initialise("Delete Layer '"..Current.Layer.Name.."'?", 'Are you sure you want delete the layer?', 'Ok', 'Cancel', function(window, success)
-				if success then
-					Current.Layer:Remove()
-				end
-				window:Close()
-			end):Show()
-		else
-			ButtonDialougeWindow:Initialise('Can not delete layer!', 'You can not delete the last layer of an image! Make another layer to delete this one.', 'Ok', nil, function(window)
-				window:Close()
-			end):Show()
-		end
-	else
-		local format = 'NFP'
-		if Current.Artboard.Format == '.nft' then
-			format = 'NFT'
-		end
-		ButtonDialougeWindow:Initialise(format..' do not support layers!', 'The format you are using, '..format..', does not support deleting layers. Use PIK to deleting layers.', 'Ok', nil, function(window)
-			window:Close()
-		end):Show()
-	end
-end
-
 function Draw()
 	if not Current.Window then
 		Drawing.Clear(UIColours.Background)
@@ -2775,25 +2712,18 @@ function Draw()
 		Drawing.DrawArea(1, 1, Drawing.Screen.Width, Drawing.Screen.Height, '|', colours.black, colours.lightGrey)
 	end
 
-	if Current.InterfaceVisible then
-		Current.MenuBar:Draw()
-		Current.Toolbar:Draw()
-	end
-
+	Current.MenuBar:Draw()
+	Current.Toolbar:Draw()
 	if Current.Artboard then
 		ab:Draw()
 	end
 
-	if Current.InterfaceVisible and Current.Menu then
+	if Current.Menu then
 		Current.Menu:Draw()
 	end
 
 	if Current.Window then
 		Current.Window:Draw()
-	end
-
-	if not Current.InterfaceVisible then
-		ShowInterfaceButton:Draw()
 	end
 
 	Drawing.DrawBuffer()
@@ -2967,7 +2897,7 @@ function LoadMenuBar()
 					{
 						Title = 'Delete Layer',
 						Click = function()
-							DeleteLayer()
+
 						end,
 						Keys = {
 							keys.delete
@@ -2979,7 +2909,7 @@ function LoadMenuBar()
 					{
 						Title = 'Rename Layer...',
 						Click = function()
-							RenameLayer()
+
 						end,
 						Enabled = function()
 							return CheckOpenArtboard()
@@ -2991,7 +2921,7 @@ function LoadMenuBar()
 					{
 						Title = 'Hide Interface',
 						Click = function()
-							Current.InterfaceVisible = not Current.InterfaceVisible
+							--MakeNewLayer()
 						end,
 						Keys = {
 							keys.tab
@@ -3023,10 +2953,14 @@ function Initialise(arg)
 
 	Current.Toolbar = Toolbar:New('right', true)
 
+	--NewDocument()
+
 	for k, v in pairs(Modules) do
 		v:Initialise()
 	end
+
 	
+
 	term.setBackgroundColour(UIColours.Background)
 	term.clear()
 
@@ -3034,14 +2968,7 @@ function Initialise(arg)
 
 	if arg and fs.exists(arg) then
 		OpenDocument(arg)
-	else
-		--NewDocument()
 	end
-
-	ShowInterfaceButton = Button:Initialise(Drawing.Screen.Width - 15, 1, nil, 1, colours.grey, nil, function(self)
-		Current.InterfaceVisible = true
-		Draw()
-	end, 'Show Interface')
 
 	Draw()
 
@@ -3079,20 +3006,7 @@ function HandleKey(...)
 	local args = {...}
 	local event = args[1]
 	local keychar = args[2]
-	if event == 'key' and Current.Tool.Name == 'Text' and Current.Input and (keychar == keys.up or keychar == keys.down or keychar == keys.left or keychar == keys.right) then
-		local currentPos = {Current.CursorPos[1] - Current.Artboard.X + 1, Current.CursorPos[2] - Current.Artboard.Y + 1}
-		if keychar == keys.up then
-			currentPos[2] = currentPos[2] - 1
-		elseif keychar == keys.down then
-			currentPos[2] = currentPos[2] + 1
-		elseif keychar == keys.left then
-			currentPos[1] = currentPos[1] - 1
-		elseif keychar == keys.right then
-			currentPos[1] = currentPos[1] + 1
-		end
-		Current.Tool:Use(currentPos[1], currentPos[2])
-		Draw()
-	elseif Current.Input then
+	if Current.Input then
 		if event == 'char' then
 			Current.Input:Char(keychar)
 		elseif event == 'key' then
@@ -3171,7 +3085,7 @@ end
 	Try to click at the given coordinates
 ]]--
 function TryClick(event, side, x, y)
-	if Current.InterfaceVisible and Current.Menu then
+	if Current.Menu then
 		if DoClick(Current.Menu, side, x, y) then
 			Draw()
 			return
@@ -3193,15 +3107,9 @@ function TryClick(event, side, x, y)
 		end
 	end
 	local interfaceElements = {
-		Current.Artboard
+		Current.Artboard,
+		Current.MenuBar
 	}
-
-	if Current.InterfaceVisible then
-		table.insert(interfaceElements, Current.MenuBar)
-	else
-		table.insert(interfaceElements, ShowInterfaceButton)
-	end
-
 	for i, v in ipairs(Lists.Interface.Toolbars) do
 		for i, v2 in ipairs(v.ToolbarItems) do
 			table.insert(interfaceElements, v2)

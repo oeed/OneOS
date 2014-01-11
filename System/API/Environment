@@ -8,11 +8,16 @@ This essentially allows the programs to run in sandbox. For example, os.shutdown
 		if type(value) ~= 'function' then
 			return value
 		end
-		return function(...)local ok, err = pcall(value, ...)
+		return function(...)local response = {pcall(value, ...)}
+					local ok = response[1]
+					table.remove(response, 1)
 					if ok then
-						return err
+						return unpack(response)
 					else
-						printError(apiName .. ' Error ('..name..'): /System/API/' .. err)
+						for i, err in ipairs(response) do
+							printError(apiName .. ' Error ('..name..'): /System/API/' .. err)
+						end
+							
 					end
 				end
 	end
