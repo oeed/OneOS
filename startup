@@ -95,8 +95,9 @@ end
 
 if LoadingScreen() then
 
-	os.run(getfenv(), '/System/main')
-
+	--os.run(getfenv(), '/System/main')
+	os.run(getfenv(), '/System/update')
+	
 	local ok, err = pcall(Initialise)
 
 	if not ok then
