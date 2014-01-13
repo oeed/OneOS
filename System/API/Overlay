@@ -50,7 +50,9 @@ function UpdateButtons()
 				},
 				{
 					Title = 'Update OneOS',
-					Click = error
+					Click = function()
+						CheckAutoUpdate(true)
+					end
 				},
 
 				{

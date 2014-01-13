@@ -22,7 +22,9 @@
 		end
 
 		self.OkButton:Draw()
-		self.CancelButton:Draw()
+		if self.CancelButton then
+			self.CancelButton:Draw()
+		end
 	end
 
 	Initialise = function(self, title, message, okText, cancelText, returnFunc)
@@ -40,10 +42,12 @@
 			returnFunc(true)
 			new:Close()
 		end, okText)
-		new.CancelButton = Button:Initialise(new.Width - #okText - 2 - 1 - #cancelText - 2, new.Height - 1, nil, 1, colours.lightGrey, colours.black, colours.blue, colours.white, new, function()
-			returnFunc(false)
-			new:Close()
-		end, cancelText)
+		if cancelText then
+			new.CancelButton = Button:Initialise(new.Width - #okText - 2 - 1 - #cancelText - 2, new.Height - 1, nil, 1, colours.lightGrey, colours.black, colours.blue, colours.white, new, function()
+				returnFunc(false)
+				new:Close()
+			end, cancelText)
+		end
 		return new
 	end
 
@@ -80,6 +84,8 @@
 
 	Click = function(self, side, x, y)
 		ButtonClick(self, self.OkButton, x, y)
-		ButtonClick(self, self.CancelButton, x, y)
+		if self.CancelButton then
+			ButtonClick(self, self.CancelButton, x, y)
+		end
 		return true
 	end

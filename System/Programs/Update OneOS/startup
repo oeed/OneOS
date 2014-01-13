@@ -47,7 +47,7 @@ function Initialise()
 	UpdaterRefresh()
 	if updaterEnvironment.Settings.TotalFiles == updaterEnvironment.Settings.DownloadedFiles then
 		sleep(3)
-		os.reboot()
+		OneOS.Reboot()
 	else
 		Current.StatusText = 'Download Failed!'
 		Current.SecondaryStatusText = updaterEnvironment.Settings.TotalFiles - updaterEnvironment.Settings.DownloadedFiles .. ' files were not downloaded. Try again.'

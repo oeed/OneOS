@@ -1,4 +1,4 @@
-OneOSVersion = '0.1 Private Beta'
+OneOSVersion = '...'
 
 local x = 1
 local y = 1
@@ -51,6 +51,7 @@ function Initialise()
 	EventRegister('key', HandleKey)
 	EventRegister('char', HandleKey)
 	EventRegister('timer', Update)
+	EventRegister('http_success', AutoUpdateRespose)
 	ShowDesktop()
 	Draw()
 	--updateTimer = os.startTimer(0.05)
@@ -63,7 +64,7 @@ function Initialise()
 	--LaunchProgram('Programs/Files/startup', {'Programs/'}, 'Files')
 	--LaunchProgram('Programs/Shell', {}, 'Shell')
 	--LaunchProgram('Programs/npaintpro', {}, 'nPaintPro')
-	LaunchProgram('Programs/Update OneOS/startup', {}, 'Test')
+	--LaunchProgram('Programs/Update OneOS/startup', {}, 'Test')
 	--LaunchProgram('Programs/test', {}, 'Test')
 	--LaunchProgram('Programs/Pik/startup', {'/desktop/image.pik'}, 'Pik')
 	--LaunchProgram('Programs/Pik/startup', {}, 'Pik')
@@ -74,7 +75,78 @@ function Initialise()
 	--LaunchProgram('Programs/Settings/startup', {}, 'About OneOS')
 	--Settings:WriteDefaults()
 	--Helpers.OpenFile('/Desktop/')
+	local h = fs.open('.version', 'r')
+	OneOSVersion = h.readAll()
+	h.close()
+
+	CheckAutoUpdate()
+
 	EventHandler()
+end
+
+local checkAutoUpdateArg = nil
+
+function CheckAutoUpdate(arg)
+	checkAutoUpdateArg = arg
+	if http then
+		http.request('https://api.github.com/repos/oeed/OneOS/releases')
+	elseif arg then
+		ButtonDialogueWindow:Initialise("HTTP Not Enabled!", "Turn on the HTTP API to update.", 'Ok', nil, function(success)end):Show()
+	end
+end
+
+function split(str, sep)
+        local sep, fields = sep or ":", {}
+        local pattern = string.format("([^%s]+)", sep)
+        str:gsub(pattern, function(c) fields[#fields+1] = c end)
+        return fields
+end
+
+function GetSematicVersion(tag)
+	tag = tag:sub(2)
+	return split(tag, '.')
+end
+
+--Returns true if the FIRST version is NEWER
+function SematicVersionIsNewer(version, otherVersion)
+	if version[1] > otherVersion[1] then
+		return true
+	elseif version[2] > otherVersion[2] then
+		return true
+	elseif version[3] > otherVersion[3] then
+		return true
+	end
+	return false
+end
+
+function AutoUpdateRespose(event, url, data)
+	if Current.Program then
+		return false
+	end
+	os.loadAPI('/System/JSON')
+	if not data then
+		return
+	end
+	local releases = JSON.decode(data.readAll())
+	os.unloadAPI('JSON')
+	if not releases or not releases[1] or not releases[1].tag_name then
+		if checkAutoUpdateArg then
+			ButtonDialogueWindow:Initialise("Update Check Failed", "Check your connection and try again.", 'Ok', nil, function(success)end):Show()
+		end
+		return
+	end
+	local latestReleaseTag = releases[1].tag_name
+
+	if OneOSVersion == latestReleaseTag then
+		--using latest version
+		if checkAutoUpdateArg then
+			ButtonDialogueWindow:Initialise("Up to date!", "OneOS is up to date!", 'Ok', nil, function(success)end):Show()
+		end
+		return
+	elseif SematicVersionIsNewer(GetSematicVersion(latestReleaseTag), GetSematicVersion(OneOSVersion)) then
+		--using old version
+		LaunchProgram('/System/Programs/Update OneOS/startup', {}, 'Update OneOS')
+	end
 end
 
 function LaunchProgram(path, args, title)
@@ -339,8 +411,11 @@ function EventHandler()
 
 		if Events[event[1]] then
 			for i, e in ipairs(Events[event[1]]) do
-				e(event[1], event[2], event[3], event[4], event[5])
-				hasFound = true
+				if e(event[1], event[2], event[3], event[4], event[5]) == false then
+					hasFound = false
+				else
+					hasFound = true
+				end
 			end
 		end
 

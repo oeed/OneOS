@@ -93,7 +93,8 @@ local blacklist = {
 	'/README.md',
 	'/TODO',
 	'/Desktop/.Desktop.settings',
-	'/System/.OneOS.settings'
+	'/System/.OneOS.settings',
+	'/.version'
 }
 
 function isBlacklisted(path)

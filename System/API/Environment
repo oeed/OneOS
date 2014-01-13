@@ -54,7 +54,8 @@ This essentially allows the programs to run in sandbox. For example, os.shutdown
 			Helpers = Helpers,
 			Desktop = Desktop,
 			Settings = Settings,
-			Version = OneOSVersion
+			Version = OneOSVersion,
+			Reboot = os.reboot
 		}
 	end
 
