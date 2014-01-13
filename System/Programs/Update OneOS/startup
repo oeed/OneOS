@@ -1,15 +1,12 @@
 tArgs = {...}
 
 os.loadAPI('/System/API/Drawing')
---os.loadAPI('/System/API/Button')
 os.loadAPI('/System/API/ProgressBar')
 os.loadAPI('/System/API/Helpers')
---[[
-os.loadAPI('/System/API/Menu')
-os.loadAPI('/System/API/Peripheral')
-os.loadAPI('/System/API/TextDialogueWindow')
-os.loadAPI('/System/API/ButtonDialogueWindow')
-]]--
+
+OneOS.CanClose = function()
+	return false
+end
 
 Current = {
 	Clicks = {},

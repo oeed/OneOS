@@ -131,27 +131,29 @@
 	end
 
 	Close = function(self)
-		if self == Current.Program then
-			Current.Program = nil
-		end
-
-		for i, program in ipairs(Current.Programs) do
-			if program == self then
-				table.remove(Current.Programs, i)
-
-				if Current.Programs[i] then
-					Current.Program = Current.Programs[i]
-				elseif Current.Programs[i-1] then
-					Current.Program = Current.Programs[i-1]
-				end
-				break
+		if not self.Environment.OneOS.CanClose or self.Environment.OneOS.CanClose() then
+			if self == Current.Program then
+				Current.Program = nil
 			end
-		end
 
-		if Current.Program then
-			Current.Program.AppRedirect:Draw()
-		end
+			for i, program in ipairs(Current.Programs) do
+				if program == self then
+					table.remove(Current.Programs, i)
 
-		Overlay.UpdateButtons()
-		MainDraw()
+					if Current.Programs[i] then
+						Current.Program = Current.Programs[i]
+					elseif Current.Programs[i-1] then
+						Current.Program = Current.Programs[i-1]
+					end
+					break
+				end
+			end
+
+			if Current.Program then
+				Current.Program.AppRedirect:Draw()
+			end
+
+			Overlay.UpdateButtons()
+			MainDraw()
+		end
 	end
