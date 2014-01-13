@@ -1,9 +1,10 @@
 TODO:
 
 Bugs:
-
+Drawing on top bar (cursor pos 0)
 
 Features:
+- Program restarting (os.reboot)
 - AirDrop like file transfer program
 - Mario like game
 - AppStore

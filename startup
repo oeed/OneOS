@@ -80,7 +80,6 @@ function LoadingScreen()
 			
 			term.clearLine()
 			PrintCentered('Loading API '..file, y + 11)
-			--sleep(0)
 			if not LoadAPI(root .. 'System/API/' .. file) then
 				term.setTextColour(colours.red)
 				PrintCentered('Error While Loading API '..file, y + 11)
@@ -95,25 +94,53 @@ end
 
 if LoadingScreen() then
 
-	--os.run(getfenv(), '/System/main')
-	os.run(getfenv(), '/System/update')
-	
-	local ok, err = pcall(Initialise)
 
-	if not ok then
+	if fs.exists('/.update/') and fs.isDir('/.update/') then
+		function installFolder(path)
+			for i, v in ipairs(fs.list('/.update/'..path)) do
+				Drawing.DrawArea(1, math.floor(Drawing.Screen.Height / 2), Drawing.Screen.Width, 1, ' ', colours.lightGrey, colours.white)
+				Drawing.DrawCharactersCenter(nil, , nil, nil, path .. v, colours.lightGrey, colours.white)
+				Drawing.DrawBuffer()
+				if fs.isDir('/.update/'..path .. v) then
+					fs.makeDir('/'..path .. v)
+					installFolder(path .. v .. '/')
+				else
+					fs.delete('/'..path .. v)
+					fs.move('/.update/'..path .. v, '/'..path .. v)
+				end
+				sleep(0)
+			end
+		end
+		Drawing.Clear(colours.white)
+		Drawing.DrawCharactersCenter(nil, -3, nil, nil, 'Installing Update', colours.blue, colours.white)
+		Drawing.DrawCharactersCenter(nil, -2, nil, nil, 'This may take a moment.', colours.grey, colours.white)
+		Drawing.DrawBuffer()
+		installFolder('')
+		fs.delete('/.update/')
+	end
+
+	os.run(getfenv(), '/System/main')
+	--os.run(getfenv(), '/System/update')
+	
+
+	local ok = {pcall(Initialise)}
+
+	if not ok[1] then
 		term.setBackgroundColor(colours.red)
 		term.setCursorPos(1,1)
 		term.write(' ')
 		term.setBackgroundColor(colours.lightGrey)
 		term.setTextColor(colours.black)
 		print('Error')
-		--[[
+
 	term.setBackgroundColor(colours.lightGrey)
 		term.setTextColor(colours.black)
 		term.clear()
 		print('Error')
-		print(err)
-	]]--
+		for i, v in ipairs(ok) do
+			print(v)
+		end
+
 	end
 	--[[end)
 	if err then

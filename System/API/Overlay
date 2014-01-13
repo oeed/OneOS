@@ -49,7 +49,7 @@ function UpdateButtons()
 					Separator = true
 				},
 				{
-					Title = 'Crash',
+					Title = 'Update OneOS',
 					Click = error
 				},
 
