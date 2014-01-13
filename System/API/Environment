@@ -57,7 +57,9 @@ This essentially allows the programs to run in sandbox. For example, os.shutdown
 			Version = OneOSVersion,
 			Restart = Restart,
 			Reboot = Restart,
-			Shutdown = Shutdown
+			Shutdown = Shutdown,
+			Clipboard = Clipboard,
+			CanClose = function()end
 		}
 	end
 

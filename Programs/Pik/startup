@@ -21,6 +21,8 @@ local round = function(num, idp)
 	return math.floor(num * mult + 0.5) / mult
 end
 
+Clipboard = OneOS.Clipboard
+
 Drawing = {
 	
 	Screen = {
@@ -256,7 +258,10 @@ Current = {
 	Input = nil,
 	CursorPos = {1,1},
 	CursorColour = colours.black,
-	InterfaceVisible = true
+	InterfaceVisible = true,
+	Selection = {vector.new(2,2,0), vector.new(11,9,0)},
+	SelectionDrawTimer = nil,
+	HandDragStart = {},
 }
 
 Lists = {
@@ -429,6 +434,40 @@ Layer = {
 
 			end
 		end
+	end,
+
+	PixelsInSelection = function(self, cut)
+		local pixels = {}
+		if Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
+			local point1 = Current.Selection[1]
+			local point2 = Current.Selection[2]
+
+			local size = point2 - point1
+			local cornerX = point1.x
+			local cornerY = point1.y
+			for x = 1, size.x + 1 do
+				for y = 1, size.y + 1 do
+					if not pixels[x] then
+						pixels[x] = {}
+					end
+					pixels[x][y] = self.Pixels[cornerX + x - 1][cornerY + y - 1]
+					if cut then
+						Current.Layer:SetPixel(cornerX + x - 1, cornerY + y - 1, nil, Current.Layer.BackgroundColour, nil)
+					end
+				end
+			end
+		end
+		return pixels
+	end,
+
+	InsertPixels = function(self, pixels)
+		local cornerX = Current.Selection[1].x
+		local cornerY = Current.Selection[1].y
+		for x, col in ipairs(pixels) do
+			for y, pixel in ipairs(col) do
+				Current.Layer:SetPixel(cornerX + x - 1, cornerY + y - 1, pixel.TextColour, pixel.BackgroundColour, pixel.Character)
+			end
+		end
 	end
 }
 
@@ -441,6 +480,7 @@ Artboard = {
 	Height = 1,
 	Layers = {},
 	Format = nil,
+	SelectionIsBlack = true,
 
 	Draw = function(self)
 		Drawing.DrawBlankArea(self.X + 1, self.Y + 1, self.Width, self.Height, UIColours.Shadow)
@@ -466,6 +506,56 @@ Artboard = {
 
 		for i, layer in ipairs(self.Layers) do
 			layer:Draw()
+		end
+
+		if Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
+			local point1 = Current.Selection[1]
+			local point2 = Current.Selection[2]
+
+			local size = point2 - point1
+
+			local isBlack = self.SelectionIsBlack
+
+			local function c()
+				local c = colours.white
+				if isBlack then
+					c = colours.black
+				end
+				isBlack = not isBlack
+				return c
+			end
+
+			function horizontal(y)
+				Drawing.WriteToBuffer(self.X - 1 + point1.x, self.Y - 1 + y, '+', c(), colours.transparent)
+				if size.x > 0 then
+					for i = 1, size.x - 1 do
+						Drawing.WriteToBuffer(self.X - 1 + point1.x + i, self.Y - 1 + y, '-', c(), colours.transparent)
+					end
+				else
+					for i = 1, (-1 * size.x) - 1 do
+						Drawing.WriteToBuffer(self.X - 1 + point1.x - i, self.Y - 1 + y, '-', c(), colours.transparent)
+					end
+				end
+
+				Drawing.WriteToBuffer(self.X - 1 + point1.x + size.x, self.Y - 1 + y, '+', c(), colours.transparent)
+			end
+
+			function vertical(x)
+				if size.y < 0 then
+					for i = 1, (-1 * size.y) - 1 do
+						Drawing.WriteToBuffer(self.X - 1 + x, self.Y - 1 + point1.y  - i, '|', c(), colours.transparent)
+					end
+				else
+					for i = 1, size.y - 1 do
+						Drawing.WriteToBuffer(self.X - 1 + x, self.Y - 1 + point1.y  + i, '|', c(), colours.transparent)
+					end
+				end
+			end
+
+			horizontal(point1.y)
+			vertical(point1.x)
+			horizontal(point1.y + size.y)
+			vertical(point1.x + size.x)
 		end
 	end,
 
@@ -596,9 +686,9 @@ Artboard = {
 		file:close()
 	end,
 
-	Click = function(self, side, x, y)
+	Click = function(self, side, x, y, drag)
 		if Current.Tool and Current.Layer and Current.Layer.Visible then
-			Current.Tool:Use(x, y, side)
+			Current.Tool:Use(x, y, side, drag)
 			return true
 		end
 	end
@@ -1426,6 +1516,25 @@ end
 
 Tools = {
 	{
+		Name = "Hand",
+		Size = 1,
+		Use = function(self, x, y, side, drag)
+			Current.Input = nil
+			if drag and Current.HandDragStart and Current.HandDragStart[1] and Current.HandDragStart[2] then
+				local deltaX = x - Current.HandDragStart[1]
+				local deltaY = y - Current.HandDragStart[2]
+				Current.Artboard.X = Current.Artboard.X + deltaX
+				Current.Artboard.Y = Current.Artboard.Y + deltaY
+			else
+				Current.HandDragStart = {x, y}
+			end
+		end,
+		Select = function(self)
+			return true
+		end
+	},
+
+	{
 		Name = "Pencil",
 		Size = 1,
 		Use = function(self, x, y, side, artboard)
@@ -1500,9 +1609,14 @@ Tools = {
 	{
 		Name = "Select",
 		Size = 1,
-		Use = function(self, x, y, side)
+		Use = function(self, x, y, side, drag)
 			Current.Input = nil
-			Current.Layer:SetPixel(x, y, nil, Current.Layer.BackgroundColour, nil)
+			if not drag then
+				Current.Selection[1] = vector.new(x, y, 0)
+				Current.Selection[2] = nil
+			else
+				Current.Selection[2] = vector.new(x, y, 0)
+			end
 		end,
 		Select = function(self)
 			return true
@@ -1582,18 +1696,6 @@ Tools = {
 			end
 		end
 	}
-}
-
-Tool = {
-	Use = function(self, x, y, artboard)
-
-	end,
-
-	Initialise = function(self)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		return new
-	end
 }
 
 --Windows--
@@ -2775,13 +2877,13 @@ function Draw()
 		Drawing.DrawArea(1, 1, Drawing.Screen.Width, Drawing.Screen.Height, '|', colours.black, colours.lightGrey)
 	end
 
+	if Current.Artboard then
+		ab:Draw()
+	end
+
 	if Current.InterfaceVisible then
 		Current.MenuBar:Draw()
 		Current.Toolbar:Draw()
-	end
-
-	if Current.Artboard then
-		ab:Draw()
 	end
 
 	if Current.InterfaceVisible and Current.Menu then
@@ -2803,6 +2905,10 @@ function Draw()
 		term.setTextColour(Current.CursorColour)
 	else
 		term.setCursorBlink(false)
+	end
+
+	if Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
+		Current.SelectionDrawTimer = os.startTimer(0.5)
 	end
 end
 
@@ -2893,37 +2999,40 @@ function LoadMenuBar()
 					{
 						Title = 'Cut',
 						Click = function()
-
+							Clipboard.Cut(Current.Layer:PixelsInSelection(true), 'pikpixels')
 						end,
 						Keys = {
 							keys.leftCtrl,
 							keys.x
 						},
 						Enabled = function()
-							return false
+							return Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil
 						end
 					},
 					{
 						Title = 'Copy',
 						Click = function()
-
+							Clipboard.Copy(Current.Layer:PixelsInSelection(), 'pikpixels')
 						end,
 						Keys = {
 							keys.leftCtrl,
 							keys.c
-						}
+						},
+						Enabled = function()
+							return Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil
+						end
 					},
 					{
 						Title = 'Paste',
 						Click = function()
-
+							Current.Layer:InsertPixels(Clipboard.Paste())
 						end,
 						Keys = {
 							keys.leftCtrl,
 							keys.v
 						},
 						Enabled = function()
-							return false
+							return (not Clipboard.isEmpty()) and Clipboard.Type == 'pikpixels'
 						end
 					}
 				}, self, true)
@@ -2969,9 +3078,6 @@ function LoadMenuBar()
 						Click = function()
 							DeleteLayer()
 						end,
-						Keys = {
-							keys.delete
-						},
 						Enabled = function()
 							return CheckOpenArtboard()
 						end
@@ -2981,6 +3087,21 @@ function LoadMenuBar()
 						Click = function()
 							RenameLayer()
 						end,
+						Enabled = function()
+							return CheckOpenArtboard()
+						end
+					},
+					{
+						Separator = true
+					},
+					{
+						Title = 'Delete Selection',
+						Click = function()
+							
+						end,
+						Keys = {
+							keys.delete
+						},
 						Enabled = function()
 							return CheckOpenArtboard()
 						end
@@ -3006,15 +3127,18 @@ function LoadMenuBar()
 	})
 end
 
-function Timer(timer)
+function Timer(event, timer)
 	if timer == Current.ControlPressedTimer then
 		Current.ControlPressedTimer = nil
+	elseif timer == Current.SelectionDrawTimer then
+		Current.Artboard.SelectionIsBlack = not Current.Artboard.SelectionIsBlack
+		Draw()
 	end
 end
 
 function Initialise(arg)
 	EventRegister('mouse_click', TryClick)
-	EventRegister('mouse_drag', TryClick)
+	EventRegister('mouse_drag', function(event, side, x, y)TryClick(event, side, x, y, true)end)
 	EventRegister('mouse_scroll', Scroll)
 	EventRegister('key', HandleKey)
 	EventRegister('char', HandleKey)
@@ -3161,18 +3285,18 @@ end
 --[[
 	Attempt to clicka given object
 ]]--
-function DoClick(object, side, x, y)
+function DoClick(object, side, x, y, drag)
 	if object and CheckClick(object, x, y) then
-		return object:Click(side, x - object.X + 1, y - object.Y + 1)
+		return object:Click(side, x - object.X + 1, y - object.Y + 1, drag)
 	end	
 end
 
 --[[
 	Try to click at the given coordinates
 ]]--
-function TryClick(event, side, x, y)
+function TryClick(event, side, x, y, drag)
 	if Current.InterfaceVisible and Current.Menu then
-		if DoClick(Current.Menu, side, x, y) then
+		if DoClick(Current.Menu, side, x, y, drag) then
 			Draw()
 			return
 		else
@@ -3184,7 +3308,7 @@ function TryClick(event, side, x, y)
 			return
 		end
 	elseif Current.Window then
-		if DoClick(Current.Window, side, x, y) then
+		if DoClick(Current.Window, side, x, y, drag) then
 			Draw()
 			return
 		else
@@ -3210,7 +3334,7 @@ function TryClick(event, side, x, y)
 	end
 
 	for i, object in ipairs(interfaceElements) do
-		if DoClick(object, side, x, y) then
+		if DoClick(object, side, x, y, drag) then
 			Draw()
 			return
 		end		

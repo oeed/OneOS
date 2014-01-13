@@ -52,6 +52,8 @@ function Initialise()
 	EventRegister('char', HandleKey)
 	EventRegister('timer', Update)
 	EventRegister('http_success', AutoUpdateRespose)
+	EventRegister('http_failure', AutoUpdateFail)
+
 	ShowDesktop()
 	Draw()
 	--updateTimer = os.startTimer(0.05)
@@ -64,9 +66,10 @@ function Initialise()
 	--LaunchProgram('Programs/Files/startup', {'Programs/'}, 'Files')
 	--LaunchProgram('Programs/Shell', {}, 'Shell')
 	--LaunchProgram('Programs/npaintpro', {}, 'nPaintPro')
+	--LaunchProgram('Programs/Quest/startup', {}, 'Quest')
 	--LaunchProgram('Programs/Update OneOS/startup', {}, 'Test')
 	--LaunchProgram('Programs/test', {}, 'Test')
-	--LaunchProgram('Programs/Pik/startup', {'/desktop/image.pik'}, 'Pik')
+	LaunchProgram('Programs/Pik/startup', {'/desktop/image.pik'}, 'Pik')
 	--LaunchProgram('Programs/Pik/startup', {}, 'Pik')
 	--LaunchProgram('Programs/About OneOS/startup', {}, 'About OneOS')
 	--LaunchProgram('rom/programs/color/paint', {'boo'}, 'Paint')
@@ -117,6 +120,15 @@ function SematicVersionIsNewer(version, otherVersion)
 		return true
 	end
 	return false
+end
+
+function AutoUpdateFail(event, url, data)
+	if url ~= 'https://api.github.com/repos/oeed/OneOS/releases#' then
+		return false
+	end
+	if checkAutoUpdateArg then
+		ButtonDialogueWindow:Initialise("Update Check Failed", "Check your connection and try again.", 'Ok', nil, function(success)end):Show()
+	end
 end
 
 function AutoUpdateRespose(event, url, data)

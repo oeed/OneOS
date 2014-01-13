@@ -9,7 +9,7 @@
 		setmetatable( new, {__index = self} )
 		new.Title = title or path
 		new.Path = path
-		new.AppRedirect = AppRedirect:Initialise(1, 2, Drawing.Screen.Width, Drawing.Screen.Height-1, nil)
+		new.AppRedirect = AppRedirect:Initialise(1, 2, Drawing.Screen.Width, Drawing.Screen.Height-1, new)
 		new.Environment = Environment:Initialise(new, shell, path)
 		new.Running = true
 		

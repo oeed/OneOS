@@ -1,7 +1,7 @@
 TODO:
 
 Bugs:
-Drawing on top bar (cursor pos 0)
+Closing a window over a program stays draw there (redraw it on window close)
 
 Features:
 - Program restarting (os.reboot)
@@ -10,7 +10,17 @@ Features:
 - AppStore
 - Turtle program completion
 - Finish Pik
-	- Clipboard
 	- Tool sizes
-	- Scrolling
 	- Comments
+	- Speedup artboard rendering (large dragging)
+	- Clicks go to artboard if under menu, sidebar etc
+
+
+Done:
+
+Selection in Pik
+Clipboard API
+AppRedirect, drawing even if not active
+Copy pasting in Pik
+Panning in pik
+Drawing on top bar (cursor pos 0)

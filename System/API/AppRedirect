@@ -10,7 +10,7 @@
 	Size = {1, 1}
 	CursorBlink = false
 
-	Initialise = function(self, x, y, width, height)
+	Initialise = function(self, x, y, width, height, program)
 		local new = {}    -- the new instance
 		setmetatable( new, {__index = self} )
 		new.X = x
@@ -23,6 +23,7 @@
 		new.CursorBlink = false
 		new.Term = _term(new)
 		new:ResizeBuffer()
+		new.Program = program
 		return new
 	end
 
@@ -66,13 +67,13 @@
 		local pos = GetAbsolutePosition(self)
 		local x = math.floor(self.CursorPos[1])
 		local y = math.floor(self.CursorPos[2])
-		if x > self.Size[1] or y > self.Size[2] then
+		if x > self.Size[1] or y > self.Size[2] or x < 1 or y < 1 then
 			return
 		end
 
 		self.Buffer[y] = self.Buffer[y] or {}
 		self.Buffer[y][x] = {character, textColour, backgroundColour}
-		if not Current.Menu then
+		if not Current.Window and not Current.Menu and Current.Program == self.Program then
 			Drawing.WriteToBuffer(pos.X+x-1, pos.Y+y-1, character, textColour, backgroundColour)
 		end
 	end
