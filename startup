@@ -99,7 +99,7 @@ if LoadingScreen() then
 		function installFolder(path)
 			for i, v in ipairs(fs.list('/.update/'..path)) do
 				Drawing.DrawArea(1, math.floor(Drawing.Screen.Height / 2), Drawing.Screen.Width, 1, ' ', colours.lightGrey, colours.white)
-				Drawing.DrawCharactersCenter(nil, , nil, nil, path .. v, colours.lightGrey, colours.white)
+				Drawing.DrawCharactersCenter(nil, 0, nil, nil, path .. v, colours.lightGrey, colours.white)
 				Drawing.DrawBuffer()
 				if fs.isDir('/.update/'..path .. v) then
 					fs.makeDir('/'..path .. v)

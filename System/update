@@ -152,3 +152,7 @@ end
 
 Settings.UpdateFunction()
 parallel.waitForAll(unpack(downloads))
+
+local h = fs.open('/.update/.version', 'w')
+h.write(latestReleaseTag)
+h.close()
