@@ -4,8 +4,10 @@ os.loadAPI('/System/API/Drawing')
 os.loadAPI('/System/API/ProgressBar')
 os.loadAPI('/System/API/Helpers')
 
+local canClose = false
+
 OneOS.CanClose = function()
-	return false
+	return canClose
 end
 
 Current = {
@@ -42,6 +44,7 @@ function Initialise()
 		end
 	end
 	UpdaterRefresh()
+	canClose = true
 	if updaterEnvironment.Settings.TotalFiles == updaterEnvironment.Settings.DownloadedFiles then
 		sleep(3)
 		OneOS.Reboot()

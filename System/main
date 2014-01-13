@@ -79,7 +79,7 @@ function Initialise()
 	OneOSVersion = h.readAll()
 	h.close()
 
-	CheckAutoUpdate()
+	--CheckAutoUpdate()
 
 	EventHandler()
 end
@@ -89,7 +89,7 @@ local checkAutoUpdateArg = nil
 function CheckAutoUpdate(arg)
 	checkAutoUpdateArg = arg
 	if http then
-		http.request('https://api.github.com/repos/oeed/OneOS/releases')
+		http.request('https://api.github.com/repos/oeed/OneOS/releases#')
 	elseif arg then
 		ButtonDialogueWindow:Initialise("HTTP Not Enabled!", "Turn on the HTTP API to update.", 'Ok', nil, function(success)end):Show()
 	end
@@ -120,7 +120,7 @@ function SematicVersionIsNewer(version, otherVersion)
 end
 
 function AutoUpdateRespose(event, url, data)
-	if Current.Program then
+	if url ~= 'https://api.github.com/repos/oeed/OneOS/releases#' then
 		return false
 	end
 	os.loadAPI('/System/JSON')
@@ -386,6 +386,42 @@ function Sleep()
 	clockTimer = os.startTimer(0.8333333)
 end
 ]]--
+
+function Shutdown(restart)
+	local success = true
+	for i, program in ipairs(Current.Programs) do
+		if not program:Close() then
+			success = false
+		end
+	end
+
+	if success and not restart then
+		os.shutdown()
+	elseif success then
+		os.reboot()
+	else
+		Current.Program = nil
+		Overlay.UpdateButtons()
+		local shutdownLabel = 'shutdown'
+		local shutdownLabelCaptital = 'Shutdown'
+		if restart then
+			shutdownLabel = 'restart'
+			shutdownLabelCaptital = 'Restart'
+		end
+
+		ButtonDialogueWindow:Initialise("Programs Still Open", "Some programs stopped themselves from being closed, preventing "..shutdownLabel..". Save your work and close them or click 'Force "..shutdownLabelCaptital.."'.", 'Force '..shutdownLabelCaptital, 'Cancel', function(btnsuccess)
+			if btsuccess and not restart then
+				os.shutdown()
+			elseif btnsuccess then
+				os.reboot()
+			end
+		end):Show()
+	end
+end
+
+function Restart()
+	Shutdown(true)
+end
 
 function EventRegister(event, func)
 	if not Events[event] then

@@ -131,7 +131,7 @@
 	end
 
 	Close = function(self)
-		if not self.Environment.OneOS.CanClose or self.Environment.OneOS.CanClose() then
+		if not self.Environment.OneOS.CanClose or self.Environment.OneOS.CanClose() ~= false then
 			if self == Current.Program then
 				Current.Program = nil
 			end
@@ -155,5 +155,8 @@
 
 			Overlay.UpdateButtons()
 			MainDraw()
+			return true
+		else
+			return false
 		end
 	end
