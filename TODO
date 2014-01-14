@@ -1,7 +1,6 @@
 TODO:
 
 Bugs:
-Closing a window over a program stays draw there (redraw it on window close)
 
 Features:
 - Program restarting (os.reboot)

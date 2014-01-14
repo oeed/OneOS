@@ -60,6 +60,9 @@
 		term.setCursorBlink(false)
 		Current.Window = nil
 		self = nil
+		if Current.Program then
+			Current.Program.AppRedirect:Draw()
+		end
 	end
 
 	Flash = function(self)
