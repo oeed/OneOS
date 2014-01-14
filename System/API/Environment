@@ -89,13 +89,18 @@ This essentially allows the programs to run in sandbox. For example, os.shutdown
 					end
 				end
 			elseif k == 'combine' then
-				list[k] = function(_path, _path2, global)
-					if not global then
+				list[k] = function(_path, _path2)
+					return fs[k](_path, _path2)
+				end
+				--[[
+				function(_path, _path2, global)
+					if global then
 						return fs[k](relPath .. _path, relPath .. _path2)
 					else
 						return fs[k](_path, _path2)
 					end
 				end
+				]]--
 			elseif k == 'open' then
 				list[k] = function(_path, mode, global)
 					if not global then
@@ -230,7 +235,7 @@ This essentially allows the programs to run in sandbox. For example, os.shutdown
 
 	Shell = function(env, program, nativeShell, path)
 		
-		local parentShell = nativeShell
+		local parentShell = nil--nativeShell
 
 		local bExit = false
 		local sDir = (parentShell and parentShell.dir()) or ""
@@ -302,12 +307,15 @@ This essentially allows the programs to run in sandbox. For example, os.shutdown
 			sPath = _sPath
 		end
 
-		function resolve( _sPath )
+		function resolve( _sPath, global)
+			print(_sPath)
+			print(sDir)
+			print(env.fs.combine(sDir, _sPath))
 			local sStartChar = string.sub( _sPath, 1, 1 )
 			if sStartChar == "/" or sStartChar == "\\" then
-				return fs.combine( "", _sPath )
+				return env.fs.combine( "", _sPath, global)
 			else
-				return fs.combine( sDir, _sPath )
+				return env.fs.combine( sDir, _sPath, global)
 			end
 		end
 
