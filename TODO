@@ -1,6 +1,9 @@
 TODO:
 
 Bugs:
+coroutine in environtment pullevent not filtering
+use a better relpath thing in env
+shell.resolve('.') double up
 
 Features:
 - Program restarting (os.reboot)
@@ -17,9 +20,4 @@ Features:
 
 Done:
 
-Selection in Pik
-Clipboard API
-AppRedirect, drawing even if not active
-Copy pasting in Pik
-Panning in pik
-Drawing on top bar (cursor pos 0)
+Relative files!

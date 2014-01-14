@@ -1,8 +1,8 @@
-os.loadAPI('/System/API/Drawing')
-os.loadAPI('/System/API/Button')
-os.loadAPI('/System/API/Helpers')
-os.loadAPI('/System/API/TextInput')
-os.loadAPI('/System/API/TextBox')
+os.loadAPI('/System/API/Drawing', true)
+os.loadAPI('/System/API/Button', true)
+os.loadAPI('/System/API/Helpers', true)
+os.loadAPI('/System/API/TextInput', true)
+os.loadAPI('/System/API/TextBox', true)
 --[[
 os.loadAPI('/System/API/Menu')
 os.loadAPI('/System/API/Peripheral')

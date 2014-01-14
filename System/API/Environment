@@ -34,7 +34,17 @@ This essentially allows the programs to run in sandbox. For example, os.shutdown
 		local env = {}    -- the new instance
 		setmetatable( env, {__index = _G} )
 
+		env.fs = addErrorHandler(self.FS(env, program, path), 'FS API')
 		env.os = addErrorHandler(self.OS(env, program), 'OS API')
+		env.loadfile = function( _sFile, global)
+			local file = env.fs.open( _sFile, "r", global)
+			if file then
+				local func, err = loadstring( file.readAll(), env.fs.getName( _sFile, global) )
+				file.close()
+				return func, err
+			end
+			return nil, "File not found"
+		end
 		env.shell = {}
 		local shellEnv = {}
 		setmetatable( shellEnv, { __index = env } )
@@ -59,8 +69,44 @@ This essentially allows the programs to run in sandbox. For example, os.shutdown
 			Reboot = Restart,
 			Shutdown = Shutdown,
 			Clipboard = Clipboard,
-			CanClose = function()end
+			CanClose = function()end,
+			Close = function()
+				program:Close()
+			end
 		}
+	end
+
+	FS = function(env, program, path)
+		local relPath = path:sub(1, #path-7)
+		local list = {}
+		for k, f in pairs(fs) do
+			if k ~= 'open' and k ~= 'combine' then
+				list[k] = function(_path, global)
+					if not global then
+						return fs[k](relPath .. _path)
+					else
+						return fs[k](_path)
+					end
+				end
+			elseif k == 'combine' then
+				list[k] = function(_path, _path2, global)
+					if not global then
+						return fs[k](relPath .. _path, relPath .. _path2)
+					else
+						return fs[k](_path, _path2)
+					end
+				end
+			elseif k == 'open' then
+				list[k] = function(_path, mode, global)
+					if not global then
+						return fs[k](relPath .. _path, mode)
+					else
+						return fs[k](_path, mode)
+					end
+				end
+			end
+		end
+		return list
 	end
 
 	OS = function(env, program)
@@ -79,8 +125,13 @@ This essentially allows the programs to run in sandbox. For example, os.shutdown
 
 			run = os.run,-- function(env, prg, arg)end,
 
-			loadAPI = function(_sPath)
-				local sName = fs.getName( _sPath )
+			loadAPI = function(_sPath, global)
+				local _fs = fs
+				if not global then
+					_fs = env.fs
+				end
+
+				local sName = _fs.getName( _sPath)
 				if tAPIsLoading[sName] == true then
 					printError( "API "..sName.." is already being loaded" )
 					return false
@@ -89,7 +140,8 @@ This essentially allows the programs to run in sandbox. For example, os.shutdown
 					
 				local tEnv = {}
 				setmetatable( tEnv, { __index = env } )
-				local fnAPI, err = loadfile( _sPath )
+				tEnv.fs = _fs
+				local fnAPI, err = env.loadfile( _sPath, global)
 				if fnAPI then
 					setfenv( fnAPI, tEnv )
 					fnAPI()
@@ -114,7 +166,11 @@ This essentially allows the programs to run in sandbox. For example, os.shutdown
 			os.unloadAPI,
 
 			pullEvent = function(target)
+				--print(target)
+				--print('!')
 				local eventData = { coroutine.yield(target) }
+				--print(eventData[1])
+				--print('*')
 				if eventData[1] == "terminate" then
 					error( "Terminated", 0 )
 				end

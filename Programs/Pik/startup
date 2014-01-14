@@ -81,7 +81,7 @@ Drawing = {
 			text = {},
 			textcol = {}
 		}
-		if fs.exists(path) then
+		if fs.exists(path, true) then
 	        local file = io.open(path, "r")
 	        local sLine = file:read()
 	        local num = 1
@@ -1776,7 +1776,7 @@ NewDocumentWindow = {
 			local ok = true
 			new.NameLabelHighlight = false
 			new.SizeLabelHighlight = false
-			if path:sub(-1) == '/' or fs.isDir(path) or #path == 0 then
+			if path:sub(-1) == '/' or fs.isDir(path, true) or #path == 0 then
 				ok = false
 				new.NameLabelHighlight = true
 			end
@@ -1903,7 +1903,7 @@ NewDocumentWindow = {
 
 local TidyPath = function(path)
 	path = '/'..path
-	if fs.isDir(path) then
+	if fs.isDir(path, true) then
 		path = path .. '/'
 	end
 
@@ -1968,7 +1968,7 @@ OpenDocumentWindow = {
 		Drawing.DrawBlankArea(self.X, self.Y + self.Height - 5, self.Width, 5, colours.lightGrey)
 		self:DrawFiles()
 
-		if (fs.exists(self.PathTextBox.TextInput.Value)) or (self.SelectedFile and #self.SelectedFile > 0 and fs.exists(self.CurrentDirectory .. self.SelectedFile)) then
+		if (fs.exists(self.PathTextBox.TextInput.Value, true)) or (self.SelectedFile and #self.SelectedFile > 0 and fs.exists(self.CurrentDirectory .. self.SelectedFile, true)) then
 			self.OpenButton.TextColour = colours.black
 		else
 			self.OpenButton.TextColour = colours.lightGrey
@@ -1985,7 +1985,7 @@ OpenDocumentWindow = {
 			if i > self.Scroll and i - self.Scroll <= 11 then
 				if file == self.SelectedFile then
 					Drawing.DrawCharacters(self.X + 1, self.Y + i - self.Scroll, file, colours.white, colours.lightBlue)
-				elseif string.find(file, '%.pik') or string.find(file, '%.nft') or string.find(file, '%.nfp') or fs.isDir(self.CurrentDirectory .. file) then
+				elseif string.find(file, '%.pik') or string.find(file, '%.nft') or string.find(file, '%.nfp') or fs.isDir(self.CurrentDirectory .. file, true) then
 					Drawing.DrawCharacters(self.X + 1, self.Y + i - self.Scroll, file, colours.black, colours.white)
 				else
 					Drawing.DrawCharacters(self.X + 1, self.Y + i - self.Scroll, file, colours.grey, colours.white)
@@ -2014,9 +2014,9 @@ OpenDocumentWindow = {
 			new.CurrentDirectory = '/Desktop/'
 		end
 		new.OpenButton = Button:Initialise(new.Width - 6, new.Height - 1, nil, nil, colours.white, new, function(self, side, x, y, toggle)
-			if fs.exists(new.PathTextBox.TextInput.Value) and self.TextColour == colours.black and not fs.isDir(new.PathTextBox.TextInput.Value) then
+			if fs.exists(new.PathTextBox.TextInput.Value, true) and self.TextColour == colours.black and not fs.isDir(new.PathTextBox.TextInput.Value, true) then
 				returnFunc(new, true, TidyPath(new.PathTextBox.TextInput.Value))
-			elseif new.SelectedFile and self.TextColour == colours.black and fs.isDir(new.CurrentDirectory .. new.SelectedFile) then
+			elseif new.SelectedFile and self.TextColour == colours.black and fs.isDir(new.CurrentDirectory .. new.SelectedFile, true) then
 				new:GoToDirectory(new.CurrentDirectory .. new.SelectedFile)
 			elseif new.SelectedFile and self.TextColour == colours.black then
 				returnFunc(new, true, TidyPath(new.CurrentDirectory .. '/' .. new.SelectedFile))
@@ -2026,7 +2026,7 @@ OpenDocumentWindow = {
 			returnFunc(new, false)
 		end, 'Cancel', colours.black)
 		new.GoUpButton = Button:Initialise(2, new.Height - 1, nil, nil, colours.white, new, function(self, side, x, y, toggle)
-			local folderName = fs.getName(new.CurrentDirectory)
+			local folderName = fs.getName(new.CurrentDirectory, true)
 			local parentDirectory = new.CurrentDirectory:sub(1, #new.CurrentDirectory-#folderName-1)
 			new:GoToDirectory(parentDirectory)
 		end, 'Go Up', colours.black)
@@ -2053,7 +2053,7 @@ OpenDocumentWindow = {
 		self.SelectedFile = nil
 		self.Typed = false
 		self.PathTextBox.TextInput.Value = path
-		self.Files = fs.list(self.CurrentDirectory)
+		self.Files = fs.list(self.CurrentDirectory, true)
 		Draw()
 	end,
 
@@ -2083,7 +2083,7 @@ OpenDocumentWindow = {
 
 		if not found then
 			if y <= 12 then
-				self.SelectedFile = fs.list(self.CurrentDirectory)[y-1]
+				self.SelectedFile = fs.list(self.CurrentDirectory, true)[y-1]
 				self.PathTextBox.TextInput.Value = TidyPath(self.CurrentDirectory .. '/' .. self.SelectedFile)
 				Draw()
 			end
@@ -2613,7 +2613,7 @@ function DisplayNewDocumentWindow()
 end
 
 function NewDocument(path, width, height, format, backgroundColour)
-	ab = Artboard:New(fs.getName(path), path, width, height, format, backgroundColour)
+	ab = Artboard:New(fs.getName(path, true), path, width, height, format, backgroundColour)
 	Current.Tool = Tools[1]
 	Current.Toolbar:Update()
 	Draw()
@@ -2621,7 +2621,7 @@ end
 local function Extension(path, addDot)
 	if not string.find(path, '%.') then
 		if not addDot then
-			return fs.getName(path)
+			return fs.getName(path, true)
 		else
 			return nil
 		end
@@ -2643,7 +2643,7 @@ end
 	Attempt to figure out what format the image is if it doesn't have an extension
 ]]--
 function GetFormat(path)
-	local file = fs.open(path, 'r')
+	local file = fs.open(path, 'r', true)
 	local content = file.readAll()
 	file.close()
 	if type(textutils.unserialize(content)) == 'table' then
@@ -2671,7 +2671,7 @@ end
 	Open a documet at a given path
 ]]--
 function OpenDocument(path)
-	if fs.exists(path) and not fs.isDir(path) then
+	if fs.exists(path, true) and not fs.isDir(path, true) then
 		local format = Extension(path, true)
 		if not format then
 			format = GetFormat(path)
@@ -2713,7 +2713,7 @@ function OpenDocument(path)
 		local height = #layers[1].Pixels[1]
 
 		Current.Artboard = nil
-		ab = Artboard:New(fs.getName('Image'), path, width, height, format, nil, layers)
+		ab = Artboard:New(fs.getName('Image', true), path, width, height, format, nil, layers)
 		Current.Tool = Tools[1]
 		Current.Toolbar:Update()
 		Draw()
@@ -3131,8 +3131,10 @@ function Timer(event, timer)
 	if timer == Current.ControlPressedTimer then
 		Current.ControlPressedTimer = nil
 	elseif timer == Current.SelectionDrawTimer then
-		Current.Artboard.SelectionIsBlack = not Current.Artboard.SelectionIsBlack
-		Draw()
+		if Current.Artboard then
+			Current.Artboard.SelectionIsBlack = not Current.Artboard.SelectionIsBlack
+			Draw()
+		end
 	end
 end
 
@@ -3156,7 +3158,7 @@ function Initialise(arg)
 
 	LoadMenuBar()
 
-	if arg and fs.exists(arg) then
+	if arg and fs.exists(arg, true) then
 		OpenDocument(arg)
 	else
 		--NewDocument()
@@ -3466,7 +3468,7 @@ end
 ]]--
 function ReadNFP(path)
 	local pixels = {}
-	local file = fs.open(path, 'r')
+	local file = fs.open(path, 'r', true)
 	local line = file.readLine()
 	local y = 1
 	while line do
@@ -3487,7 +3489,7 @@ end
 	Reads a .nft file from the given path
 ]]--
 function ReadNFT(path)
-	local file = fs.open(path, 'r')
+	local file = fs.open(path, 'r', true)
 	local line = file.readLine()
 	local lines = {}
 	while line do
@@ -3542,7 +3544,7 @@ end
 	Read a .pik file from the given path
 ]]--
 function ReadPIK(path)
-	local file = fs.open(path, 'r')
+	local file = fs.open(path, 'r', true)
 	local _layers = textutils.unserialize(file.readAll())
 	file.close()
 	local layers = {}

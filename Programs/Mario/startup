@@ -1,6 +1,3 @@
-local runningLocation = shell.getRunningProgram()
-runningLocation = runningLocation:sub(1, #runningLocation-7) --this should be changed!
-
 if OneOS then
 	--running under OneOS
 	OneOS.ToolBarColour = colours.grey
@@ -332,7 +329,7 @@ Sprite = {
 		new.Y = y
 		new.X = x
 		if type(background) == 'string' then
-			background = Drawing.LoadImage(runningLocation .. 'Sprites/' .. background)
+			background = Drawing.LoadImage('Sprites/' .. background)
 		end
 		new.Background = background or colours.white
 		new.Parent = parent

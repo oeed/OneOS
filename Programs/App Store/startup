@@ -1,6 +1,3 @@
-local runningLocation = shell.getRunningProgram()
-runningLocation = runningLocation:sub(1, #runningLocation-7) --this should be changed!
-
 _print = print
 
 isMenuVisible = false
@@ -558,7 +555,7 @@ function DisplayLoader()
 end
 
 function Initialise()
-	os.loadAPI(runningLocation..'api');
+	os.loadAPI('api');
 	--sleep(0.5)
 	--DownloadData()
 	ChangePage('Categories')
@@ -631,7 +628,7 @@ end
 function LoadSearch(id)
 		local item = SearchPage:Initialise()
 		searchBox = item
-		featuredBannerTimer = os.startTimer(5)
+		--featuredBannerTimer = os.startTimer(5)
 		table.insert(listItems, item)
 
 end
@@ -854,7 +851,7 @@ function EventHandler()
 		elseif event == "timer" then
 			if arg == featuredBannerTimer and currentPage == 'Featured' then
 
-				featuredBannerTimer = os.startTimer(5)
+				--featuredBannerTimer = os.startTimer(5)
 				listItems[1]:NextPage()
 				Draw()
 			end
@@ -949,11 +946,14 @@ if term.isColor and term.isColor() then
 
 		term.setTextColor(colours.white)
 		print(" Press any key to exit...")
-		os.pullEvent("key")
-		os.reboot()
+		local ev = os.pullEvent("###")
+		print(ev)
+		print('**')
+		sleep(5)
+		OneOS.Close()
 	end
 
 else
-
+	print('The App Store requires an Advanced (gold) Computer!')
 end
 

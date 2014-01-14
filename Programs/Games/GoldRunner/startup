@@ -5,17 +5,12 @@
 		Written by: Nitrogen Fingers
 ]]--
 
-
---[[
-	Extra code which fixes the program not being able to find the directories in OneOS.
-
-	shell.resolve(".") is replaced with absFilesPath
-]]--
-
-local absFilesPath = string.sub(shell.getRunningProgram(), 1, -8)
-
-
 w,h = term.getSize()
+if not term.isColour() then
+	printError("Requires an Advanced Computer")
+	return
+end
+
 
 running = true
 started = false
@@ -958,7 +953,7 @@ local function drawPallette(xpos,ypos)
 end
 
 local function saveCurrentMap(path)
-	local file = io.open(absFilesPath.."/levels/"..path, "w")
+	local file = io.open(shell.resolve(".").."/levels/"..path, "w")
 	if not file then return false end
 	
 	drawMap()
@@ -1003,7 +998,7 @@ local function runLevelEditor()
 	inLevelEditor = true
 	term.setBackgroundColour(colours.black)
 	term.clear()
-	if not fs.exists(absFilesPath.."/levels/"..levelEditName) then
+	if not fs.exists(shell.resolve(".").."/levels/"..levelEditName) then
 		map = {}
 		goldMap = {}
 		monks = {}
@@ -1015,7 +1010,7 @@ local function runLevelEditor()
 		exX = 48
 		exY = 17
 	else
-		loadMap(absFilesPath.."/levels/"..levelEditName)
+		loadMap(shell.resolve(".").."/levels/"..levelEditName)
 		for _,monk in pairs(monks) do
 			map[monk.y][monk.x] = "&"
 		end
@@ -1164,7 +1159,7 @@ local function runTitle()
 end
 
 local function playLevel()
-	loadMap(absFilesPath.."/levels/"..levelList[currentLevel])
+	loadMap(shell.resolve(".").."/levels/"..levelList[currentLevel])
 	running = true
 	while running do
 		drawMap()
@@ -1197,7 +1192,7 @@ local function playLevel()
 				currentLevel = currentLevel + 1
 				playerLives = playerLives + 1
 				resetMap()
-				loadMap(absFilesPath.."/levels/"..levelList[currentLevel])
+				loadMap(shell.resolve(".").."/levels/"..levelList[currentLevel])
 			end
 			nextLevel = false
 		else
@@ -1227,10 +1222,11 @@ local function playLevel()
 end
 
 term.clear()
-if not fs.exists(absFilesPath.."/levels") then
+if not fs.exists(shell.resolve(".").."/levels") then
+	error(shell.resolve("."))
 	error("Level directory not present!")
 end
-levelList = fs.list(absFilesPath.."/levels")
+levelList = fs.list(shell.resolve(".").."/levels")
 if #levelList == 0 then
 	error("Level directory is empty!")
 end
@@ -1285,7 +1281,7 @@ while menSel ~= "Quit" do
 		
 		if menSel == "Play Level" then
 			currentLevel = nil
-			levelList = fs.list(absFilesPath.."/levels")
+			levelList = fs.list(shell.resolve(".").."/levels")
 			for num,name in pairs(levelList) do 
 				if name == levelName then
 					currentLevel = num
