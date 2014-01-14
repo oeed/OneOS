@@ -251,7 +251,7 @@ ListItem = {
 	YMargin = 1,
 	Width = 0,
 	Height = 6,
-	AppID = '',
+	AppID = 0,
 	Title = '',
 	Author = '',
 	Rating = 0,
@@ -326,7 +326,7 @@ ListItem = {
 
 		RegisterClick(self.Width - 7, self.Y + Drawing.Offset.Y + installPos - 1, 9, 1, function()
 			Load("Installing App", function()
-				api.installApplication(2,"/")
+				api.installApplication(tonumber(self.AppID),"/install/")
 			end)
 			Load("Application Installed!", function()
 				sleep(1)

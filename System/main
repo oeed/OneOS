@@ -327,7 +327,7 @@ function HandleKey(...)
 	
 	--REMOVE THIS AT RELEASE!
 	if keychar == 'r' then
-		os.reboot()
+		--os.reboot()
 	end
 
 	if Current.Input then

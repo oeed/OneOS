@@ -5,6 +5,7 @@ os.loadAPI('/System/API/Button', true)
 os.loadAPI('/System/API/Helpers', true)
 os.loadAPI('/System/API/Menu', true)
 os.loadAPI('/System/API/Peripheral', true)
+os.loadAPI('/System/API/TextInput', true)
 os.loadAPI('/System/API/TextDialogueWindow', true)
 os.loadAPI('/System/API/ButtonDialogueWindow', true)
 

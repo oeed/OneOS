@@ -115,14 +115,22 @@ end
 
 function installApplication(id, path, computerid, username, password)
 	local package = downloadApplication(id)
-	print(#package)
+	if type(package) ~= 'string' or #package == 0 then
+		error('The application did not download correctly or is empty. Try again.')
+	end
 	local packrun = loadstring(package)
 	local env = getfenv()
 	env['installLocation'] = resolve(path) or '/'
+	print(env['installLocation'])
+	sleep(2)
 	setfenv( packrun, env)
-	packrun()
-	if computerid and username and password then
-		doRequest('computer', 'install', {id = id, computerid = computerid, username = username, password = password})
+	if packrun then
+		packrun()
+		if computerid and username and password then
+			doRequest('computer', 'install', {id = id, computerid = computerid, username = username, password = password})
+		end
+	else
+		error('The application appears to be corrupt. Try downloading it again.')
 	end
 
 	return true

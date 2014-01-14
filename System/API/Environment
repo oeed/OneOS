@@ -1,6 +1,6 @@
 --[[
 
-This essentially allows the programs to run in sandbox. For example, os.shutdown doesn't shut the entire computer down. Instead, it simply stops the program.
+This essentially allows the programs to run sandboxed. For example, os.shutdown doesn't shut the entire computer down. Instead, it simply stops the program.
 
 ]]
 
@@ -80,12 +80,20 @@ This essentially allows the programs to run in sandbox. For example, os.shutdown
 		local relPath = path:sub(1, #path-7)
 		local list = {}
 		for k, f in pairs(fs) do
-			if k ~= 'open' and k ~= 'combine' then
+			if k ~= 'open' and k ~= 'combine' and k ~= 'copy' then
 				list[k] = function(_path, global)
 					if not global then
 						return fs[k](relPath .. _path)
 					else
 						return fs[k](_path)
+					end
+				end
+			elseif k == 'copy' then
+				list[k] = function(_path, _path2, global)
+					if not global then
+						return fs[k](relPath .. _path, relPath .. _path2)
+					else
+						return fs[k](_path, _path2)
 					end
 				end
 			elseif k == 'combine' then

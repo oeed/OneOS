@@ -1662,12 +1662,16 @@ Tools = {
 			Current.Input = TextInput:Initialise('', function(key)
 				if key == keys.delete or key == keys.backspace then
 					if #Current.Input.Value == 0 then
-						Current.Layer.Pixels[x-1][y]:Set(nil, nil, ' ')
-						Current.Tool:Use(Current.CursorPos[1] - Current.Artboard.X, Current.CursorPos[2] - Current.Artboard.Y + 1)
-						Draw()
+						if Current.Layer.Pixels[x-1] and Current.Layer.Pixels[x-1][y] then
+							Current.Layer.Pixels[x-1][y]:Set(nil, nil, ' ')
+							Current.Tool:Use(Current.CursorPos[1] - Current.Artboard.X, Current.CursorPos[2] - Current.Artboard.Y + 1)
+							Draw()
+						end
 						return
 					else
-						Current.Layer.Pixels[x+#Current.Input.Value][y]:Set(nil, nil, ' ')
+						if Current.Layer.Pixels[x+#Current.Input.Value] and Current.Layer.Pixels[x+#Current.Input.Value][y] then
+							Current.Layer.Pixels[x+#Current.Input.Value][y]:Set(nil, nil, ' ')
+						end
 					end
 				else
 					local i = #Current.Input.Value
@@ -3205,7 +3209,7 @@ function HandleKey(...)
 	local args = {...}
 	local event = args[1]
 	local keychar = args[2]
-	if event == 'key' and Current.Tool.Name == 'Text' and Current.Input and (keychar == keys.up or keychar == keys.down or keychar == keys.left or keychar == keys.right) then
+	if event == 'key' and Current.Tool and Current.Tool.Name == 'Text' and Current.Input and (keychar == keys.up or keychar == keys.down or keychar == keys.left or keychar == keys.right) then
 		local currentPos = {Current.CursorPos[1] - Current.Artboard.X + 1, Current.CursorPos[2] - Current.Artboard.Y + 1}
 		if keychar == keys.up then
 			currentPos[2] = currentPos[2] - 1
