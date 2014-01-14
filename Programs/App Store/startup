@@ -19,12 +19,16 @@ maxScroll = 0
 pageHeight = 0
 
 searchBox = nil
-cursorFlashTimer = nil
-
 featuredBannerTimer = nil
 
 Values = {
 	ToolbarHeight = 2,
+}
+
+Current = {
+	CursorBlink = false,
+	CursorPos = {},
+	CursorColour = colours.black
 }
 
 
@@ -169,7 +173,6 @@ SearchPage = {
 	Height = 3,
 	Text = "",
 	Placeholder = "Search...",
-	CursorFlash = false,
 	CursorPos = 1,
 
 	Draw = function(self)
@@ -191,10 +194,10 @@ SearchPage = {
 			Drawing.DrawCharacters(self.X+1, self.Y+1, self.Text, colours.black, colours.white)
 		end
 
-		if self.CursorFlash then
-			Drawing.DrawCharacters(self.X+self.CursorPos, self.Y+1, "_", colours.black, colours.white)
-		end
-		self.CursorFlash = not self.CursorFlash
+		Current.CursorBlink = true
+		Current.CursorPos = {self.X+self.CursorPos, self.Y+3}
+		Current.CursorColour = colours.black
+
  	end,
 
 	Initialise = function(self)
@@ -351,7 +354,7 @@ ListItem = {
 		Drawing.DrawCharacters(self.X + 8, self.Y + 1, self.Title, colours.black, colours.white)
 		if self.Type ~= 2 then
 			Drawing.DrawCharacters(self.X + 8, self.Y + 2, "by "..self.Author, colours.grey, colours.white)
-			Drawing.DrawCharacters(self.Width - 8, self.Y + installPos - 1, " Install ", colours.white, colours.blue)
+			Drawing.DrawCharacters(self.Width - 8, self.Y + installPos - 1, " Install ", colours.white, colours.green)
 		end
 
 		Drawing.DrawImage(self.X+1, self.Y+1, self.Icon)
@@ -546,7 +549,7 @@ function DisplayLoader()
 		currStep = currStep + 1
 		if currStep >= maxStep then
 			isLoading = false
-			error('Load timeout. Check your internet connection and try again. The sever may also be down, try again in 10 minutes.')
+			error('Load timeout. Check your internet connection and try again. The server may also be down, try again in 10 minutes.')
 		end
 
 		Drawing.DrawBuffer()
@@ -558,7 +561,7 @@ function Initialise()
 	os.loadAPI(runningLocation..'api');
 	--sleep(0.5)
 	--DownloadData()
-	ChangePage('Featured')
+	ChangePage('Categories')
 	
 	--print(api.getAllApplications())
 	--BuildListItems()
@@ -600,22 +603,10 @@ end
 function LoadFeatured()
 	Load("Loading", function()
 		local tApps = api.getFeaturedApplications()
-		--banner apps
---[[
-		local bannerImages = {}
-		local bannerIDs = {}
-		for i, app in ipairs(tApps) do
-			if app.ishero == 1 then
-				table.insert(bannerIDs, app.id)
-				table.insert(bannerImages, ListItem.explode('*', "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 f0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 *00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 *00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 *00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 *00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 *00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 *"))
-			end
-		end
-		table.insert(listItems, FeaturedBanner:Initialise(bannerImages, bannerIDs))
 
-]]--
 		--all items
 		for i, app in ipairs(tApps) do
-			local item = ListItem:Initialise(FeaturedBanner.Height + 3 +(i-1)*(ListItem.Height + 2), 
+			local item = ListItem:Initialise(1+(i-1)*(ListItem.Height + 2), 
 				app.id, app.name, app.icon, app.description,
 				 app.user.username, app.stars, app.version,
 				  app.category, app.downloads)
@@ -627,10 +618,12 @@ end
 function LoadCategories()
 	Load("Loading", function()
 		local tApps = api.getCategories()
-		for i, category in ipairs(tApps) do
+		local i = 1
+		for name, category in pairs(tApps) do
 			local item = ListItem:Initialise(1+(i-1)*(ListItem.Height + 2), 
-				0, category.name, category.icon, category.description, nil, nil, nil, nil, nil, 2)
+				0, name, category.icon, category.description, nil, nil, nil, nil, nil, 2)
 			table.insert(listItems, item)
+			i = i + 1
 		end
 	end)
 end
@@ -638,7 +631,6 @@ end
 function LoadSearch(id)
 		local item = SearchPage:Initialise()
 		searchBox = item
-		cursorFlashTimer = os.startTimer(0.5)
 		featuredBannerTimer = os.startTimer(5)
 		table.insert(listItems, item)
 
@@ -649,17 +641,14 @@ function ClearCurrentPage()
 	for i,v in ipairs(listItems) do listItems[i]=nil end
 	currentScroll = 0
 	searchBox = nil
-	cursorFlashTimer = nil
 	featuredBannerTimer = nil
 	Draw()
 end
 
 function LoadList(func)
 	Load("Loading", function()
-		local tApps = func()
+		local tApps = api.getAllApplications()--textutils.unserialize(func())
 		for i, app in ipairs(tApps) do
-			--print(textutils.serialize(app))
-			--sleep(4)
 			local item = ListItem:Initialise(1+(i-1)*(ListItem.Height + 2), 
 				app.id, app.name, app.icon, app.description,
 				 app.user.username, app.stars, app.version,
@@ -682,6 +671,12 @@ function Draw()
 	--DrawScrollbar()
 
 	Drawing.DrawBuffer()
+
+	if Current.CursorPos and Current.CursorPos[1] and Current.CursorPos[2] then
+		term.setCursorPos(unpack(Current.CursorPos))
+	end
+	term.setTextColour(Current.CursorColour)
+	term.setCursorBlink(Current.CursorBlink)
 end
 
 function DrawList()
@@ -857,13 +852,6 @@ function EventHandler()
 			print(maxScroll)
 
 		elseif event == "timer" then
-			if arg == cursorFlashTimer and currentPage == 'Search' then
-
-				cursorFlashTimer = os.startTimer(0.5)
-				--print(searchBox)
-				Draw()
-			end
-
 			if arg == featuredBannerTimer and currentPage == 'Featured' then
 
 				featuredBannerTimer = os.startTimer(5)
