@@ -8,7 +8,7 @@ desktopDragOverTimer = nil
 local dragOverSource = nil
 
 
-local function IconLocation(i)
+local function IconLocation(i, ignoreOverlay)
 	local y, x = 3, 5
 	local slotHeight = 5
 	local slotWidth = 11
@@ -17,6 +17,16 @@ local function IconLocation(i)
 	local collumn = math.ceil((i / maxRow)+0.1) - 1
 	x = x + (slotWidth * collumn)
 	y = y + (i % maxRow) * slotHeight
+	if #files == 1 then
+		return nil
+	end
+
+	for _i, file in ipairs(files) do
+		if not ignoreOverlay and settings.layout[file] and x == settings.layout[file].x and y == settings.layout[file].y then
+			return IconLocation(i+2)
+		end
+	end
+
 	return x, y
 end
 
@@ -30,18 +40,26 @@ function RefreshFiles()
 		end
 	end
 
+	local notSet = {}
+
 	for i, file in ipairs(fs.list('Desktop/')) do
 		if string.sub( file, 1, 1 ) ~= '.' then
-			table.insert(files, file)
 			if not settings.layout[file] then
-				local x, y = IconLocation(count)
-				count = count + 1
-				layout[file] = {x = x, y = y}
+				table.insert(notSet, file)
 			else
+				table.insert(files, file)
 				layout[file] = settings.layout[file]
 			end
 		end
 	end
+
+	for i, file in ipairs(notSet) do
+		local x, y = IconLocation(count)
+		table.insert(files, file)
+        count = count + 1
+        layout[file] = {x = x, y = y}
+	end
+
 	settings.layout = layout
 	settings.colour = Settings:GetValues()['DesktopColour']
 end
@@ -220,7 +238,7 @@ end
 
 function Clean()
 	for i, file in ipairs(files) do
-		local x, y = IconLocation(i)
+		local x, y = IconLocation(i, true)
 		settings.layout[file] = {x = x, y = y}
 	end
 	SaveSettings()

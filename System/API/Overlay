@@ -22,6 +22,7 @@ function UpdateButtons()
 				{
 					Title = 'Desktop',
 					Click = function()
+						Desktop:RefreshFiles()
 						Current.Program = nil
 						UpdateButtons()
 					end

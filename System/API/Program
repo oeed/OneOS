@@ -153,6 +153,7 @@
 				Current.Program.AppRedirect:Draw()
 			end
 
+			Desktop:RefreshFiles()
 			Overlay.UpdateButtons()
 			MainDraw()
 			return true
