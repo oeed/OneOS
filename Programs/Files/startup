@@ -39,10 +39,7 @@ Current = {
 	Window = nil,
 	IconCache = {},
 	ShowHidden = false,
-	Clipboard = {
-		isCopy = nil,
-		path = nil
-	},
+	Clipboard = OneOS.Clipboard,
 	ScrollBarDragStartY = nil
 }
 
@@ -414,18 +411,17 @@ function FilesClick(event, x, y, side)
 					{
 						Title = 'Paste',
 						Click = function()
-							local destPath = Helpers.TidyPath(Current.Path..'/'..fs.getName(Current.Clipboard.path, true))
-							if Current.Clipboard.isCopy then
-								fs.copy(Current.Clipboard.path, destPath, true)
-							elseif Current.Clipboard.isCopy == false then
-								fs.move(Current.Clipboard.path, destPath, true)
-								Current.Clipboard.isCopy = nil
-								Current.Clipboard.path = nil
+							local destPath = Helpers.TidyPath(Current.Path..'/'..fs.getName(Current.Clipboard.Content, true))
+							if not Current.Clipboard.IsCut then
+								fs.copy(Current.Clipboard.Content, destPath, true)
+							elseif Current.Clipboard.IsCut then
+								local content = Current.Clipboard.Paste()
+								fs.move(content[1], destPath, true)
 							end
 						end
 					},
 				}
-				if not Current.Clipboard.path then
+				if not Current.Clipboard.Content then
 					table.remove(items, 3)
 					table.remove(items, 2)
 				end
@@ -489,15 +485,13 @@ function RightClickFile(file, absX, absY)
 		{
 			Title = 'Copy',
 			Click = function()
-				Current.Clipboard.isCopy = true
-				Current.Clipboard.path = file.path
+				Current.Clipboard.Copy(file.path, 'filepath')
 			end
 		},
 		{
 			Title = 'Cut',
 			Click = function()
-				Current.Clipboard.isCopy = false
-				Current.Clipboard.path = file.path
+				Current.Clipboard.Cut(file.path, 'filepath')
 			end
 		},
 		{

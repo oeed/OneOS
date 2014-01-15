@@ -251,7 +251,7 @@ Current = {
 	Tool = nil,
 	ToolSize = 1,
 	Toolbar = nil,
-	Colour = colours.green,
+	Colour = colours.lightBlue,
 	Menu = nil,
 	MenuBar = nil,
 	Window = nil,
@@ -259,7 +259,7 @@ Current = {
 	CursorPos = {1,1},
 	CursorColour = colours.black,
 	InterfaceVisible = true,
-	Selection = {vector.new(2,2,0), vector.new(11,9,0)},
+	Selection = {},
 	SelectionDrawTimer = nil,
 	HandDragStart = {},
 }
@@ -458,6 +458,22 @@ Layer = {
 			end
 		end
 		return pixels
+	end,
+
+	EraseSelection = function(self)
+		if Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
+			local point1 = Current.Selection[1]
+			local point2 = Current.Selection[2]
+
+			local size = point2 - point1
+			local cornerX = point1.x
+			local cornerY = point1.y
+			for x = 1, size.x + 1 do
+				for y = 1, size.y + 1 do
+					Current.Layer:SetPixel(cornerX + x - 1, cornerY + y - 1, nil, Current.Layer.BackgroundColour, nil)
+				end
+			end
+		end
 	end,
 
 	InsertPixels = function(self, pixels)
@@ -2576,6 +2592,14 @@ function CheckOpenArtboard()
 	end
 end
 
+function CheckSelectedLayer()
+	if Current.Artboard and Current.Layer then
+		return true
+	else
+		return false
+	end
+end
+
 function DisplayNewDocumentWindow()
 	NewDocumentWindow:Initialise(function(self, success, path, width, height, format, backgroundColour)
 		if success then
@@ -3083,7 +3107,7 @@ function LoadMenuBar()
 							DeleteLayer()
 						end,
 						Enabled = function()
-							return CheckOpenArtboard()
+							return CheckSelectedLayer()
 						end
 					},
 					{
@@ -3099,15 +3123,19 @@ function LoadMenuBar()
 						Separator = true
 					},
 					{
-						Title = 'Delete Selection',
+						Title = 'Erase Selection',
 						Click = function()
-							
+							Current.Layer:EraseSelection()
 						end,
 						Keys = {
 							keys.delete
 						},
 						Enabled = function()
-							return CheckOpenArtboard()
+							if CheckSelectedLayer() and Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
+								return true
+							else
+								return false
+							end
 						end
 					},
 					{

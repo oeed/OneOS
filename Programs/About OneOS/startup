@@ -1,8 +1,8 @@
 tArgs = {...}
 
-os.loadAPI('/System/API/Drawing')
-os.loadAPI('/System/API/Button')
-os.loadAPI('/System/API/Helpers')
+os.loadAPI('/System/API/Drawing', true)
+os.loadAPI('/System/API/Button', true)
+os.loadAPI('/System/API/Helpers', true)
 --[[
 os.loadAPI('/System/API/Menu')
 os.loadAPI('/System/API/Peripheral')
@@ -33,13 +33,13 @@ function Initialise()
 	EventRegister('timer', Update)
 
 
-	systemSize = FolderSize('/System/') + fs.getSize('startup')
+	systemSize = FolderSize('/System/') + fs.getSize('startup', true)
 	desktopSize = FolderSize('/Desktop/')
 	programsSize = FolderSize('/Programs/')
 	totalSize = FolderSize('/')
 	logo = Drawing.LoadImage('/System/Images/Logo')
-	maxSpace = fs.getFreeSpace('/') + totalSize
-	thanksLines = Helpers.WrapText('Thanks to GravityScore for LuaIDE and NitrogenFingers for his image formatting methods.', Drawing.Screen.Width-2)
+	maxSpace = fs.getFreeSpace('/', true) + totalSize
+	thanksLines = Helpers.WrapText('Thanks to GravityScore for LuaIDE, NitrogenFingers for his image formatting methods and GoldRunner and Symmetryc his help on GitHub.', Drawing.Screen.Width-2)
 	Update()
 	EventHandler()
 end
@@ -121,11 +121,11 @@ end
 
 function FolderSize(path)
 	local totalSize = 0
-	for i, v in ipairs(fs.list(path)) do
-		if fs.isDir(path..'/'..v) and path..'/'..v ~= '//rom' then
+	for i, v in ipairs(fs.list(path, true)) do
+		if fs.isDir(path..'/'..v, true) and path..'/'..v ~= '//rom' then
 			totalSize = totalSize + FolderSize(path..'/'..v)
 		else
-			totalSize = totalSize + fs.getSize(path..'/'..v)
+			totalSize = totalSize + fs.getSize(path..'/'..v, true)
 		end
 	end
 	return totalSize
