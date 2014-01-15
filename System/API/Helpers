@@ -47,8 +47,8 @@ OpenFile = function(path, args)
 			end
 		elseif fs.isDir(path) then
 			LaunchProgram('/Programs/Files/startup', {path}, 'Files')
-		elseif extension == 'nfp' or extension == 'nft' or extension == 'pik' then
-			LaunchProgram('/Programs/Pik/startup', {path}, 'Pik')
+		elseif extension == 'nfp' or extension == 'nft' or extension == 'skch' then
+			LaunchProgram('/Programs/Sketch/startup', {path}, 'Sketch')
 		else
 			LaunchProgram('/Programs/LuaIDE/startup', {path}, 'LuaIDE')
 		end

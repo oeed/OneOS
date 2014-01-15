@@ -101,8 +101,10 @@
 			topHeight = 0
 		end
 		if self.Items[y-topHeight] and self.Items[y-topHeight].Click then
-			self.Items[y-topHeight]:Click()
-			self:Close()
+			if side == 1 then
+				self.Items[y-topHeight]:Click()
+				self:Close()
+			end
 			return true
 		else
 			return false
