@@ -2,8 +2,7 @@ TODO:
 
 Bugs:
 coroutine in environtment pullevent not filtering
-use a better relpath thing in env
-shell.resolve('.') double up
+lua not working in shell
 
 Features:
 - Program restarting (os.reboot)

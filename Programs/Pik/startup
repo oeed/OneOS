@@ -249,7 +249,7 @@ Current = {
 	Artboard = nil,
 	Layer = nil,
 	Tool = nil,
-	ToolSize = 1,
+	ToolSize = 2,
 	Toolbar = nil,
 	Colour = colours.lightBlue,
 	Menu = nil,
@@ -1245,6 +1245,8 @@ Menu = {
 			return 'R'
 		elseif key == keys.l then
 			return 'L'
+		elseif key == keys.t then
+			return 'T'
 		else
 			return '?'		
 		end
@@ -1468,18 +1470,27 @@ Modules = {
 		ToolbarItem = nil,
 		Update = function(self)
 			for i, view in ipairs(self.ToolbarItem.ContentView.Views) do
-				if Current.Tool and Current.Tool.Name == view.Text then
+				if (Current.Tool and Current.Tool.Name == view.Text) then
 					view.TextColour = colours.white
 				else
 					view.TextColour = colours.lightGrey
 				end
 			end
+			self.ToolbarItem.ContentView.Views[1].Text = 'Size: '..Current.ToolSize
 		end,
 
 		Initialise = function(self)
-			self.ToolbarItem = ToolbarItem:Initialise(self, #Tools+1, true, Current.Toolbar)
+			self.ToolbarItem = ToolbarItem:Initialise(self, #Tools+2, true, Current.Toolbar,
+				{{
+					Title = "Change Tool Size",
+					Click = function()
+						DisplayToolSizeWindow()
+					end,
+				}})
 
-			local y = 1
+			table.insert(self.ToolbarItem.ContentView.Views, Button:Initialise(1, 1, self.ToolbarItem.Width, 1, UIColours.Toolbar, self.ToolbarItem.ContentView, DisplayToolSizeWindow, 'Size: '..Current.ToolSize))
+
+			local y = 2
 			for i, tool in ipairs(Tools) do
 				table.insert(self.ToolbarItem.ContentView.Views, Button:Initialise(1, y, self.ToolbarItem.Width, 1, UIColours.Toolbar, self.ToolbarItem.ContentView, function() SetTool(tool) self:Update(self.ToolbarItem) end, tool.Name))
 				y = y + 1
@@ -1530,10 +1541,32 @@ end
 
 --Tools--
 
+function ToolAffectedPixels(x, y)
+	if not CheckSelectedLayer() then
+		return {}
+	end
+	if Current.ToolSize == 1 then
+		if Current.Layer.Pixels[x] and Current.Layer.Pixels[x][y] then
+			return {{Current.Layer.Pixels[x][y], x, y}}
+		end
+	else
+		local pixels = {}
+		local cornerX = x - math.ceil(Current.ToolSize/2)
+		local cornerY = y - math.ceil(Current.ToolSize/2)
+		for _x = 1, Current.ToolSize do
+			for _y = 1, Current.ToolSize do
+				if Current.Layer.Pixels[cornerX + _x] and Current.Layer.Pixels[cornerX + _x][cornerY + _y] then
+					table.insert(pixels, {Current.Layer.Pixels[cornerX + _x][cornerY + _y], cornerX + _x, cornerY + _y})
+				end
+			end
+		end
+		return pixels
+	end
+end
+
 Tools = {
 	{
 		Name = "Hand",
-		Size = 1,
 		Use = function(self, x, y, side, drag)
 			Current.Input = nil
 			if drag and Current.HandDragStart and Current.HandDragStart[1] and Current.HandDragStart[2] then
@@ -1552,15 +1585,16 @@ Tools = {
 
 	{
 		Name = "Pencil",
-		Size = 1,
-		Use = function(self, x, y, side, artboard)
+		Use = function(self, _x, _y, side, artboard)
 			Current.Input = nil
-			if side == 1 then
-				Current.Layer.Pixels[x][y].BackgroundColour = Current.Colour
-			elseif side == 2 then
-				Current.Layer.Pixels[x][y].TextColour = Current.Colour
+			for i, pixel in ipairs(ToolAffectedPixels(_x, _y)) do
+				if side == 1 then
+					pixel[1].BackgroundColour = Current.Colour
+				elseif side == 2 then
+					pixel[1].TextColour = Current.Colour
+				end
+				pixel[1]:Draw(pixel[2], pixel[3])
 			end
-			Current.Layer.Pixels[x][y]:Draw(x, y)
 		end,
 		Select = function(self)
 			return true
@@ -1569,7 +1603,6 @@ Tools = {
 
 	{
 		Name = "Eraser",
-		Size = 1,
 		Use = function(self, x, y, side)
 			Current.Input = nil
 			Current.Layer:SetPixel(x, y, nil, Current.Layer.BackgroundColour, nil)
@@ -1581,7 +1614,6 @@ Tools = {
 
 	{
 		Name = "Fill Bucket",
-		Size = 1,
 		Use = function(self, x, y, side)
 			local replaceColour = Current.Layer.Pixels[x][y].BackgroundColour
 			if side == 2 then
@@ -1624,7 +1656,6 @@ Tools = {
 
 	{
 		Name = "Select",
-		Size = 1,
 		Use = function(self, x, y, side, drag)
 			Current.Input = nil
 			if not drag then
@@ -1641,7 +1672,6 @@ Tools = {
 
 	{
 		Name = "Move",
-		Size = 1,
 		Use = function(self, x, y, side)
 			Current.Input = nil
 			Current.Layer:SetPixel(x, y, nil, Current.Layer.BackgroundColour, nil)
@@ -1652,28 +1682,7 @@ Tools = {
 	},
 
 	{
-		Name = "Eye Dropper",
-		Size = 1,
-		Use = function(self, x, y, side)
-			Current.Input = nil
-			if side == 1 then
-				if Current.Layer.Pixels[x][y].BackgroundColour ~= -1 then
-					Current.Colour = Current.Layer.Pixels[x][y].BackgroundColour
-				end
-			else
-				if Current.Layer.Pixels[x][y].TextColour ~= 1 then
-					Current.Colour = Current.Layer.Pixels[x][y].TextColour
-				end
-			end
-		end,
-		Select = function(self)
-			return true
-		end
-	},
-
-	{
 		Name = "Text",
-		Size = 1,
 		Use = function(self, x, y)
 			Current.Input = TextInput:Initialise('', function(key)
 				if key == keys.delete or key == keys.backspace then
@@ -2248,7 +2257,7 @@ TextDialougeWindow = {
 		end
 	end,
 
-	Initialise = function(self, title, message, okText, cancelText, returnFunc)
+	Initialise = function(self, title, message, okText, cancelText, returnFunc, numerical)
 		local new = {}    -- the new instance
 		setmetatable( new, {__index = self} )
 		new.Width = 28
@@ -2275,7 +2284,7 @@ TextDialougeWindow = {
 				new.OkButton:Click()
 			end
 			Draw()
-		end)
+		end, numerical)
 
 		Current.Input = new.TextInput
 
@@ -2642,7 +2651,7 @@ end
 
 function NewDocument(path, width, height, format, backgroundColour)
 	ab = Artboard:New(fs.getName(path, true), path, width, height, format, backgroundColour)
-	Current.Tool = Tools[1]
+	Current.Tool = Tools[2]
 	Current.Toolbar:Update()
 	Draw()
 end
@@ -2665,6 +2674,24 @@ local function Extension(path, addDot)
 		end
 		return extension
 	end
+end
+
+function DisplayToolSizeWindow()
+	if not CheckOpenArtboard() then
+		return
+	end	
+	TextDialougeWindow:Initialise('Change Tool Size', 'Enter the new tool size you\'d like to use.', 'Ok', 'Cancel', function(window, success, value)
+		if success then
+			Current.ToolSize = math.ceil(tonumber(value))
+			if Current.ToolSize < 1 then
+				Current.ToolSize = 1
+			elseif Current.ToolSize > 50 then
+				Current.ToolSize = 50
+			end
+			ModuleNamed('Tools'):Update()
+		end
+		window:Close()
+	end, true):Show()	
 end
 
 --[[
@@ -2742,7 +2769,7 @@ function OpenDocument(path)
 
 		Current.Artboard = nil
 		ab = Artboard:New(fs.getName('Image', true), path, width, height, format, nil, layers)
-		Current.Tool = Tools[1]
+		Current.Tool = Tools[2]
 		Current.Toolbar:Update()
 		Draw()
 	end
@@ -3156,6 +3183,42 @@ function LoadMenuBar()
 			end
 			return true 
 		end, 'Image', colours.lightGrey, false),
+		
+		Button:Initialise(20, 1, nil, nil, colours.grey, Current.MenuBar, function(self, side, x, y, toggle)
+			if toggle then
+				local menuItems = {{
+						Title = "Change Size",
+						Click = function()
+							DisplayToolSizeWindow()
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.t
+						}
+					},
+					{
+						Separator = true
+					}
+				}
+
+				for i, tool in ipairs(Tools) do
+					table.insert(menuItems, {
+						Title = tool.Name,
+						Click = function()
+							SetTool(tool)
+						end,
+						Enabled = function()
+							return CheckOpenArtboard()
+						end
+					})
+				end
+
+				Menu:New(20, 2, menuItems, self, true)
+			else
+				Current.Menu = nil
+			end
+			return true 
+		end, 'Tools', colours.lightGrey, false),
 	})
 end
 
