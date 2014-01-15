@@ -8,7 +8,7 @@ colours.transparent = -1
 colors.transparent = -1
 
 --TODO: make and insert logo
---PikLogo = [[]]
+--SketchLogo = [[]]
 
 
 --APIS--
@@ -251,7 +251,7 @@ Current = {
 	Tool = nil,
 	ToolSize = 1,
 	Toolbar = nil,
-	Colour = colours.green,
+	Colour = colours.lightBlue,
 	Menu = nil,
 	MenuBar = nil,
 	Window = nil,
@@ -259,7 +259,7 @@ Current = {
 	CursorPos = {1,1},
 	CursorColour = colours.black,
 	InterfaceVisible = true,
-	Selection = {vector.new(2,2,0), vector.new(11,9,0)},
+	Selection = {},
 	SelectionDrawTimer = nil,
 	HandDragStart = {},
 }
@@ -286,7 +286,9 @@ function SetTool(tool)
 	if tool and tool.Select and tool:Select() then
 		Current.Input = nil
 		Current.Tool = tool
+		return true
 	end
+	return false
 end
 
 function GetAbsolutePosition(object)
@@ -450,7 +452,11 @@ Layer = {
 					if not pixels[x] then
 						pixels[x] = {}
 					end
-					pixels[x][y] = self.Pixels[cornerX + x - 1][cornerY + y - 1]
+					if not self.Pixels[cornerX + x - 1] or not self.Pixels[cornerX + x - 1][cornerY + y - 1] then
+						break
+					end
+					local pixel =  self.Pixels[cornerX + x - 1][cornerY + y - 1]
+					pixels[x][y] = Pixel:Initialise(pixel.TextColour, pixel.BackgroundColour, pixel.Character, Current.Layer)
 					if cut then
 						Current.Layer:SetPixel(cornerX + x - 1, cornerY + y - 1, nil, Current.Layer.BackgroundColour, nil)
 					end
@@ -458,6 +464,22 @@ Layer = {
 			end
 		end
 		return pixels
+	end,
+
+	EraseSelection = function(self)
+		if Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
+			local point1 = Current.Selection[1]
+			local point2 = Current.Selection[2]
+
+			local size = point2 - point1
+			local cornerX = point1.x
+			local cornerY = point1.y
+			for x = 1, size.x + 1 do
+				for y = 1, size.y + 1 do
+					Current.Layer:SetPixel(cornerX + x - 1, cornerY + y - 1, nil, Current.Layer.BackgroundColour, nil)
+				end
+			end
+		end
 	end,
 
 	InsertPixels = function(self, pixels)
@@ -669,8 +691,8 @@ Artboard = {
 		path = path or self.Path
 
         local file = io.open(path, "w")
-		if self.Format == '.pik' then
-			file:write(textutils.serialize(SavePIK()))
+		if self.Format == '.skch' then
+			file:write(textutils.serialize(SaveSKCH()))
 		else
 			local lines = {}
 			if self.Format == '.nfp' then
@@ -1229,6 +1251,8 @@ Menu = {
 			return 'R'
 		elseif key == keys.l then
 			return 'L'
+		elseif key == keys.t then
+			return 'T'
 		else
 			return '?'		
 		end
@@ -1452,18 +1476,27 @@ Modules = {
 		ToolbarItem = nil,
 		Update = function(self)
 			for i, view in ipairs(self.ToolbarItem.ContentView.Views) do
-				if Current.Tool and Current.Tool.Name == view.Text then
+				if (Current.Tool and Current.Tool.Name == view.Text) then
 					view.TextColour = colours.white
 				else
 					view.TextColour = colours.lightGrey
 				end
 			end
+			self.ToolbarItem.ContentView.Views[1].Text = 'Size: '..Current.ToolSize
 		end,
 
 		Initialise = function(self)
-			self.ToolbarItem = ToolbarItem:Initialise(self, #Tools+1, true, Current.Toolbar)
+			self.ToolbarItem = ToolbarItem:Initialise(self, #Tools+2, true, Current.Toolbar,
+				{{
+					Title = "Change Tool Size",
+					Click = function()
+						DisplayToolSizeWindow()
+					end,
+				}})
 
-			local y = 1
+			table.insert(self.ToolbarItem.ContentView.Views, Button:Initialise(1, 1, self.ToolbarItem.Width, 1, UIColours.Toolbar, self.ToolbarItem.ContentView, DisplayToolSizeWindow, 'Size: '..Current.ToolSize))
+
+			local y = 2
 			for i, tool in ipairs(Tools) do
 				table.insert(self.ToolbarItem.ContentView.Views, Button:Initialise(1, y, self.ToolbarItem.Width, 1, UIColours.Toolbar, self.ToolbarItem.ContentView, function() SetTool(tool) self:Update(self.ToolbarItem) end, tool.Name))
 				y = y + 1
@@ -1514,10 +1547,32 @@ end
 
 --Tools--
 
+function ToolAffectedPixels(x, y)
+	if not CheckSelectedLayer() then
+		return {}
+	end
+	if Current.ToolSize == 1 then
+		if Current.Layer.Pixels[x] and Current.Layer.Pixels[x][y] then
+			return {{Current.Layer.Pixels[x][y], x, y}}
+		end
+	else
+		local pixels = {}
+		local cornerX = x - math.ceil(Current.ToolSize/2)
+		local cornerY = y - math.ceil(Current.ToolSize/2)
+		for _x = 1, Current.ToolSize do
+			for _y = 1, Current.ToolSize do
+				if Current.Layer.Pixels[cornerX + _x] and Current.Layer.Pixels[cornerX + _x][cornerY + _y] then
+					table.insert(pixels, {Current.Layer.Pixels[cornerX + _x][cornerY + _y], cornerX + _x, cornerY + _y})
+				end
+			end
+		end
+		return pixels
+	end
+end
+local moveStartPoint = {}
 Tools = {
 	{
 		Name = "Hand",
-		Size = 1,
 		Use = function(self, x, y, side, drag)
 			Current.Input = nil
 			if drag and Current.HandDragStart and Current.HandDragStart[1] and Current.HandDragStart[2] then
@@ -1536,15 +1591,16 @@ Tools = {
 
 	{
 		Name = "Pencil",
-		Size = 1,
-		Use = function(self, x, y, side, artboard)
+		Use = function(self, _x, _y, side, artboard)
 			Current.Input = nil
-			if side == 1 then
-				Current.Layer.Pixels[x][y].BackgroundColour = Current.Colour
-			elseif side == 2 then
-				Current.Layer.Pixels[x][y].TextColour = Current.Colour
+			for i, pixel in ipairs(ToolAffectedPixels(_x, _y)) do
+				if side == 1 then
+					pixel[1].BackgroundColour = Current.Colour
+				elseif side == 2 then
+					pixel[1].TextColour = Current.Colour
+				end
+				pixel[1]:Draw(pixel[2], pixel[3])
 			end
-			Current.Layer.Pixels[x][y]:Draw(x, y)
 		end,
 		Select = function(self)
 			return true
@@ -1553,7 +1609,6 @@ Tools = {
 
 	{
 		Name = "Eraser",
-		Size = 1,
 		Use = function(self, x, y, side)
 			Current.Input = nil
 			Current.Layer:SetPixel(x, y, nil, Current.Layer.BackgroundColour, nil)
@@ -1565,7 +1620,6 @@ Tools = {
 
 	{
 		Name = "Fill Bucket",
-		Size = 1,
 		Use = function(self, x, y, side)
 			local replaceColour = Current.Layer.Pixels[x][y].BackgroundColour
 			if side == 2 then
@@ -1608,7 +1662,6 @@ Tools = {
 
 	{
 		Name = "Select",
-		Size = 1,
 		Use = function(self, x, y, side, drag)
 			Current.Input = nil
 			if not drag then
@@ -1625,28 +1678,18 @@ Tools = {
 
 	{
 		Name = "Move",
-		Size = 1,
-		Use = function(self, x, y, side)
+		Use = function(self, x, y, side, drag)
 			Current.Input = nil
-			Current.Layer:SetPixel(x, y, nil, Current.Layer.BackgroundColour, nil)
-		end,
-		Select = function(self)
-			return true
-		end
-	},
 
-	{
-		Name = "Eye Dropper",
-		Size = 1,
-		Use = function(self, x, y, side)
-			Current.Input = nil
-			if side == 1 then
-				if Current.Layer.Pixels[x][y].BackgroundColour ~= -1 then
-					Current.Colour = Current.Layer.Pixels[x][y].BackgroundColour
-				end
-			else
-				if Current.Layer.Pixels[x][y].TextColour ~= 1 then
-					Current.Colour = Current.Layer.Pixels[x][y].TextColour
+			if Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
+				if drag and moveStartPoint then
+					local pixels = Current.Layer:PixelsInSelection(true)
+					local size = Current.Selection[1] - Current.Selection[2]
+					Current.Selection[1] = vector.new(x-moveStartPoint[1], y-moveStartPoint[2], 0)
+					Current.Selection[2] = vector.new(x-moveStartPoint[1]-size.x, y-moveStartPoint[2]-size.y, 0)
+					Current.Layer:InsertPixels(pixels)
+				else
+					moveStartPoint = {x-Current.Selection[1].x, y-Current.Selection[1].y}
 				end
 			end
 		end,
@@ -1657,14 +1700,17 @@ Tools = {
 
 	{
 		Name = "Text",
-		Size = 1,
 		Use = function(self, x, y)
 			Current.Input = TextInput:Initialise('', function(key)
 				if key == keys.delete or key == keys.backspace then
 					if #Current.Input.Value == 0 then
-						if Current.Layer.Pixels[x-1] and Current.Layer.Pixels[x-1][y] then
-							Current.Layer.Pixels[x-1][y]:Set(nil, nil, ' ')
-							Current.Tool:Use(Current.CursorPos[1] - Current.Artboard.X, Current.CursorPos[2] - Current.Artboard.Y + 1)
+						if Current.Layer.Pixels[x] and Current.Layer.Pixels[x][y] then
+							Current.Layer.Pixels[x][y]:Set(nil, nil, ' ')
+							local newPos = Current.CursorPos[1] - Current.Artboard.X
+							if newPos < Current.Artboard.X - 1 then
+								newPos = Current.Artboard.X - 1
+							end
+							Current.Tool:Use(newPos, Current.CursorPos[2] - Current.Artboard.Y + 1)
 							Draw()
 						end
 						return
@@ -1681,6 +1727,12 @@ Tools = {
 					end
 				end
 
+				local newPos = x+Current.Input.CursorPos
+
+				if newPos > Current.Artboard.Width then
+					Current.Input.CursorPos = Current.Input.CursorPos - 1
+				end
+
 				Current.CursorPos = {x+Current.Input.CursorPos + Current.Artboard.X - 1, y + Current.Artboard.Y - 1}
 				Current.CursorColour = Current.Colour
 				Draw()
@@ -1691,7 +1743,7 @@ Tools = {
 		end,
 		Select = function(self)
 			if Current.Artboard.Format == '.nfp' then
-				ButtonDialougeWindow:Initialise('NFP does not support text!', 'The format you are using, NFP, does not support text. Use NFP or PIK to use text.', 'Ok', nil, function(window)
+				ButtonDialougeWindow:Initialise('NFP does not support text!', 'The format you are using, NFP, does not support text. Use NFP or SKCH to use text.', 'Ok', nil, function(window)
 					window:Close()
 				end):Show()
 				return false
@@ -1713,7 +1765,7 @@ NewDocumentWindow = {
 	Visible = true,
 	Return = nil,
 	OkButton = nil,
-	Format = '.pik',
+	Format = '.skch',
 	ImageBackgroundColour = colours.white,
 	NameLabelHighlight = false,
 	SizeLabelHighlight = false,
@@ -1750,7 +1802,7 @@ NewDocumentWindow = {
 
 		self.OkButton:Draw()
 		self.CancelButton:Draw()
-		self.PIKButton:Draw()
+		self.SKCHButton:Draw()
 		self.NFTButton:Draw()
 		self.NFPButton:Draw()
 		self.PathTextBox:Draw()
@@ -1774,7 +1826,7 @@ NewDocumentWindow = {
 		new.Visible = true
 		new.NameLabelHighlight = false
 		new.SizeLabelHighlight = false
-		new.Format = '.pik'
+		new.Format = '.skch'
 		new.OkButton = Button:Initialise(new.Width - 4, new.Height - 1, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
 			local path = new.PathTextBox.TextInput.Value
 			local ok = true
@@ -1804,37 +1856,37 @@ NewDocumentWindow = {
 		new.CancelButton = Button:Initialise(new.Width - 13, new.Height - 1, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)returnFunc(new, false)end, 'Cancel', colours.black)
 		new.WhatFormatButton = Button:Initialise(2, new.Height - 1, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)end, 'Which type?', colours.black)
 
-		new.PIKButton = Button:Initialise(7, 5, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
+		new.SKCHButton = Button:Initialise(7, 5, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
 			new.NFTButton.Toggle = false
 			new.NFPButton.Toggle = false
 			self.Toggle = false
-			new.Format = '.pik'
-		end, '.pik', colours.black, true, colours.lightBlue)
-		new.NFTButton = Button:Initialise(14, 5, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
-			new.PIKButton.Toggle = false
+			new.Format = '.skch'
+		end, '.skch', colours.black, true, colours.lightBlue)
+		new.NFTButton = Button:Initialise(15, 5, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
+			new.SKCHButton.Toggle = false
 			new.NFPButton.Toggle = false
 			self.Toggle = false
 			new.Format = '.nft'
 		end, '.nft', colours.black, false, colours.lightBlue)
-		new.NFPButton = Button:Initialise(21, 5, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
-			new.PIKButton.Toggle = false
+		new.NFPButton = Button:Initialise(22, 5, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
+			new.SKCHButton.Toggle = false
 			new.NFTButton.Toggle = false
 			self.Toggle = false
 			new.Format = '.nfp'
 		end, '.nfp', colours.black, false, colours.lightBlue)
 
 		new.PathTextBox = TextBox:Initialise(7, 3, new.Width - 7, 1, new, '/Desktop/', nil, nil, function(key)
-			if key == keys.enter then
+			if key == keys.enter or key == keys.tab then
 				Current.Input = new.WidthTextBox.TextInput
 			end			
 		end)
 		new.WidthTextBox = TextBox:Initialise(7, 7, 4, 1, new, tostring(15), nil, nil, function()
-			if key == keys.enter then
+			if key == keys.enter or key == keys.tab then
 				Current.Input = new.HeightTextBox.TextInput
 			end
 		end, true)
 		new.HeightTextBox = TextBox:Initialise(14, 7, 4, 1, new, tostring(10), nil, nil, function()
-			if key == keys.enter then
+			if key == keys.enter or key == keys.tab then
 				Current.Input = new.PathTextBox.TextInput
 			end
 		end, true)
@@ -1895,7 +1947,7 @@ NewDocumentWindow = {
 	end,
 
 	Click = function(self, side, x, y)
-		local items = {self.OkButton, self.CancelButton, self.PIKButton, self.NFTButton, self.NFPButton, self.PathTextBox, self.WidthTextBox, self.HeightTextBox, self.WhatFormatButton, self.WhiteButton, self.BlackButton, self.TransparentButton}
+		local items = {self.OkButton, self.CancelButton, self.SKCHButton, self.NFTButton, self.NFPButton, self.PathTextBox, self.WidthTextBox, self.HeightTextBox, self.WhatFormatButton, self.WhiteButton, self.BlackButton, self.TransparentButton}
 		for i, v in ipairs(items) do
 			if CheckClick(v, x, y) then
 				v:Click(side, x, y)
@@ -1989,7 +2041,7 @@ OpenDocumentWindow = {
 			if i > self.Scroll and i - self.Scroll <= 11 then
 				if file == self.SelectedFile then
 					Drawing.DrawCharacters(self.X + 1, self.Y + i - self.Scroll, file, colours.white, colours.lightBlue)
-				elseif string.find(file, '%.pik') or string.find(file, '%.nft') or string.find(file, '%.nfp') or fs.isDir(self.CurrentDirectory .. file, true) then
+				elseif string.find(file, '%.skch') or string.find(file, '%.nft') or string.find(file, '%.nfp') or fs.isDir(self.CurrentDirectory .. file, true) then
 					Drawing.DrawCharacters(self.X + 1, self.Y + i - self.Scroll, file, colours.black, colours.white)
 				else
 					Drawing.DrawCharacters(self.X + 1, self.Y + i - self.Scroll, file, colours.grey, colours.white)
@@ -2232,7 +2284,7 @@ TextDialougeWindow = {
 		end
 	end,
 
-	Initialise = function(self, title, message, okText, cancelText, returnFunc)
+	Initialise = function(self, title, message, okText, cancelText, returnFunc, numerical)
 		local new = {}    -- the new instance
 		setmetatable( new, {__index = self} )
 		new.Width = 28
@@ -2259,7 +2311,7 @@ TextDialougeWindow = {
 				new.OkButton:Click()
 			end
 			Draw()
-		end)
+		end, numerical)
 
 		Current.Input = new.TextInput
 
@@ -2576,6 +2628,14 @@ function CheckOpenArtboard()
 	end
 end
 
+function CheckSelectedLayer()
+	if Current.Artboard and Current.Layer then
+		return true
+	else
+		return false
+	end
+end
+
 function DisplayNewDocumentWindow()
 	NewDocumentWindow:Initialise(function(self, success, path, width, height, format, backgroundColour)
 		if success then
@@ -2585,8 +2645,13 @@ function DisplayNewDocumentWindow()
 			local oldWindow = self
 			Current.Input = nil
 			Current.Window = nil
-			makeDocument = function()oldWindow:Close()NewDocument(path, width, height, format, backgroundColour)end		
-			if format == '.nfp' then
+			makeDocument = function()oldWindow:Close()NewDocument(path, width, height, format, backgroundColour)end
+			if fs.exists(path, true) then
+				ButtonDialougeWindow:Initialise('File Exists', path..' already exists! Use a different name and try again.', 'Ok', nil, function(window, ok)
+					window:Close()
+					oldWindow:Show()
+				end):Show()
+			elseif format == '.nfp' then
 				Current.Window = nil
 				ButtonDialougeWindow:Initialise('Use NFP?', 'The NFT format does not support text or layers, if you use it you will only be able to use 1 layer and not have any text.', 'Use NFP', 'Cancel', function(window, ok)
 					window:Close()
@@ -2618,7 +2683,7 @@ end
 
 function NewDocument(path, width, height, format, backgroundColour)
 	ab = Artboard:New(fs.getName(path, true), path, width, height, format, backgroundColour)
-	Current.Tool = Tools[1]
+	Current.Tool = Tools[2]
 	Current.Toolbar:Update()
 	Draw()
 end
@@ -2643,6 +2708,24 @@ local function Extension(path, addDot)
 	end
 end
 
+function DisplayToolSizeWindow()
+	if not CheckOpenArtboard() then
+		return
+	end	
+	TextDialougeWindow:Initialise('Change Tool Size', 'Enter the new tool size you\'d like to use.', 'Ok', 'Cancel', function(window, success, value)
+		if success then
+			Current.ToolSize = math.ceil(tonumber(value))
+			if Current.ToolSize < 1 then
+				Current.ToolSize = 1
+			elseif Current.ToolSize > 50 then
+				Current.ToolSize = 50
+			end
+			ModuleNamed('Tools'):Update()
+		end
+		window:Close()
+	end, true):Show()	
+end
+
 --[[
 	Attempt to figure out what format the image is if it doesn't have an extension
 ]]--
@@ -2651,8 +2734,8 @@ function GetFormat(path)
 	local content = file.readAll()
 	file.close()
 	if type(textutils.unserialize(content)) == 'table' then
-		-- It's a serlized table, asume pik
-		return '.pik'
+		-- It's a serlized table, asume sketch
+		return '.skch'
 	elseif string.find(content, string.char(30)) or string.find(content, string.char(31)) then
 		-- Contains the characters that set colours, asume nft
 		return '.nft'
@@ -2685,8 +2768,8 @@ function OpenDocument(path)
 			layers = ReadNFP(path)
 		elseif format == '.nft' then
 			layers = ReadNFT(path)		
-		elseif format == '.pik' then
-			layers = ReadPIK(path)
+		elseif format == '.skch' then
+			layers = ReadSKCH(path)
 		end
 
 		for i, layer in ipairs(layers) do
@@ -2718,7 +2801,7 @@ function OpenDocument(path)
 
 		Current.Artboard = nil
 		ab = Artboard:New(fs.getName('Image', true), path, width, height, format, nil, layers)
-		Current.Tool = Tools[1]
+		Current.Tool = Tools[2]
 		Current.Toolbar:Update()
 		Draw()
 	end
@@ -2728,7 +2811,7 @@ function MakeNewLayer()
 	if not CheckOpenArtboard() then
 		return
 	end
-	if Current.Artboard.Format == '.pik' then
+	if Current.Artboard.Format == '.skch' then
 		TextDialougeWindow:Initialise('New Layer Name', 'Enter the name you want for the next layer.', 'Ok', 'Cancel', function(window, success, value)
 			if success then
 				Current.Artboard:MakeLayer(value, colours.transparent)
@@ -2740,7 +2823,7 @@ function MakeNewLayer()
 		if Current.Artboard.Format == '.nft' then
 			format = 'NFT'
 		end
-		ButtonDialougeWindow:Initialise(format..' do not support layers!', 'The format you are using, '..format..', does not support multiple layers. Use PIK to have more than one layer.', 'Ok', nil, function(window)
+		ButtonDialougeWindow:Initialise(format..' do not support layers!', 'The format you are using, '..format..', does not support multiple layers. Use SKCH to have more than one layer.', 'Ok', nil, function(window)
 			window:Close()
 		end):Show()
 	end
@@ -2828,7 +2911,7 @@ function RenameLayer()
 	if not CheckOpenArtboard() then
 		return
 	end
-	if Current.Artboard.Format == '.pik' then
+	if Current.Artboard.Format == '.skch' then
 		TextDialougeWindow:Initialise("Rename Layer '"..Current.Layer.Name.."'", 'Enter the new name you want the layer to be called.', 'Ok', 'Cancel', function(window, success, value)
 			if success then
 				Current.Layer.Name = value
@@ -2840,7 +2923,7 @@ function RenameLayer()
 		if Current.Artboard.Format == '.nft' then
 			format = 'NFT'
 		end
-		ButtonDialougeWindow:Initialise(format..' do not support layers!', 'The format you are using, '..format..', does not support renaming layers. Use PIK to rename layers.', 'Ok', nil, function(window)
+		ButtonDialougeWindow:Initialise(format..' do not support layers!', 'The format you are using, '..format..', does not support renaming layers. Use SKCH to rename layers.', 'Ok', nil, function(window)
 			window:Close()
 		end):Show()
 	end
@@ -2850,7 +2933,7 @@ function DeleteLayer()
 	if not CheckOpenArtboard() then
 		return
 	end
-	if Current.Artboard.Format == '.pik' then
+	if Current.Artboard.Format == '.skch' then
 		if #Current.Artboard.Layers > 1 then
 			ButtonDialougeWindow:Initialise("Delete Layer '"..Current.Layer.Name.."'?", 'Are you sure you want delete the layer?', 'Ok', 'Cancel', function(window, success)
 				if success then
@@ -2868,7 +2951,7 @@ function DeleteLayer()
 		if Current.Artboard.Format == '.nft' then
 			format = 'NFT'
 		end
-		ButtonDialougeWindow:Initialise(format..' do not support layers!', 'The format you are using, '..format..', does not support deleting layers. Use PIK to deleting layers.', 'Ok', nil, function(window)
+		ButtonDialougeWindow:Initialise(format..' do not support layers!', 'The format you are using, '..format..', does not support deleting layers. Use SKCH to deleting layers.', 'Ok', nil, function(window)
 			window:Close()
 		end):Show()
 	end
@@ -3003,7 +3086,7 @@ function LoadMenuBar()
 					{
 						Title = 'Cut',
 						Click = function()
-							Clipboard.Cut(Current.Layer:PixelsInSelection(true), 'pikpixels')
+							Clipboard.Cut(Current.Layer:PixelsInSelection(true), 'sketchpixels')
 						end,
 						Keys = {
 							keys.leftCtrl,
@@ -3016,7 +3099,7 @@ function LoadMenuBar()
 					{
 						Title = 'Copy',
 						Click = function()
-							Clipboard.Copy(Current.Layer:PixelsInSelection(), 'pikpixels')
+							Clipboard.Copy(Current.Layer:PixelsInSelection(), 'sketchpixels')
 						end,
 						Keys = {
 							keys.leftCtrl,
@@ -3036,7 +3119,7 @@ function LoadMenuBar()
 							keys.v
 						},
 						Enabled = function()
-							return (not Clipboard.isEmpty()) and Clipboard.Type == 'pikpixels'
+							return (not Clipboard.isEmpty()) and Clipboard.Type == 'sketchpixels'
 						end
 					}
 				}, self, true)
@@ -3083,7 +3166,7 @@ function LoadMenuBar()
 							DeleteLayer()
 						end,
 						Enabled = function()
-							return CheckOpenArtboard()
+							return CheckSelectedLayer()
 						end
 					},
 					{
@@ -3099,15 +3182,19 @@ function LoadMenuBar()
 						Separator = true
 					},
 					{
-						Title = 'Delete Selection',
+						Title = 'Erase Selection',
 						Click = function()
-							
+							Current.Layer:EraseSelection()
 						end,
 						Keys = {
 							keys.delete
 						},
 						Enabled = function()
-							return CheckOpenArtboard()
+							if CheckSelectedLayer() and Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
+								return true
+							else
+								return false
+							end
 						end
 					},
 					{
@@ -3128,6 +3215,44 @@ function LoadMenuBar()
 			end
 			return true 
 		end, 'Image', colours.lightGrey, false),
+		
+		Button:Initialise(20, 1, nil, nil, colours.grey, Current.MenuBar, function(self, side, x, y, toggle)
+			if toggle then
+				local menuItems = {{
+						Title = "Change Size",
+						Click = function()
+							DisplayToolSizeWindow()
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.t
+						}
+					},
+					{
+						Separator = true
+					}
+				}
+
+				for i, tool in ipairs(Tools) do
+					table.insert(menuItems, {
+						Title = tool.Name,
+						Click = function()
+							SetTool(tool)
+							local m = ModuleNamed('Tools')
+							m:Update(m.ToolbarItem)
+						end,
+						Enabled = function()
+							return CheckOpenArtboard()
+						end
+					})
+				end
+
+				Menu:New(20, 2, menuItems, self, true)
+			else
+				Current.Menu = nil
+			end
+			return true 
+		end, 'Tools', colours.lightGrey, false),
 	})
 end
 
@@ -3181,7 +3306,7 @@ end
 function SplashScreen()
 	Drawing.Clear(colours.white)
 	--Drawing.DrawImage(1, 1, Drawing.LoadImage())
-	Drawing.DrawCharactersCenter(nil,nil,nil,nil, "Pik by oeed", colours.magenta, colours.white)
+	Drawing.DrawCharactersCenter(nil,nil,nil,nil, "Sketch by oeed", colours.magenta, colours.white)
 	Drawing.DrawBuffer()
 	sleep(1)
 end
@@ -3220,6 +3345,23 @@ function HandleKey(...)
 		elseif keychar == keys.right then
 			currentPos[1] = currentPos[1] + 1
 		end
+
+		if currentPos[1] < 1 then
+			currentPos[1] = 1
+		end
+
+		if currentPos[1] > Current.Artboard.Width then
+			currentPos[1] = Current.Artboard.Width
+		end
+
+		if currentPos[2] < 1 then
+			currentPos[2] = 1
+		end
+
+		if currentPos[2] > Current.Artboard.Height then
+			currentPos[2] = Current.Artboard.Height
+		end
+
 		Current.Tool:Use(currentPos[1], currentPos[2])
 		Draw()
 	elseif Current.Input then
@@ -3403,9 +3545,9 @@ local function getColourOf(hex)
 end
 
 --[[
-	Saves the current artboard in .pik format
+	Saves the current artboard in .skch format
 ]]--
-function SavePIK()
+function SaveSKCH()
 	local layers = {}
 	for i, l in ipairs(Current.Artboard.Layers) do
 		local pixels = SaveNFT(i)
@@ -3545,9 +3687,9 @@ function ParseNFT(lines)
 end
 
 --[[
-	Read a .pik file from the given path
+	Read a .skch file from the given path
 ]]--
-function ReadPIK(path)
+function ReadSKCH(path)
 	local file = fs.open(path, 'r', true)
 	local _layers = textutils.unserialize(file.readAll())
 	file.close()

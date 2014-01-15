@@ -20,12 +20,7 @@ end
 OpenFile = function(path, args)
 	args = args or {}
 	if fs.exists(path) then
-		local extension = path:gmatch('\.[0-9a-z]+$')()
-		if extension then
-			extension = extension:sub(2)
-		else
-			extension = nil
-		end
+		local extension = Helpers.Extension(path)
 		if extension == 'shortcut' then
 			h = fs.open(path, 'r')
 			local shortcutPointer = h.readLine()
@@ -39,18 +34,18 @@ OpenFile = function(path, args)
 			h.close()
 
 			Helpers.OpenFile(shortcutPointer, tArgs)
-		elseif path:lower():find('programs') and #path > 11 then
+		elseif extension == 'program' then
 			if fs.isDir(path) and fs.exists(path..'/startup') then
-				LaunchProgram(path..'/startup', args, fs.getName(path))
+				LaunchProgram(path..'/startup', args, Helpers.RemoveExtension(fs.getName(path)))
 			elseif not fs.isDir(path) then
-				LaunchProgram(path, args, fs.getName(path))
+				LaunchProgram(path, args, Helpers.RemoveExtension(fs.getName(path)))
 			end
 		elseif fs.isDir(path) then
-			LaunchProgram('/Programs/Files/startup', {path}, 'Files')
+			LaunchProgram('/System/Programs/Files.program/startup', {path}, 'Files')
 		elseif extension == 'nfp' or extension == 'nft' or extension == 'skch' then
-			LaunchProgram('/Programs/Sketch/startup', {path}, 'Sketch')
+			LaunchProgram('/Programs/Sketch.program/startup', {path}, 'Sketch')
 		else
-			LaunchProgram('/Programs/LuaIDE/startup', {path}, 'LuaIDE')
+			LaunchProgram('/Programs/LuaIDE.program/startup', {path}, 'LuaIDE')
 		end
 	end
 end
@@ -86,23 +81,29 @@ Split = function(str,sep)
 end
 
 Extension = function(path, addDot)
-	if not string.find(path, '%.') then
+	if not path then
+		return nil
+	elseif not string.find(path, '%.') then
 		if not addDot then
 			return fs.getName(path)
 		else
 			return ''
 		end
 	else
-		local extension = path:gmatch('\.[0-9a-z]+$')()
+		local _path = path
+		if path:sub(#path) == '/' then
+			_path = path:sub(1,#path-1)
+		end
+		local extension = _path:gmatch('\.[0-9a-z]+$')()
 		if extension then
 			extension = extension:sub(2)
 		else
-			extension = path
+			extension = nil
 		end
 		if addDot then
 			extension = '.'..extension
 		end
-		return extension
+		return extension:lower()
 	end
 end
 
@@ -126,7 +127,7 @@ IconForFile = function(path)
 		local shortcutPointer = h.readLine()
 		h.close()
 		return Helpers.IconForFile(shortcutPointer)
-	elseif path:lower():sub(1,12):find('programs') and path ~= '/Programs/' then
+	elseif extension and extension == 'program' then
 		if fs.isDir(path) and fs.exists(path..'/startup') and fs.exists(path..'/icon') then
 			return ReadIcon(path..'/icon')
 		elseif not fs.isDir(path) or (fs.isDir(path) and fs.exists(path..'/startup') and not fs.exists(path..'/icon')) then
@@ -179,7 +180,7 @@ MakeShortcut = function(path)
 	path = TidyPath(path)
 	local name = Helpers.RemoveExtension(path)
 	if fs.isDir(path) then
-		name = fs.getName(path)
+		name = Helpers.RemoveExtension(fs.getName(path))
 	end
 	local f = fs.open('Desktop/'..name..'.shortcut', 'w')
 	f.write(path)

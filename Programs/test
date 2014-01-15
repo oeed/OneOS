@@ -1,7 +1,0 @@
-while true do
-	local one, two, three, four = os.pullEventRaw()
-	print(one)
-	print(two)
-	print(three)
-	print(four)
-end

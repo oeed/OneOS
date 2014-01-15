@@ -1,0 +1,82 @@
+	X = 1
+	Y = 1
+	Width = 0
+	Height = 0
+	Type = nil
+	Attributes = nil
+	Parent = nil
+	WebView = nil
+	Children = nil
+
+	Draw = function(self)
+		RegisteredWebElements = {}
+		
+		Drawing.DrawBlankArea(pos.X, pos.Y, self.Width, self.Height, self.BackgroundColour)
+
+		RegisterClick(self)
+	end
+
+	local round = function(num, idp)
+		local mult = 10^(idp or 0)
+		return math.floor(num * mult + 0.5) / mult
+	end
+
+	CalculateSize = function(self)
+		if self.Attributes.width then
+			self.Width = self.Attributes.width
+		elseif GetDefaultAttribute(self.Type, 'width') then
+			local value = GetDefaultAttribute(self.Type, 'width')
+			if value:sub(#value) == '%' then
+				local num = tonumber(value:sub(1, #value-1))
+				if type(num) == 'number' and num > 0 then
+					self.Width = (num / 100) * self.Parent.Width
+				end
+			elseif type(tonumber(value)) == 'number' and tonumber(value) > 0 then
+				self.Width = tonumber(value)
+			end
+		end
+		self.Width = 1
+		self.Height = 1
+	end
+
+	Initialise = function(self, element, parentElement, webView)
+		local new = {}    -- the new instance
+		setmetatable( new, {__index = self} )
+		new.Type = element._tag:lower()
+		height = height or 1
+		width = width or #text + 2
+		new.Parent = parentElement
+		new:CalculateSize()
+		return new
+	end
+
+	Click = function(self, side, x, y)
+		if self._Click then
+			if self:_Click(side, x, y, not self.Toggle) ~= false and self.Toggle ~= nil then
+				self.Toggle = not self.Toggle
+			end
+			return true
+		else
+			return false
+		end
+	end
+
+local function GetDefaultAttribute(type, attribute)
+	if defaultAttributes[type][attribute] then
+		return defaultAttributes[type][attribute]
+	elseif defaultAttributes['*'][attribute] then
+		return defaultAttributes['*'][attribute]
+	end
+end
+
+local defaultAttributes = {
+	['*'] = {
+		width = '100%',
+	},
+	p = {
+		color = 'black',
+		bgcolor = 'white',
+		width = '100%',
+		height = '1'
+	}
+}

@@ -1,0 +1,220 @@
+tArgs = {...}
+
+os.loadAPI('/System/API/Drawing', true)
+os.loadAPI('/System/API/Button', true)
+os.loadAPI('/System/API/Helpers', true)
+os.loadAPI('/System/API/Menu', true)
+os.loadAPI('/System/API/Peripheral', true)
+os.loadAPI('/System/API/TextDialogueWindow', true)
+os.loadAPI('/System/API/ButtonDialogueWindow', true)
+os.loadAPI('HTML')
+os.loadAPI('WebView')
+
+
+Current = {
+	Clicks = {},
+}
+
+Events = {
+	
+}
+
+InterfaceElements = {
+	
+}
+
+function Initialise()
+	EventRegister('mouse_click', TryClick)
+	EventRegister('mouse_drag', TryClick)
+	EventRegister('monitor_touch', TryClick)
+	EventRegister('mouse_scroll', Scroll)
+	EventRegister('key', HandleKey)
+	EventRegister('char', HandleKey)
+	EventRegister('timer', Update)
+
+	OneOS.ToolBarColour = colours.lightGrey
+	OneOS.ToolBarTextColour = colours.white
+
+	--Update()
+	sleep(0)
+	local h = fs.open(runningLocation .. 'test.html', 'r')
+	--print(textutils.serialize(HTML.parsestr(h.readAll())))
+	sleep(0)
+	--h.close()
+
+	webView = WebView:Initialise(1, 1, 51, 19, HTML.parsestr(h.readAll()), nil)
+	webView:BuildPage()
+	h.close()
+
+	print(type(tonumber('100%')))
+	EventHandler()
+end
+
+function Update()
+	Draw()
+	updateTimer = os.startTimer(1)
+end
+
+function Draw()
+	Current.Clicks = {}
+	Drawing.DrawBlankArea(1, 1, Drawing.Screen.Width, 3, colours.lightGrey)
+	Drawing.DrawBlankArea(1, 4, Drawing.Screen.Width, Drawing.Screen.Height-3, colours.white)
+
+	for i, elem in ipairs(InterfaceElements) do
+		if elem.Draw then
+			elem:Draw()
+		end
+	end
+
+	Drawing.DrawBuffer()
+end
+
+MainDraw = Draw
+function RegisterElement(elem)
+	table.insert(InterfaceElements, elem)
+end
+
+function UnregisterElement(elem)
+	for i, e in ipairs(InterfaceElements) do
+		if elem == e then
+			InterfaceElements[i] = nil
+		end
+	end
+end
+
+function RegisterClick(elem)
+	table.insert(Current.Clicks, elem)
+end
+
+function CheckClick(object, x, y)
+	local pos = GetAbsolutePosition(object)
+	if pos.X <= x and pos.Y <= y and  pos.X + object.Width > x and pos.Y + object.Height > y then
+		return true
+	end
+end
+
+function DoClick(event, object, side, x, y)
+	if object and CheckClick(object, x, y) then
+		return object:Click(side, x - object.X + 1, y - object.Y + 1)
+	end	
+end
+
+function TryClick(event, side, x, y)
+	if Current.Menu and DoClick(event, Current.Menu, side, x, y) then
+		Draw()
+		return
+	elseif Current.Window then
+		if DoClick(event, Current.Window, side, x, y) then
+			Draw()
+			return
+		else
+			Current.Window:Flash()
+		end
+	else
+		if Current.Menu then
+			Current.Menu:Close()
+			Draw()
+		end
+
+		for i, object in ipairs(Current.Clicks) do
+			if DoClick(event, object, side, x, y) then
+				Draw()
+				return
+			end		
+		end
+
+		if 1 <= x and 5 <= y and  Current.SidebarWidth + 1 > x then
+			SidebarClick(x, y - 4, side)
+		elseif 5 <= y then
+			FilesClick(event, x - Current.SidebarWidth, y - 4, side)
+		end
+	end
+end
+
+function HandleKey(...)
+	local args = {...}
+	local event = args[1]
+	local keychar = args[2]
+	if Current.Window then
+		if event == 'key' then
+			if keychar == keys.enter then
+				if Current.Window.OkButton then
+					Current.Window.OkButton:Click(1,1,1)
+					Draw()
+				end
+			elseif keychar == keys.delete or keychar == keys.backspace then
+				if Current.Window.CancelButton then
+					Current.Window.CancelButton:Click(1,1,1)
+					Draw()
+				end
+			end
+		end
+	elseif Current.SelectedFile then
+		if event == 'key' then
+			if keychar == keys.enter then
+				local file = nil
+				for i, f in ipairs(Current.FileList) do
+					if f.name == Current.SelectedFile then
+						file = f
+					end
+				end
+				if file then
+					OpenFile(file)
+				end
+			elseif keychar == keys.delete or keychar == keys.backspace then
+				local file = nil
+				for i, f in ipairs(Current.FileList) do
+					if f.name == Current.SelectedFile then
+						file = f
+					end
+				end
+				if file then
+					ButtonDialogueWindow:Initialise("Delete '"..Helpers.TruncateString(Helpers.RemoveExtension(file.name), 16).."'?", "Are you sure you want to delete '"..file.name.."'?", 'Yes', 'Cancel', function(success)
+						if success then
+							fs.delete(file.path)
+						end
+					end):Show()
+					Draw()
+				end
+			end
+		end
+	end
+
+	if keychar == keys.up then
+		Scroll('mouse_scroll', -1)
+	elseif keychar == keys.down then
+		Scroll('mouse_scroll', 1)
+	end
+end
+
+function GetAbsolutePosition(obj)
+	if not obj.Parent then
+		return {X = obj.X, Y = obj.Y}
+	else
+		local pos = GetAbsolutePosition(obj.Parent)
+		local x = pos.X + obj.X - 1
+		local y = pos.Y + obj.Y - 1
+		return {X = x, Y = y}
+	end
+end
+
+function EventRegister(event, func)
+	if not Events[event] then
+		Events[event] = {}
+	end
+
+	table.insert(Events[event], func)
+end
+
+function EventHandler()
+	while true do
+		local event = { coroutine.yield() }
+		if Events[event[1]] then
+			for i, e in ipairs(Events[event[1]]) do
+				e(event[1], event[2], event[3], event[4], event[5])
+			end
+		end
+	end
+end
+
+Initialise()

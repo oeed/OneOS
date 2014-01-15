@@ -39,7 +39,7 @@ function Initialise()
 	totalSize = FolderSize('/')
 	logo = Drawing.LoadImage('/System/Images/Logo')
 	maxSpace = fs.getFreeSpace('/', true) + totalSize
-	thanksLines = Helpers.WrapText('Thanks to GravityScore for LuaIDE, NitrogenFingers for his image formatting methods and GoldRunner and Symmetryc his help on GitHub.', Drawing.Screen.Width-2)
+	thanksLines = Helpers.WrapText('Thanks to GravityScore for LuaIDE, NitrogenFingers for his image formatting methods and GoldRunner, Symmetryc for his help on GitHub, Jesusthekiller for Maze3D, Vilsol for his huge help with the App Store and testers!', Drawing.Screen.Width-2)
 	Update()
 	EventHandler()
 end

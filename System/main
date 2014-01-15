@@ -63,7 +63,7 @@ function Initialise()
 	--LaunchProgram('/Programs/Mario/startup', {}, 'Mario')
 	--LaunchProgram('/Programs/Shell/startup', {}, 'Other')
 	--LaunchProgram('Applications/Files/other', {}, 'Other')
-	--LaunchProgram('Programs/Files/startup', {'Programs/'}, 'Files')
+	LaunchProgram('/System/Programs/Files.program/startup', {'Desktop/'}, 'Files')
 	--LaunchProgram('Programs/Shell', {}, 'Shell')
 	--LaunchProgram('Programs/npaintpro', {}, 'nPaintPro')
 	--LaunchProgram('Programs/Quest/startup', {}, 'Quest')
@@ -72,7 +72,7 @@ function Initialise()
 	--LaunchProgram('Programs/Games/GoldRunner/startup', {}, 'Goldrunner')
 	--LaunchProgram('Programs/App Store/startup', {}, 'App Store')
 	--LaunchProgram('Programs/test', {}, 'Test')
-	--LaunchProgram('Programs/Sketch/startup', {'/desktop/image.skch'}, 'Sketch')
+	--LaunchProgram('Programs/Sketch/startup', {'/desktop/test.skch'}, 'Sketch')
 	--LaunchProgram('Programs/Pik/startup', {}, 'Pik')
 	--LaunchProgram('Programs/About OneOS/startup', {}, 'About OneOS')
 	--LaunchProgram('rom/programs/color/paint', {'boo'}, 'Paint')
@@ -327,7 +327,7 @@ function HandleKey(...)
 	
 	--REMOVE THIS AT RELEASE!
 	if keychar == 'r' then
-		os.reboot()
+		--os.reboot()
 	end
 
 	if Current.Input then

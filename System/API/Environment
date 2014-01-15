@@ -81,7 +81,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 		local relPath = path:sub(1, #path-7)
 		local list = {}
 		for k, f in pairs(fs) do
-			if k ~= 'open' and k ~= 'combine' and k ~= 'copy' then
+			if k ~= 'open' and k ~= 'combine' and k ~= 'copy' and k ~= 'move' then
 				list[k] = function(_path, global)
 					if not global then
 						return fs[k](relPath .. _path)
@@ -89,7 +89,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 						return fs[k](_path)
 					end
 				end
-			elseif k == 'copy' then
+			elseif k == 'copy' or k == 'move' then
 				list[k] = function(_path, _path2, global)
 					if not global then
 						return fs[k](relPath .. _path, relPath .. _path2)

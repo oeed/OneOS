@@ -30,21 +30,23 @@ function UpdateButtons()
 				{
 					Title = 'About OneOS',
 					Click = function()
-						LaunchProgram('Programs/About OneOS/startup', {}, 'About OneOS')
+						LaunchProgram('/System/Programs/About OneOS/startup', {}, 'About OneOS')
 					end
 				},
 				{
 					Title = 'Settings',
 					Click = function()
-						LaunchProgram('Programs/Settings/startup', {}, 'Settings')
+						LaunchProgram('/System/Programs/Settings/startup', {}, 'Settings')
 					end
 				},
-				{
+				--[[
+{
 					Title = 'Help',
 					Click = function()
 						LaunchProgram('Programs/Help/startup', {}, 'Help')
 					end
 				},
+]]--
 				
 				{
 					Separator = true

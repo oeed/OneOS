@@ -69,6 +69,7 @@ function Initialise()
 		else
 			self.Toggle = true
 		end
+		os.startTimer(0.5)
 	end, '<', 3):Register()
 	
 	ForwardButton = Button:Initialise(5, 2, nil, 1, colours.white, colours.lightGrey, colours.lightBlue, colours.white, nil, function(self)
@@ -77,6 +78,7 @@ function Initialise()
 		else
 			self.Toggle = true
 		end
+		os.startTimer(0.5)
 	end, '>', 3):Register()
 
 	ListToggleButton = Button:Initialise(9, 2, nil, 1, colours.white, colours.black, colours.lightBlue, colours.white, nil, function(self)
@@ -87,6 +89,7 @@ function Initialise()
 			self.Text = 'List'
 		end
 		Current.FileScroll = 0
+		os.startTimer(0.5)
 	end, 'List', 3):Register()
 
 	HiddenToggleButton = Button:Initialise(16, 2, nil, 1, colours.white, colours.black, colours.lightBlue, colours.white, nil, function(self)
@@ -97,6 +100,7 @@ function Initialise()
 			self.Text = 'Show Hidden'
 		end
 		Update()
+		os.startTimer(0.5)
 	end, 'Show Hidden', 3):Register()
 
 	if Current.ListMode then
@@ -178,7 +182,7 @@ function DrawFiles()
 						textColour = colours.white
 					end
 
-					local shortenedName = Helpers.TruncateString(file.name, 9)
+					local shortenedName = Helpers.TruncateString(file.shortName, 9)
 					local x, y = IconLocation(i)
 					x = x + Current.SidebarWidth
 					y = y + 3
@@ -220,6 +224,7 @@ function RefreshFiles()
 			end
 			table.insert(Current.FileList,{
 				name = fs.getName(path, true),
+				shortName = Helpers.RemoveExtension(fs.getName(path, true)),
 				size = fs.getSize(path, true),
 				isDirectory = fs.isDir(path, true),
 				path = Helpers.TidyPath(path)
@@ -287,7 +292,6 @@ function Update()
 	RefreshFiles()
 	UpdateScroll()
 	Draw()
-	updateTimer = os.startTimer(1)
 end
 
 function Draw()
@@ -325,9 +329,19 @@ end
 MainDraw = Draw
 
 function OpenFile(file, ignoreProgram)
-	if file.isDirectory and (ignoreProgram or not file.path:lower():sub(1,12):find('programs') or file.path == '/Programs/') then
+	local extension = Helpers.Extension(file.path)
+	if extension == 'shortcut' then
+		h = fs.open(file.path, 'r', true)
+		local shortcutPointer = h.readLine()
+		h.close()
+		if fs.isDir(shortcutPointer, true) then
+			OpenFile({path = shortcutPointer, isDirectory = true}, ignoreProgram)
+			return
+		end
+	end
+	if file.isDirectory and (ignoreProgram or extension ~= 'program') then
 		GoToPath(file.path)
-	elseif not ignoreProgram and file.path:lower():sub(1,12):find('programs') or file.path ~= '/Programs/' then
+	elseif not ignoreProgram and extension == 'program' then
 		if fs.isDir(file.path, true) and fs.exists(file.path..'/startup', true) then
 			OneOS.OpenFile(file.path)
 		elseif not fs.isDir(file.path, true) or (fs.isDir(file.path, true) and fs.exists(file.path..'/startup', true)) then
@@ -414,9 +428,11 @@ function FilesClick(event, x, y, side)
 							local destPath = Helpers.TidyPath(Current.Path..'/'..fs.getName(Current.Clipboard.Content, true))
 							if not Current.Clipboard.IsCut then
 								fs.copy(Current.Clipboard.Content, destPath, true)
+								Update()
 							elseif Current.Clipboard.IsCut then
 								local content = Current.Clipboard.Paste()
-								fs.move(content[1], destPath, true)
+								fs.move(content, destPath, true)
+								Update()
 							end
 						end
 					},
@@ -440,7 +456,8 @@ function RightClickFile(file, absX, absY)
 			end
 		}
 
-	if not file.path:lower():find('programs') or not fs.isDir(file.path, true) or file.path == '/Programs/' then
+	local extension = Helpers.Extension(file.path)
+	if not extension == 'program' or not fs.isDir(file.path, true) then
 		openContent = nil
 	end
 
@@ -475,6 +492,7 @@ function RightClickFile(file, absX, absY)
 				ButtonDialogueWindow:Initialise("Delete '"..Helpers.TruncateString(Helpers.RemoveExtension(file.name), 16).."'?", "Are you sure you want to delete '"..file.name.."'?", 'Yes', 'Cancel', function(success)
 					if success then
 						fs.delete(file.path, true)
+						Update()
 					end
 				end):Show()
 			end
