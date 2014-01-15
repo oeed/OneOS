@@ -129,8 +129,6 @@ DrawCharactersCenter = function(x, y, w, h, characters, textColour,bgColour)
 	Drawing.DrawCharacters(x, y, characters, textColour, bgColour)
 end
 
-
-
 GetColour = function(hex)
     local value = tonumber(hex, 16)
     if not value then return nil end

@@ -121,8 +121,6 @@ function installApplication(id, path, computerid, username, password)
 	local packrun = loadstring(package)
 	local env = getfenv()
 	env['installLocation'] = resolve(path) or '/'
-	print(env['installLocation'])
-	sleep(2)
 	setfenv( packrun, env)
 	if packrun then
 		packrun()

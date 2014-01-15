@@ -28,7 +28,12 @@ Current = {
 	CursorColour = colours.black
 }
 
-
+local function split(str, sep)
+        local sep, fields = sep or ":", {}
+        local pattern = string.format("([^%s]+)", sep)
+        str:gsub(pattern, function(c) fields[#fields+1] = c end)
+        return fields
+end
 --This is my drawing API, is is pretty much identical to what drives PearOS.
 local _w, _h = term.getSize()
 Drawing = {
@@ -63,14 +68,68 @@ Drawing = {
 		end
 	end,
 
-	DrawImage = function(x,y,tImage)
-		for _y=1, #tImage do
-			for _x=1, tImage[_y]:len()/3 do
-				local char = string.sub(tImage[_y],_x*3, (_x*3))
-				local textColour = Drawing.GetColour(string.byte(tImage[_y],(_x*3)-1,(_x*3)-1)  or 0)
-				local bgColour = Drawing.GetColour(string.byte(tImage[_y],(_x*3)-2,(_x*3)-2)  or f)
-				Drawing.WriteToBuffer(x+_x-1, y+_y-1, char, textColour, bgColour)
+	LoadImage = function(str)
+		local image = {
+			text = {},
+			textcol = {}
+		}
+		local tLines = split(str, '\n')
+		for num, sLine in ipairs(tLines) do
+            table.insert(image, num, {})
+            table.insert(image.text, num, {})
+            table.insert(image.textcol, num, {})
+                                        
+            --As we're no longer 1-1, we keep track of what index to write to
+            local writeIndex = 1
+            --Tells us if we've hit a 30 or 31 (BG and FG respectively)- next char specifies the curr colour
+            local bgNext, fgNext = false, false
+            --The current background and foreground colours
+            local currBG, currFG = nil,nil
+            for i=1,#sLine do
+                    local nextChar = string.sub(sLine, i, i)
+                    if nextChar:byte() == 30 then
+                            bgNext = true
+                    elseif nextChar:byte() == 31 then
+                            fgNext = true
+                    elseif bgNext then
+                            currBG = Drawing.GetColour(nextChar)
+                            bgNext = false
+                    elseif fgNext then
+                            currFG = Drawing.GetColour(nextChar)
+                            fgNext = false
+                    else
+                            if nextChar ~= " " and currFG == nil then
+                                    currFG = colours.white
+                            end
+                            image[num][writeIndex] = currBG
+                            image.textcol[num][writeIndex] = currFG
+                            image.text[num][writeIndex] = nextChar
+                            writeIndex = writeIndex + 1
+                    end
+            end
+            num = num+1
+        end
+	 	return image
+	end,
+
+	DrawImage = function(_x,_y,tImage, w, h)
+		if tImage then
+			for y = 1, h do
+				if not tImage[y] then
+					break
+				end
+				for x = 1, w do
+					if not tImage[y][x] then
+						break
+					end
+					local bgColour = tImage[y][x]
+		            local textColour = tImage.textcol[y][x] or colours.white
+		            local char = tImage.text[y][x]
+		            Drawing.WriteToBuffer(x+_x-1, y+_y-1, char, textColour, bgColour)
+				end
 			end
+		elseif w and h then
+			Drawing.DrawBlankArea(_x, _y, w, h, colours.lightGrey)
 		end
 	end,
 
@@ -83,14 +142,11 @@ Drawing = {
 		Drawing.DrawCharacters(x, y, characters, textColour, bgColour)
 	end,
 
-
-
-	GetColour = function(str)
-		local colours = {}
-		for n=1,16 do
-			colours[ string.byte( "0123456789abcdef",n,n ) ] = 2^(n-1)
-		end
-		return colours[str]
+	GetColour = function(hex)
+	    local value = tonumber(hex, 16)
+	    if not value then return nil end
+	    value = math.pow(2,value)
+	    return value
 	end,
 
 	Clear = function (_colour)
@@ -219,7 +275,7 @@ FeaturedBanner = {
 	Draw = function(self)
 		Drawing.DrawBlankArea(self.X+1, self.Y+1, self.Width, self.Height, colours.grey)
 		Drawing.DrawBlankArea(self.X, self.Y, self.Width, self.Height, colours.white)
-		Drawing.DrawImage(self.X, self.Y, self.Images[self.CurrentImage])		
+		Drawing.DrawImage(self.X, self.Y, self.Images[self.CurrentImage], self.Width, self.Height)		
 		RegisterClick(self.X + Drawing.Offset.X, self.Y + Drawing.Offset.Y, self.Width, self.Height, function()
 			ChangePage('more-info', self.AppIDs[self.CurrentImage])
 		end)
@@ -261,17 +317,6 @@ ListItem = {
 	Category = '?',
 	Version = 1,
 	Type = 0, --0 = app list item, 1 = more info, 2 category
-
-	explode = function(div,str)
-	    if (div=='') then return false end
-	    local pos,arr = 0,{}
-	    for st,sp in function() return string.find(str,div,pos,true) end do
-	        table.insert(arr,string.sub(str,pos,st-1))
-	        pos = sp + 1
-	    end
-	    table.insert(arr,string.sub(str,pos))
-	    return arr
-	end,
 
 	CalculateWrapping = function(self, text)
 
@@ -326,7 +371,7 @@ ListItem = {
 
 		RegisterClick(self.Width - 7, self.Y + Drawing.Offset.Y + installPos - 1, 9, 1, function()
 			Load("Installing App", function()
-				api.installApplication(tonumber(self.AppID),"/install/")
+				api.installApplication(tonumber(self.AppID),"/Programs/"..self.Title.."/")
 			end)
 			Load("Application Installed!", function()
 				sleep(1)
@@ -354,7 +399,7 @@ ListItem = {
 			Drawing.DrawCharacters(self.Width - 8, self.Y + installPos - 1, " Install ", colours.white, colours.green)
 		end
 
-		Drawing.DrawImage(self.X+1, self.Y+1, self.Icon)
+		Drawing.DrawImage(self.X+1, self.Y+1, self.Icon, 4, 3)
 		
 
 		if self.Type == 1 then
@@ -477,7 +522,7 @@ ListItem = {
 		new:UpdateSize()
 		new.AppID = appid
 		new.Title = title
-		new.Icon = self.explode('*', icon)
+		new.Icon = Drawing.LoadImage(icon)
 		new.Icon[5] = nil
 		new.Description = new:CalculateWrapping(description)
 		new.Author = author
@@ -558,7 +603,7 @@ function Initialise()
 	os.loadAPI('api');
 	--sleep(0.5)
 	--DownloadData()
-	ChangePage('Categories')
+	ChangePage('Top Charts')
 	
 	--print(api.getAllApplications())
 	--BuildListItems()
@@ -644,7 +689,7 @@ end
 
 function LoadList(func)
 	Load("Loading", function()
-		local tApps = api.getAllApplications()--textutils.unserialize(func())
+		local tApps = func()
 		for i, app in ipairs(tApps) do
 			local item = ListItem:Initialise(1+(i-1)*(ListItem.Height + 2), 
 				app.id, app.name, app.icon, app.description,

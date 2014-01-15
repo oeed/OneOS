@@ -70,7 +70,7 @@ function Initialise()
 	--LaunchProgram('Programs/Update OneOS/startup', {}, 'Test')
 	--LaunchProgram('Programs/FTest/startup', {}, 'FTest')
 	--LaunchProgram('Programs/Games/GoldRunner/startup', {}, 'Goldrunner')
-	--LaunchProgram('Programs/App Store/startup', {}, 'App Store')
+	LaunchProgram('Programs/App Store/startup', {}, 'App Store')
 	--LaunchProgram('Programs/test', {}, 'Test')
 	--LaunchProgram('Programs/Pik/startup', {'/desktop/image.pik'}, 'Pik')
 	--LaunchProgram('Programs/Pik/startup', {}, 'Pik')
@@ -327,7 +327,7 @@ function HandleKey(...)
 	
 	--REMOVE THIS AT RELEASE!
 	if keychar == 'r' then
-		--os.reboot()
+		os.reboot()
 	end
 
 	if Current.Input then
