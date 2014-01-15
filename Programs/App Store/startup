@@ -991,10 +991,7 @@ if term.isColor and term.isColor() then
 
 		term.setTextColor(colours.white)
 		print(" Press any key to exit...")
-		local ev = os.pullEvent("###")
-		print(ev)
-		print('**')
-		sleep(5)
+		--local ev = os.pullEvent("###")
 		OneOS.Close()
 	end
 

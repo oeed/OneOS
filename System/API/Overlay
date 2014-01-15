@@ -98,7 +98,7 @@ function UpdateButtons()
 				currentProgramI = i
 				InsertButton("x "..Current.Program.Title, true, colours.white, activeBackgroundColour, textColour, colours.white, function(self, side, x, y, toggle)
 					if x == 2 then
-						Current.Program:Close()
+						Current.Program:Close(side == 2)
 					end
 					self.Toggle = false
 				end)

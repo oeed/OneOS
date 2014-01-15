@@ -71,7 +71,8 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 			Clipboard = Clipboard,
 			CanClose = function()end,
 			Close = function()
-				program:Close()
+				--This needs some serious fixing!
+				program:Close(true)
 			end
 		}
 	end

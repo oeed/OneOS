@@ -130,8 +130,8 @@
 		end
 	end
 
-	Close = function(self)
-		if not self.Environment.OneOS.CanClose or self.Environment.OneOS.CanClose() ~= false then
+	Close = function(self, force)
+		if force or not self.Environment.OneOS.CanClose or self.Environment.OneOS.CanClose() ~= false then
 			if self == Current.Program then
 				Current.Program = nil
 			end
