@@ -116,7 +116,11 @@ RemoveExtension = function(path)
 end
 
 RemoveFileName = function(path)
-	return string.match(path, "(.-)([^\\/]-%.?([^%.\\/]*))$")[1]
+	local v = string.match(path, "(.-)([^\\/]-%.?([^%.\\/]*))$")
+	if type(v) == 'string' then
+		return v
+	end
+	return v[1]
 end
 
 IconForFile = function(path)

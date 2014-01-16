@@ -176,23 +176,36 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 				return true
 			end,
 
-
-			os.unloadAPI,
+			unloadAPI = function ( _sName )
+				if _sName ~= "_G" and type(env[_sName]) == "table" then
+					env[_sName] = nil
+				end
+			end,
 
 			pullEvent = function(target)
-				--print(target)
-				--print('!')
-				local eventData = { coroutine.yield(target) }
-				--print(eventData[1])
-				--print('*')
-				if eventData[1] == "terminate" then
-					error( "Terminated", 0 )
+				local eventData = nil
+				local wait = true
+				while wait do
+					eventData = { coroutine.yield(target) }
+					if eventData[1] == "terminate" then
+						error( "Terminated", 0 )
+					elseif eventData[1] == target then
+						wait = false
+					end
 				end
 				return unpack( eventData )
 			end,
 
 			pullEventRaw = function(target)
-				return coroutine.yield(target)
+				local eventData = nil
+				local wait = true
+				while wait do
+					eventData = { coroutine.yield(target) }
+					if eventData[1] == target then
+						wait = false
+					end
+				end
+				return unpack( eventData )
 			end,
 
 			queueEvent = function(...)

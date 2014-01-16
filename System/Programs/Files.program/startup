@@ -40,7 +40,9 @@ Current = {
 	IconCache = {},
 	ShowHidden = false,
 	Clipboard = OneOS.Clipboard,
-	ScrollBarDragStartY = nil
+	ScrollBarDragStartY = nil,
+	CursorPos = {1,1},
+	CursorColour = colours.black,
 }
 
 Events = {
@@ -323,7 +325,19 @@ function Draw()
 		Current.Window:Draw()
 	end
 
+	UpdateCursor()
+
 	Drawing.DrawBuffer()
+end
+
+function UpdateCursor()
+	if Current.Input then
+		term.setCursorPos(Current.CursorPos[1], Current.CursorPos[2])
+		term.setCursorBlink(true)
+		term.setTextColour(Current.CursorColour)
+	else
+		term.setCursorBlink(false)
+	end
 end
 
 MainDraw = Draw
@@ -475,13 +489,10 @@ function RightClickFile(file, absX, absY)
 		{
 			Title = 'Rename...',
 			Click = function()
-				TextDialogueWindow:Initialise("Rename '"..Helpers.TruncateString(Helpers.RemoveExtension(file.name), 17).."'", function(success, value)
+				local tdw = TextDialogueWindow:Initialise("Rename '"..Helpers.TruncateString(Helpers.RemoveExtension(file.name), 17).."'", function(success, value)
 					if success then
-						fs.move(file.path, Helpers.RemoveFileName(file.path)..value..'.'..Helpers.Extension(file.name), true)
-						settings.layout[value..'.'..Helpers.Extension(file.name)] = settings.layout[file.name]
-						settings.layout[file.name] = nil
-						Desktop.SaveSettings()
-						Desktop.RefreshFiles()
+						fs.move(file.path, Helpers.RemoveFileName(file.path)..value..Helpers.Extension(file.name, true), true)
+						Update()
 					end
 				end):Show()
 			end
@@ -639,12 +650,15 @@ function HandleKey(...)
 					Current.Window.OkButton:Click(1,1,1)
 					Draw()
 				end
-			elseif keychar == keys.delete or keychar == keys.backspace then
-				if Current.Window.CancelButton then
-					Current.Window.CancelButton:Click(1,1,1)
-					Draw()
-				end
 			end
+		end
+		if Current.Input then
+			if event == 'char' then
+				Current.Input:Char(keychar)
+			elseif event == 'key' then
+				Current.Input:Key(keychar)
+			end
+			UpdateCursor()
 		end
 	elseif Current.SelectedFile then
 		if event == 'key' then
