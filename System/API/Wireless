@@ -6,6 +6,11 @@
 		PingReply = 4201,
 		TurtleRemote = 4202,
 		TurtleRemoteReply = 4203,
+		TransmitDiscovery = 4204,
+		TransmitDiscoveryReply = 4205,
+		TransmitRequest = 4206,
+		TransmitRequestReply = 4207,
+		TransmitSend = 4208,
 	}
 
 	local function isOpen(channel)

@@ -35,7 +35,8 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 		setmetatable( env, {__index = _G} )
 
 		env.fs = addErrorHandler(self.FS(env, program, path), 'FS API')
-		env.os = addErrorHandler(self.OS(env, program), 'OS API')
+		env.io = addErrorHandler(self.IO(env, program, path), 'IO API')
+		env.os = addErrorHandler(self.OS(env, program, path), 'OS API')
 		env.loadfile = function( _sFile, global)
 			local file = env.fs.open( _sFile, "r", global)
 			if file then
@@ -45,6 +46,18 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 			end
 			return nil, "File not found"
 		end
+
+		env.dofile = function( _sFile )
+			local fnFile, e = env.loadfile( _sFile )
+			if fnFile then
+				setfenv( fnFile, getfenv(2) )
+				return fnFile()
+			else
+				error( e, 2 )
+			end
+		end
+
+
 		env.shell = {}
 		local shellEnv = {}
 		setmetatable( shellEnv, { __index = env } )
@@ -54,6 +67,27 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
  		env.OneOS = addErrorHandler(self.OneOS(env, program), 'OneOS API')
 		env.sleep = env.os.sleep
 		return env
+	end
+
+	IO = function(env, program, path)
+		local relPath = Helpers.RemoveFileName(path)
+		return {
+			input = io.input,
+			output = io.output,
+			type = io.type,
+			close = io.close,
+			write = io.write,
+			flush = io.flush,
+			lines = io.lines,
+			read = io.read,
+			open = function(_path, mode, global)
+				if not global then
+					return io.open(relPath .. _path, mode)
+				else
+					return io.open(_path, mode)
+				end
+			end
+		}
 	end
 
 	OneOS = function(env, program)
@@ -78,7 +112,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 	end
 
 	FS = function(env, program, path)
-		local relPath = path:sub(1, #path-7)
+		local relPath = Helpers.RemoveFileName(path)
 		local list = {}
 		for k, f in pairs(fs) do
 			if k ~= 'open' and k ~= 'combine' and k ~= 'copy' and k ~= 'move' then
@@ -123,7 +157,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 		return list
 	end
 
-	OS = function(env, program)
+	OS = function(env, program, path)
 		local tAPIsLoading = {}
 		_os = {
 
@@ -137,17 +171,40 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 
 			setComputerLabel = os.setComputerLabel,
 
-			run = os.run,-- function(env, prg, arg)end,
+			run = function( _tEnv, _sPath, ... )
+			    local tArgs = { ... }
+			    local fnFile, err = loadfile( Helpers.RemoveFileName(path) .. '/' .. _sPath )
+			    if fnFile then
+			        local tEnv = _tEnv
+			        --setmetatable( tEnv, { __index = function(t,k) return _G[k] end } )
+					setmetatable( tEnv, { __index = env} )
+			        setfenv( fnFile, tEnv )
+			        local ok, err = pcall( function()
+			        	fnFile( unpack( tArgs ) )
+			        end )
+			        if not ok then
+			        	if err and err ~= "" then
+				        	printError( err )
+				        end
+			        	return false
+			        end
+			        return true
+			    end
+			    if err and err ~= "" then
+					printError( err )
+				end
+			    return false
+			end,
 
 			loadAPI = function(_sPath, global)
-				local _fs = fs
-				if not global then
-					_fs = env.fs
+				local _fs = env.fs
+				if global == true then
+					_fs = fs
 				end
 
 				local sName = _fs.getName( _sPath)
 				if tAPIsLoading[sName] == true then
-					printError( "API "..sName.." is already being loaded" )
+					env.printError( "API "..sName.." is already being loaded" )
 					return false
 				end
 				tAPIsLoading[sName] = true
@@ -189,7 +246,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 					eventData = { coroutine.yield(target) }
 					if eventData[1] == "terminate" then
 						error( "Terminated", 0 )
-					elseif eventData[1] == target then
+					elseif target == nil or eventData[1] == target then
 						wait = false
 					end
 				end
@@ -201,7 +258,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 				local wait = true
 				while wait do
 					eventData = { coroutine.yield(target) }
-					if eventData[1] == target then
+					if target == nil or eventData[1] == target then
 						wait = false
 					end
 				end
@@ -267,7 +324,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 
 		-- Colours
 		local promptColour, textColour, bgColour
-		if term.isColour() then
+		if env.term.isColour() then
 			promptColour = colours.yellow
 			textColour = colours.white
 			bgColour = colours.black
@@ -282,11 +339,11 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 			local sPath = nativeShell.resolveProgram( _sCommand )
 			if sPath ~= nil then
 				tProgramStack[#tProgramStack + 1] = sPath
-		   		local result = os.run( env, sPath, ... )
+		   		local result = env.os.run( env, sPath, ... )
 				tProgramStack[#tProgramStack] = nil
 				return result
 		   	else
-		    	printError( "No such program" )
+		    	env.printError( "No such program" )
 		    	return false
 		    end
 		end
@@ -304,7 +361,6 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 			return false
 		end
 
-		-- Install shell API
 		function run( ... )
 			return runLine( table.concat( { ... }, " " ) )
 		end
@@ -330,9 +386,6 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 		end
 
 		function resolve( _sPath, global)
-			print(_sPath)
-			print(sDir)
-			print(env.fs.combine(sDir, _sPath))
 			local sStartChar = string.sub( _sPath, 1, 1 )
 			if sStartChar == "/" or sStartChar == "\\" then
 				return env.fs.combine( "", _sPath, global)
@@ -341,7 +394,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 			end
 		end
 
-		function resolveProgram( _sCommand )
+		function resolveProgram( _sCommand, global)
 			-- Substitute aliases firsts
 			if tAliases[ _sCommand ] ~= nil then
 				_sCommand = tAliases[ _sCommand ]
@@ -359,8 +412,8 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 		    
 		 	-- Otherwise, look on the path variable
 		    for sPath in string.gmatch(sPath, "[^:]+") do
-		    	sPath = fs.combine( nativeShell.resolve( sPath ), _sCommand )
-		    	if fs.exists( sPath ) and not fs.isDir( sPath ) then
+		    	sPath = env.fs.combine( nativeShell.resolve( sPath ), _sCommand, global)
+		    	if env.fs.exists( sPath, global) and not fs.isDir( sPath ) then
 					return sPath
 		    	end
 		    end
@@ -375,10 +428,10 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 			-- Add programs from the path
 		    for sPath in string.gmatch(sPath, "[^:]+") do
 		    	sPath = nativeShell.resolve( sPath )
-				if fs.isDir( sPath ) then
+				if env.fs.isDir( sPath ) then
 					local tList = fs.list( sPath )
 					for n,sFile in pairs( tList ) do
-						if not fs.isDir( fs.combine( sPath, sFile ) ) and
+						if not env.fs.isDir( env.fs.combine( sPath, sFile ) ) and
 						   (_bIncludeHidden or string.sub( sFile, 1, 1 ) ~= ".") then
 							tItems[ sFile ] = true
 						end

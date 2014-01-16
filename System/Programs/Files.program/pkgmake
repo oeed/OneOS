@@ -1,0 +1,76 @@
+sPackage=[[local pkg=%@1
+local function makeFile(_path,_content)
+ local file=fs.open(_path,"w", true)
+ file.write(_content)
+ file.close()
+end
+local function makeFolder(_path,_content)
+ fs.makeDir(_path, true)
+ for k,v in pairs(_content) do
+  if type(v)=="table" then
+   makeFolder(_path.."/"..k,v)
+  else
+   makeFile(_path.."/"..k,v)
+  end
+ end
+end
+local sDest= installLocation or '/'
+if sDest=="root" then
+ sDest="/"
+end
+sDest = sDest .. %@2
+local tPackage=pkg
+makeFolder(sDest,tPackage)
+print("Package Extracted to '"..sDest.."'!")
+]]
+
+function addFile(_package,_path)
+	if fs.getName(_path, true)==".DS_Store" then
+		return _package
+	end
+	local file,err=fs.open(_path,"r", true)
+	local content=file.readAll()
+	content=content:gsub("%%","%%%%")
+	_package[fs.getName(_path, true)]=content
+	file.close()
+	return _package
+end
+
+function addFolder(_package,_path)
+	if string.sub(_path,1,string.len("rom"))=="rom" or string.sub(_path,1,string.len("/rom"))=="/rom" then
+		return
+	end
+	_package=_package or {}
+	for _,f in ipairs(fs.list(_path, true)) do
+		local path=_path.."/"..f
+		if fs.isDir(path, true) then
+			_package[fs.getName(f, true)]=addFolder(_package[fs.getName(f, true)],path)
+		else
+			_package=addFile(_package,path)
+		end
+	end
+	return _package
+end
+
+local tArgs={...}
+
+local sSource=shell.resolve(tArgs[1], true)
+local sDest=shell.resolve(tArgs[2], true)
+
+
+if fs.exists(sSource, true) and fs.isDir(sSource, true) then
+	tPackage={}
+	tPackage=addFolder(tPackage,sSource)
+	fPackage=fs.open(sDest,"w", true)
+	if fPackage then
+		sPackage=string.gsub(sPackage,"%%@1",textutils.serialize(tPackage))
+		sPackage=string.gsub(sPackage,"%%@2",textutils.serialize(fs.getName(tArgs[1], true)))
+		fPackage.write(sPackage)
+		fPackage.close()
+	else
+		error(sDest)
+	end
+else
+	error(sSource)
+	error("Source does not exist or is not a folder.")
+end

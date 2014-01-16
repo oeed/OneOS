@@ -1,0 +1,34 @@
+tArgs = {...}
+
+if not tArgs[1] or not fs.exists(tArgs[1], true) then
+	OneOS.Close()
+end
+
+os.loadAPI('/System/API/Helpers', true)
+os.loadAPI('/System/API/Drawing', true)
+
+Drawing.Clear(colours.white)
+Drawing.DrawCharactersCenter(nil, nil, nil, nil, 'Extracting Package...', colours.black, colours.white)
+Drawing.DrawBuffer()
+
+
+local packrun, err = loadfile(tArgs[1], true)
+local env = getfenv()
+env['installLocation'] = Helpers.RemoveFileName(tArgs[1])..'/'
+setfenv( packrun, env)
+if packrun then
+	packrun()
+else
+	error(err)
+	error(tArgs[1])
+	error('The package appears to be corrupt.')
+end
+
+Drawing.Clear(colours.white)
+Drawing.DrawCharactersCenter(nil, nil, nil, nil, 'Package Extracted', colours.black, colours.white)
+Drawing.DrawBuffer()
+
+
+
+sleep(1)
+OneOS.Close()

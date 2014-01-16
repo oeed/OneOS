@@ -10,6 +10,9 @@ Screen = {
 	Height = _h
 }
 
+colours.transparent = -1
+colors.transparent = -1
+
 DrawCharacters = function (x, y, characters, textColour, bgColour)
 	Drawing.WriteStringToBuffer(x, y, characters, textColour, bgColour)
 end
@@ -52,28 +55,18 @@ DrawImage = function(_x,_y,tImage, w, h)
 			end
 		end
 	elseif w and h then
-		Drawing.DrawBlankArea(x, y, w, h, colours.green)
+		Drawing.DrawBlankArea(_x, _y, w, h, colours.lightGrey)
 	end
 end
 
---[[
-	for _y=1, #tImage do
-		for _x=1, tImage[_y]:len()/3 do
-			local char = string.sub(tImage[_y],_x*3, (_x*3))
-			local textColour = Drawing.GetColour(string.byte(tImage[_y],(_x*3)-1,(_x*3)-1)  or 0)
-			local bgColour = Drawing.GetColour(string.byte(tImage[_y],(_x*3)-2,(_x*3)-2)  or f)
-			Drawing.WriteToBuffer(x+_x-1, y+_y-1, char, textColour, bgColour)
-		end
-	end
-]]
 --using .nft
-LoadImage = function(path)
+LoadImage = function(path, global)
 	local image = {
 		text = {},
 		textcol = {}
 	}
 	if fs.exists(path) then
-        local file = io.open(path, "r")
+        local file = io.open(path, "r", global)
         local sLine = file:read()
         local num = 1
         while sLine do  
@@ -87,7 +80,6 @@ LoadImage = function(path)
                 local bgNext, fgNext = false, false
                 --The current background and foreground colours
                 local currBG, currFG = nil,nil
-                term.setCursorPos(1,1)
                 for i=1,#sLine do
                         local nextChar = string.sub(sLine, i, i)
                         if nextChar:byte() == 30 then
@@ -96,9 +88,15 @@ LoadImage = function(path)
                                 fgNext = true
                         elseif bgNext then
                                 currBG = Drawing.GetColour(nextChar)
+			                    if currBG == nil then
+			                    	currBG = colours.transparent
+			                    end
                                 bgNext = false
                         elseif fgNext then
                                 currFG = Drawing.GetColour(nextChar)
+			                    if currFG == nil or currFG == colours.transparent then
+			                    	currFG = colours.white
+			                    end
                                 fgNext = false
                         else
                                 if nextChar ~= " " and currFG == nil then
@@ -114,6 +112,8 @@ LoadImage = function(path)
                 sLine = file:read()
         end
         file:close()
+    else
+    	return nil
 	end
  	return image
 end
@@ -130,6 +130,9 @@ DrawCharactersCenter = function(x, y, w, h, characters, textColour,bgColour)
 end
 
 GetColour = function(hex)
+	if hex == ' ' then
+		return colours.transparent
+	end
     local value = tonumber(hex, 16)
     if not value then return nil end
     value = math.pow(2,value)

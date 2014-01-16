@@ -100,23 +100,23 @@ Drawing = {
 	                for i=1,#sLine do
 	                        local nextChar = string.sub(sLine, i, i)
 	                        if nextChar:byte() == 30 then
-	                                bgNext = true
+                                bgNext = true
 	                        elseif nextChar:byte() == 31 then
-	                                fgNext = true
+                                fgNext = true
 	                        elseif bgNext then
-	                                currBG = Drawing.GetColour(nextChar)
-	                                bgNext = false
+                                currBG = Drawing.GetColour(nextChar)
+                                bgNext = false
 	                        elseif fgNext then
-	                                currFG = Drawing.GetColour(nextChar)
-	                                fgNext = false
+                                currFG = Drawing.GetColour(nextChar)
+                                fgNext = false
 	                        else
-	                                if nextChar ~= " " and currFG == nil then
-	                                        currFG = colours.white
-	                                end
-	                                image[num][writeIndex] = currBG
-	                                image.textcol[num][writeIndex] = currFG
-	                                image.text[num][writeIndex] = nextChar
-	                                writeIndex = writeIndex + 1
+                                if nextChar ~= " " and currFG == nil then
+                                       currFG = colours.white
+                                end
+                                image[num][writeIndex] = currBG
+                                image.textcol[num][writeIndex] = currFG
+                                image.text[num][writeIndex] = nextChar
+                                writeIndex = writeIndex + 1
 	                        end
 	                end
 	                num = num+1
@@ -690,7 +690,7 @@ Artboard = {
 		Current.Artboard = self
 		path = path or self.Path
 
-        local file = io.open(path, "w")
+        local file = io.open(path, "w", true)
 		if self.Format == '.skch' then
 			file:write(textutils.serialize(SaveSKCH()))
 		else
@@ -3464,9 +3464,7 @@ function TryClick(event, side, x, y, drag)
 			return
 		end
 	end
-	local interfaceElements = {
-		Current.Artboard
-	}
+	local interfaceElements = {}
 
 	if Current.InterfaceVisible then
 		table.insert(interfaceElements, Current.MenuBar)
@@ -3480,6 +3478,8 @@ function TryClick(event, side, x, y, drag)
 		end
 		table.insert(interfaceElements, v)
 	end
+
+	table.insert(interfaceElements, Current.Artboard)
 
 	for i, object in ipairs(interfaceElements) do
 		if DoClick(object, side, x, y, drag) then
@@ -3538,10 +3538,13 @@ end
 	Gets the colour from a hex value
 ]]--
 local function getColourOf(hex)
-        local value = tonumber(hex, 16)
-        if not value then return nil end
-        value = math.pow(2,value)
-        return value
+	if hex == ' ' then
+		return colours.transparent
+	end
+    local value = tonumber(hex, 16)
+    if not value then return nil end
+    value = math.pow(2,value)
+    return value
 end
 
 --[[

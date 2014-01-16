@@ -156,9 +156,9 @@ function Click(event, side, x, y)
 					{
 						Title = 'Rename...',
 						Click = function()
-							TextDialogueWindow:Initialise("Rename '"..Helpers.TruncateString(Helpers.RemoveExtension(name), 17).."'", function(success, value)
+							TextDialogueWindow:Initialise("Rename '"..Helpers.TruncateString(name, 17).."'", function(success, value)
 								if success then
-									fs.move('Desktop/'..name, 'Desktop/'..value..Helpers.Extension(name, true))
+									fs.move('Desktop/'..name, 'Desktop/'..value)
 
 									settings.layout[value..Helpers.Extension(name, true)] = settings.layout[name]
 									settings.layout[name] = nil

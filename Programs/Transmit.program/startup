@@ -1,0 +1,292 @@
+tArgs = {...}
+
+os.loadAPI('/System/API/Drawing', true)
+os.loadAPI('/System/API/Button', true)
+os.loadAPI('/System/API/Helpers', true)
+os.loadAPI('/System/API/Peripheral', true)
+os.loadAPI('/System/API/Wireless', true)
+os.loadAPI('/System/API/ButtonDialogueWindow', true)
+
+
+Current = {
+	Clicks = {},
+	Image = 'disabled',
+	Status = 0,
+	DiscoverdComputers = {
+		{
+			ID = 2,
+			Name = 'Steve\'s Computer'
+		},
+		{
+			ID = 2,
+			Name = 'John\'s Computer'
+		},
+	},
+	Destination = {}
+}
+
+Events = {
+	
+}
+
+InterfaceElements = {
+	
+}
+
+local imageCache = {}
+
+function Initialise()
+	EventRegister('mouse_click', TryClick)
+	EventRegister('mouse_drag', TryClick)
+	EventRegister('monitor_touch', TryClick)
+	EventRegister('mouse_scroll', Scroll)
+	EventRegister('key', HandleKey)
+	EventRegister('char', HandleKey)
+	EventRegister('timer', Update)
+	EventRegister('modem_message', function(...)print(...)Wireless.HandleMessage(...) end)
+
+	for i, file in ipairs(fs.list('/images/')) do
+		imageCache[Helpers.RemoveExtension(file)] = Drawing.LoadImage('/images/'..file)
+	end
+
+	Wireless.Initialise()
+
+	if tArgs[1] then
+		Current.Status = 1
+	else
+		Current.Status = 2
+	end
+
+	if not os.getComputerLabel() then
+		os.setComputerLabel('OneOS Computer')
+	end
+
+	Update()EventHandler()
+	if Current.Status == 2 then
+		parallel.waitForAll(EventHandler, RecieveFile)
+	elseif Current.Status == 3 then
+		parallel.waitForAll(EventHandler, DiscoverComputers)
+	else
+		EventHandler()
+	end
+end
+
+function UpdateImage()
+	if Current.Status == 0 then
+		Current.Image = 'disabled'
+	elseif Current.Status == 1 or Current.Status == 2 or Current.Status == 3 then
+		if Current.Image == 'anm0' then
+			Current.Image = 'anm1'
+		elseif Current.Image == 'anm1' then
+			Current.Image = 'anm2'
+		elseif Current.Image == 'anm2' then
+			Current.Image = 'anm3'
+		else
+			Current.Image = 'anm0'
+		end
+	end
+end
+
+function DiscoverComputers()
+	local keepRunning = true
+	Wireless.Responder = function(event, side, channel, replyChannel, message, distance)
+		if channel == Wireless.Channels.TransmitDiscovery then
+			local reply = Turtle.HandleMessage(message.content)
+			if reply then
+				Turtle.Reply(reply, message.messageID)
+			end
+		end
+	end
+	while keepRunning do
+	end
+end
+
+function RecieveFile()
+	local keepRunning = true
+	Wireless.Responder = function(event, side, channel, replyChannel, message, distance)
+		if channel == Wireless.Channels.TransmitDiscovery then
+			local reply = Turtle.HandleMessage(message.content)
+			if reply then
+				Turtle.Reply(reply, message.messageID)
+			end
+		end
+	end
+	while keepRunning do
+		
+	end
+end
+
+function SendToComputer(computer)
+	Current.Destination = computer
+	local h = fs.open(tArgs[1], 'r', true)
+	local f = h.readAll()
+	h.close()
+end
+
+function Update()
+	Draw()
+	updateTimer = os.startTimer(0.5)
+end
+
+function DrawComputer(computer, angle, radius)
+	--sohcahtoa
+	local vertexX, vertexY = Drawing.Screen.Width/2, Drawing.Screen.Height - 2
+	width = (radius * math.sin(-angle/90)) * 1.5 -- to fix the pixel ratio
+	height = radius * math.cos(-angle/90)
+
+	local centerX = (Drawing.Screen.Width/2) - width
+	local centerY = vertexY - height
+	local name = Helpers.TruncateString(computer.Name,13)
+	Drawing.DrawImage(centerX-3, centerY-2, imageCache['computer'], 5, 4)
+
+	Drawing.DrawCharacters(math.floor(centerX - (#name / 2)), centerY+3, name, colours.black, colours.white)
+
+	RegisterClick(centerX-3, centerY-2, 5, 4, function() 
+		Current.Status = 3
+		SendToComputer(computer)
+	end)
+	RegisterClick(math.floor(centerX - (#name / 2)), centerY+3, #name, 1, function() 
+		Current.Status = 3
+		SendToComputer(computer)
+	end)
+end
+
+function DrawComputers()
+	--max of 4, with 75˚ between them
+	while #Current.DiscoverdComputers > 4 do
+		table.remove(Current.DiscoverdComputers, #Current.DiscoverdComputers)
+	end
+
+	local max = #Current.DiscoverdComputers
+	local separationAngle = 75
+	for i, computer in ipairs(Current.DiscoverdComputers) do
+		local angle = 0
+		if max % 2 == 0 then
+			if max/2 == i then
+				angle = separationAngle/2
+			elseif max/2 == i - 1 then
+				angle = -separationAngle/2
+			else
+				angle = separationAngle * (i - max/2) - separationAngle/2
+			end
+		else
+			if math.ceil(max/2) == i then
+				angle = 0
+			else
+				angle = separationAngle * (i - math.ceil(max/2))
+			end
+		end
+		DrawComputer(computer, angle, 12)
+	end
+	Drawing.DrawCharactersCenter(nil, math.ceil(Drawing.Screen.Height/2), nil, nil, 'Select the computer to send the file to.', colours.grey, colours.white)
+end
+
+function Draw()
+	UpdateImage()
+	Current.Clicks = {}
+	Drawing.Clear(colours.white)
+	local imgY = 0
+	if Current.Status ==  1 then
+		imgY = 1
+	end
+	Drawing.DrawImage((Drawing.Screen.Width-10)/2, Drawing.Screen.Height-5-imgY, imageCache[Current.Image], 10, 5)
+
+	if Current.Status ==  1 then
+		DrawComputers()
+	elseif Current.Status == 2 then
+		Drawing.DrawCharactersCenter(nil, -1, nil, nil, 'Waiting to be sent a file...', colours.grey, colours.white)
+	elseif Current.Status == 3 then
+		Drawing.DrawCharactersCenter(nil, -1, nil, nil, 'Waiting for reciever to accept...', colours.grey, colours.white)
+	end
+	Drawing.DrawCharactersCenter(nil, -math.ceil(Drawing.Screen.Height/2) + 1, nil, nil, 'This computer is: '..os.getComputerLabel(), colours.grey, colours.white)
+
+	Drawing.DrawBuffer()
+end
+
+MainDraw = Draw
+function RegisterElement(elem)
+	table.insert(InterfaceElements, elem)
+end
+
+function UnregisterElement(elem)
+	for i, e in ipairs(InterfaceElements) do
+		if elem == e then
+			InterfaceElements[i] = nil
+		end
+	end
+end
+
+function RegisterClick(x, y, width, height, click)
+	if type(x) == 'table' then
+		table.insert(Current.Clicks, x)
+	else
+		table.insert(Current.Clicks,{
+			X = x,
+			Y = y,
+			Width = width,
+			Height = height,
+			Click = click
+		})
+	end
+end
+
+function CheckClick(object, x, y)
+	local pos = GetAbsolutePosition(object)
+	if pos.X <= x and pos.Y <= y and  pos.X + object.Width > x and pos.Y + object.Height > y then
+		return true
+	end
+end
+
+function DoClick(event, object, side, x, y)
+	if object and CheckClick(object, x, y) then
+		return object:Click(side, x - object.X + 1, y - object.Y + 1)
+	end	
+end
+
+function TryClick(event, side, x, y)
+	for i, object in ipairs(Current.Clicks) do
+		if DoClick(event, object, side, x, y) then
+			Draw()
+			return
+		end		
+	end
+end
+
+function HandleKey(...)
+	local args = {...}
+	local event = args[1]
+	local keychar = args[2]
+	
+end
+
+function GetAbsolutePosition(obj)
+	if not obj.Parent then
+		return {X = obj.X, Y = obj.Y}
+	else
+		local pos = GetAbsolutePosition(obj.Parent)
+		local x = pos.X + obj.X - 1
+		local y = pos.Y + obj.Y - 1
+		return {X = x, Y = y}
+	end
+end
+
+function EventRegister(event, func)
+	if not Events[event] then
+		Events[event] = {}
+	end
+
+	table.insert(Events[event], func)
+end
+
+function EventHandler()
+	while true do
+		local event = { coroutine.yield() }
+		if Events[event[1]] then
+			for i, e in ipairs(Events[event[1]]) do
+				e(event[1], event[2], event[3], event[4], event[5])
+			end
+		end
+	end
+end
+
+Initialise()

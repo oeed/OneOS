@@ -1,6 +1,0 @@
-print('Online')
-os.startTimer(0.1)
-local e = os.pullEvent('mouse_click')
-print(e)
-local e = os.pullEvent('timer')
-print(e)

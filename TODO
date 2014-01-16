@@ -1,22 +1,17 @@
 TODO:
 
 Bugs:
-coroutine in environtment pullevent not filtering
 lua not working in shell
+loadfile, packager in files relieis on it
 
 Features:
-- Program restarting (os.reboot)
 - AirDrop like file transfer program
 - Mario like game
 - AppStore
 - Turtle program completion
+- Package in files
 - Finish Pik
-	- Tool sizes
-	- Comments
 	- Speedup artboard rendering (large dragging)
-	- Clicks go to artboard if under menu, sidebar etc
 
 
 Done:
-
-Relative files!

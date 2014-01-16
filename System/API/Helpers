@@ -44,6 +44,8 @@ OpenFile = function(path, args)
 			LaunchProgram('/System/Programs/Files.program/startup', {path}, 'Files')
 		elseif extension == 'nfp' or extension == 'nft' or extension == 'skch' then
 			LaunchProgram('/Programs/Sketch.program/startup', {path}, 'Sketch')
+		elseif extension == 'pkg' then
+			LaunchProgram('/System/Programs/Unpackager.program/startup', {path}, 'Unpackager')
 		else
 			LaunchProgram('/Programs/LuaIDE.program/startup', {path}, 'LuaIDE')
 		end
@@ -70,7 +72,7 @@ end
 
 ReadIcon = function(path)
 	if not Current.IconCache[path] then
-		Current.IconCache[path] = Drawing.LoadImage(path)
+		Current.IconCache[path] = Drawing.LoadImage(path, true)
 	end
 	return Current.IconCache[path]
 end

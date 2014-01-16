@@ -56,6 +56,10 @@ function getAllApplications()
 	return doRequest('application', 'all')
 end
 
+function getApplicationsInCategory(name)
+	return doRequest('application', 'category', {name = name})
+end
+
 function getFeaturedApplications()
 	return doRequest('application', 'featured')
 end

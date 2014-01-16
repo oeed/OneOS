@@ -385,7 +385,7 @@ ListItem = {
 			end)
 		elseif self.Type == 2 then
 			RegisterClick(self.X, self.Y + Drawing.Offset.Y, self.Width, self.Height, function()
-				ChangePage('Search Results','Voi')
+				ChangePage('Category Items',self.Title)
 			end)
 		end
 
@@ -625,6 +625,8 @@ function ChangePage(title, arg)
 		LoadAboutApp(arg)
 	elseif title == "Search" then
 		LoadSearch()
+	elseif title == "Category Items" then
+		LoadList(function() return api.getApplicationsInCategory(arg) end)
 	end
 
 	currentPage = title

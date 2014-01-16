@@ -430,7 +430,12 @@ function FilesClick(event, x, y, side)
 					{
 						Title = 'New Folder',
 						Click = function()
-							
+							TextDialogueWindow:Initialise("Create a Folder", function(success, value)
+								if success then
+									fs.makeDir(Current.Path..'/'..value)
+									Update()
+								end
+							end):Show()
 						end
 					},
 					{
@@ -487,11 +492,25 @@ function RightClickFile(file, absX, absY)
 			Separator = true
 		},
 		{
+			Title = 'Create Package',
+			Click = function()
+				local packrun = loadfile('pkgmake')
+				local env = getfenv()
+				setfenv( packrun, env)
+				local path = file.path:sub(1,#file.path-1)
+				packrun(file.path, Helpers.RemoveFileName(path)..Helpers.RemoveExtension(fs.getName(path))..'.pkg')
+				Update()
+			end
+		},
+		{
+			Separator = true
+		},
+		{
 			Title = 'Rename...',
 			Click = function()
-				local tdw = TextDialogueWindow:Initialise("Rename '"..Helpers.TruncateString(Helpers.RemoveExtension(file.name), 17).."'", function(success, value)
+				local tdw = TextDialogueWindow:Initialise("Rename '"..Helpers.TruncateString(file.name, 17).."'", function(success, value)
 					if success then
-						fs.move(file.path, Helpers.RemoveFileName(file.path)..value..Helpers.Extension(file.name, true), true)
+						fs.move(file.path, Helpers.RemoveFileName(file.path)..value, true)
 						Update()
 					end
 				end):Show()
