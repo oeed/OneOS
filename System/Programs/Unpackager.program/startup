@@ -28,7 +28,5 @@ Drawing.Clear(colours.white)
 Drawing.DrawCharactersCenter(nil, nil, nil, nil, 'Package Extracted', colours.black, colours.white)
 Drawing.DrawBuffer()
 
-
-
 sleep(1)
 OneOS.Close()
