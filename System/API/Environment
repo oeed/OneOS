@@ -130,6 +130,14 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 			CanClose = function()end,
 			Close = function()
 				program:Close(true)
+			end,
+			Run = function(path, ...)
+				local args = {...}
+				if fs.isDir(path) and fs.exists(path..'/startup') then
+					LaunchProgram(path..'/startup', args, Helpers.RemoveExtension(fs.getName(path)))
+				elseif not fs.isDir(path) then
+					LaunchProgram(path, args, Helpers.RemoveExtension(fs.getName(path)))
+				end
 			end
 		}
 	end

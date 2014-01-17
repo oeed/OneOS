@@ -35,6 +35,14 @@
 		Peripheral.Call('wireless_modem', 'transmit', channel, replyChannel, textutils.serialize(message))
 	end
 
+	function Present()
+		if Peripheral.GetPeripheral('wireless_modem') == nil then
+			return false
+		else
+			return true
+		end
+	end
+
 	local function FormatMessage(message, messageID)
 		return {
 			content = textutils.serialize(message),
@@ -74,8 +82,10 @@
 	end
 
 	Initialise = function()
-		for i, c in pairs(Channels) do
-			open(c)
+		if Present() then
+			for i, c in pairs(Channels) do
+				open(c)
+			end
 		end
 	end
 

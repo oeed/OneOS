@@ -601,7 +601,9 @@ function DisplayLoader()
 end
 
 function Initialise()
-	os.loadAPI('api');
+	os.loadAPI('api')
+	print(api)
+	sleep(2)
 	--sleep(0.5)
 	--DownloadData()
 	ChangePage('Top Charts')

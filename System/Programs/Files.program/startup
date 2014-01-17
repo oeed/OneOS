@@ -492,20 +492,6 @@ function RightClickFile(file, absX, absY)
 			Separator = true
 		},
 		{
-			Title = 'Create Package',
-			Click = function()
-				local packrun = loadfile('pkgmake')
-				local env = getfenv()
-				setfenv( packrun, env)
-				local path = file.path:sub(1,#file.path-1)
-				packrun(file.path, Helpers.RemoveFileName(path)..Helpers.RemoveExtension(fs.getName(path))..'.pkg')
-				Update()
-			end
-		},
-		{
-			Separator = true
-		},
-		{
 			Title = 'Rename...',
 			Click = function()
 				local tdw = TextDialogueWindow:Initialise("Rename '"..Helpers.TruncateString(file.name, 17).."'", function(success, value)
@@ -563,6 +549,38 @@ function RightClickFile(file, absX, absY)
 			end
 		}
 	}
+	if file.isDirectory then
+		table.insert(items, 3,
+		{
+			Title = 'Create Package',
+			Click = function()
+				local packrun = loadfile('pkgmake')
+				local env = getfenv()
+				setfenv( packrun, env)
+				local path = file.path:sub(1,#file.path-1)
+				packrun(file.path, Helpers.RemoveFileName(path)..Helpers.RemoveExtension(fs.getName(path))..'.pkg')
+				Update()
+			end
+		})
+
+		table.insert(items, 4,
+		{
+			Separator = true
+		})
+	else
+		table.insert(items, 3,
+		{
+			Title = 'Transmit',
+			Click = function()
+				OneOS.Run('/Programs/Transmit.program/',file.path)
+			end
+		})
+
+		table.insert(items, 4,
+		{
+			Separator = true
+		})
+	end
 	if openContent then
 		table.insert(items, 2, openContent)
 	end

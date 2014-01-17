@@ -46,16 +46,20 @@ function Initialise()
 	EventRegister('modem_message', function(...)print(...)Wireless.HandleMessage(...) end)
 
 	for i, file in ipairs(fs.list('/images/')) do
-		imageCache[Helpers.RemoveExtension(file)] = Drawing.LoadImage('/images/'..file)
+		imageCache[Helpers.RemoveExtension(file)] = Drawing.LoadImage('/Programs/Transmit.program/images/'..file)
 	end
 
-	Wireless.Initialise()
-
-	if tArgs[1] then
-		Current.Status = 1
+	if not Wireless.Present() then
+		Current.Status = 0
 	else
-		Current.Status = 2
+		Wireless.Initialise()
+		if tArgs[1] then
+			Current.Status = 1
+		else
+			Current.Status = 2
+		end
 	end
+
 
 	if not os.getComputerLabel() then
 		os.setComputerLabel('OneOS Computer')
@@ -190,16 +194,19 @@ function Draw()
 		imgY = 1
 	end
 	Drawing.DrawImage((Drawing.Screen.Width-10)/2, Drawing.Screen.Height-5-imgY, imageCache[Current.Image], 10, 5)
-
-	if Current.Status ==  1 then
-		DrawComputers()
-	elseif Current.Status == 2 then
-		Drawing.DrawCharactersCenter(nil, -1, nil, nil, 'Waiting to be sent a file...', colours.grey, colours.white)
-	elseif Current.Status == 3 then
-		Drawing.DrawCharactersCenter(nil, -1, nil, nil, 'Waiting for reciever to accept...', colours.grey, colours.white)
+	if Current.Status == 0 then
+		Drawing.DrawCharactersCenter(nil, -2, nil, nil, 'Connect a Wireless Modem on any', colours.grey, colours.white)		
+		Drawing.DrawCharactersCenter(nil, -1, nil, nil, 'side to use Transmit', colours.grey, colours.white)		
+	else
+		if Current.Status ==  1 then
+			DrawComputers()
+		elseif Current.Status == 2 then
+			Drawing.DrawCharactersCenter(nil, -1, nil, nil, 'Waiting to be sent a file...', colours.grey, colours.white)
+		elseif Current.Status == 3 then
+			Drawing.DrawCharactersCenter(nil, -1, nil, nil, 'Waiting for reciever to accept...', colours.grey, colours.white)
+		end
+		Drawing.DrawCharactersCenter(nil, -math.ceil(Drawing.Screen.Height/2) + 1, nil, nil, 'This computer is: '..os.getComputerLabel(), colours.grey, colours.white)
 	end
-	Drawing.DrawCharactersCenter(nil, -math.ceil(Drawing.Screen.Height/2) + 1, nil, nil, 'This computer is: '..os.getComputerLabel(), colours.grey, colours.white)
-
 	Drawing.DrawBuffer()
 end
 
