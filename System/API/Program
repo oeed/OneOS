@@ -3,10 +3,11 @@
 	Timers = {}
 	AppRedirect = nil
 	Running = true
-
+	local _args = {}
 	Initialise = function(self, shell, path, title, args)
 		local new = {}    -- the new instance
 		setmetatable( new, {__index = self} )
+		_args = args
 		new.Title = title or path
 		new.Path = path
 		new.AppRedirect = AppRedirect:Initialise(1, 2, Drawing.Screen.Width, Drawing.Screen.Height-1, new)
@@ -70,6 +71,13 @@
 		Overlay.UpdateButtons()
 		MainDraw()
 		return new
+	end
+
+	Restart = function(self)
+		local path = self.Path
+		local title = self.Title
+		self:Close()
+		LaunchProgram(path, {}, title)
 	end
 
 	QueueEvent = function(self, ...)
@@ -149,13 +157,14 @@
 				end
 			end
 
-			if Current.Program then
-				Current.Program.AppRedirect:Draw()
-			end
-
 			Desktop:RefreshFiles()
 			Overlay.UpdateButtons()
-			MainDraw()
+			if Current.Program then
+				MainDraw()
+				Current.Program.AppRedirect:Draw()
+			else
+				Desktop:Draw()
+			end
 			return true
 		else
 			return false

@@ -129,7 +129,6 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 			Clipboard = Clipboard,
 			CanClose = function()end,
 			Close = function()
-				--This needs some serious fixing!
 				program:Close(true)
 			end
 		}
@@ -318,9 +317,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 				return os.day()
 			end,
 
-			setAlarm = function(timer)
-
-			end,
+			setAlarm = os.setAlarm,
 
 			shutdown = function()
 				print()
@@ -330,7 +327,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 			end,
 
 			reboot = function()
-
+				program:Restart()
 			end
 		}
 		return _os
@@ -343,7 +340,14 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 		local bExit = false
 		local sDir = (parentShell and parentShell.dir()) or ""
 		local sPath = (parentShell and parentShell.path()) or ".:/rom/programs"
-		local tAliases = (parentShell and parentShell.aliases()) or {}
+		local tAliases = {
+			ls = "list",
+			dir = "list",
+			cp = "copy",
+			mv = "move",
+			rm = "delete",
+			preview = "edit"
+		}
 		local tProgramStack = {path}
 
 		-- Colours
@@ -360,7 +364,10 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 
 
 		local function _run( _sCommand, ... )
-			local sPath = nativeShell.resolveProgram(Helpers.RemoveFileName(appPath) .. '/' ..  _sCommand )
+			local sPath = nativeShell.resolveProgram(_sCommand)
+			if _sCommand:sub(1,3) ~= 'rom' then
+				sPath = nativeShell.resolveProgram(Helpers.RemoveFileName(appPath) .. '/' ..  _sCommand )
+			end
 			if sPath ~= nil then
 				tProgramStack[#tProgramStack + 1] = sPath
 		   		local result = osrun( env, sPath, ... )
@@ -428,40 +435,63 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 		    local sStartChar = string.sub( _sCommand, 1, 1 )
 		    if sStartChar == "/" or sStartChar == "\\" then
 		    	local sPath = fs.combine( "", _sCommand )
-		    	if fs.exists( sPath ) and not fs.isDir( sPath ) then
+		    	if fs.exists( sPath, global) and not fs.isDir( sPath, global) then
 					return sPath
 		    	end
 				return nil
 		    end
-		    
-		 	-- Otherwise, look on the path variable
-		    for sPath in string.gmatch(sPath, "[^:]+") do
-		    	sPath = env.fs.combine( nativeShell.resolve( sPath ), _sCommand, global)
-		    	if env.fs.exists( sPath, global) and not fs.isDir( sPath ) then
-					return sPath
+
+		    function lookInFolder(_fPath)
+		    	for i, f in ipairs(fs.list(_fPath, true)) do
+		    		if not fs.isDir( fs.combine( _fPath, f), true) then
+						if f == _sCommand then
+							return fs.combine( _fPath, f)
+						end
+					end
 		    	end
 		    end
-			
+
+		    local list = {Helpers.RemoveFileName(appPath), '/rom/programs/', '/rom/programs/color/', '/rom/programs/computer/'}
+		    if http then
+		    	table.insert(list, '/rom/programs/http/')
+		    end
+		    if turtle then
+		    	table.insert(list, '/rom/programs/turtle/')
+		    end
+		    for i, p in ipairs(list) do
+		    	local r = lookInFolder(p)
+		    	if r then
+		    		return r
+		    	end
+		    end
+
 			-- Not found
 			return nil
 		end
 
 		function programs( _bIncludeHidden )
 			local tItems = {}
-			
-			-- Add programs from the path
-		    for sPath in string.gmatch(sPath, "[^:]+") do
-		    	sPath = nativeShell.resolve( sPath )
-				if env.fs.isDir( sPath ) then
-					local tList = fs.list( sPath )
-					for n,sFile in pairs( tList ) do
-						if not env.fs.isDir( env.fs.combine( sPath, sFile ) ) and
-						   (_bIncludeHidden or string.sub( sFile, 1, 1 ) ~= ".") then
-							tItems[ sFile ] = true
+
+		    local function addFolder(_fPath)
+		    	for i, f in ipairs(fs.list(_fPath, true)) do
+		    		if not fs.isDir( fs.combine( _fPath, f), true) then
+						if (_bIncludeHidden or string.sub( f, 1, 1 ) ~= ".") then
+							tItems[ f ] = true
 						end
 					end
-				end
-		    end	
+		    	end
+		    end
+
+		    addFolder('/rom/programs/')
+		    addFolder('/rom/programs/color/')
+		    addFolder('/rom/programs/computer/')
+		    if http then
+		    	addFolder('/rom/programs/http/')
+		    end
+		    if turtle then
+		    	addFolder('/rom/programs/turtle/')
+		    end
+		    addFolder(Helpers.RemoveFileName(appPath))
 
 			-- Sort and return
 			local tItemList = {}

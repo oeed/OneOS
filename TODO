@@ -2,8 +2,6 @@ TODO:
 
 Bugs:
 lua not working in shell
-loadfile, packager in files relieis on it
-os.reboot()
 
 Features:
 - AirDrop like file transfer program

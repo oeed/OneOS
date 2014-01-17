@@ -117,6 +117,14 @@ local function resolve( _sPath )
 	end
 end
 
+function saveApplicationIcon(id, path)
+	local app = getApplication(id)
+	local icon = app.icon
+	local h = fs.open(path, 'w', true)
+	h.write(icon)
+	h.close()
+end
+
 function installApplication(id, path, computerid, username, password)
 	local package = downloadApplication(id)
 	if type(package) ~= 'string' or #package == 0 then

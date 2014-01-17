@@ -371,7 +371,8 @@ ListItem = {
 
 		RegisterClick(self.Width - 7, self.Y + Drawing.Offset.Y + installPos - 1, 9, 1, function()
 			Load("Installing App", function()
-				api.installApplication(tonumber(self.AppID),"/Programs/"..self.Title.."/")
+				api.installApplication(tonumber(self.AppID),"/Programs/"..self.Title..".program/")
+				api.saveApplicationIcon(tonumber(self.AppID),"/Programs/"..self.Title..".program/icon")
 			end)
 			Load("Application Installed!", function()
 				sleep(1)
@@ -992,8 +993,8 @@ if term.isColor and term.isColor() then
 		print(" " .. tostring(err) .. "\n\n")
 
 		term.setTextColor(colours.white)
-		print(" Press any key to exit...")
-		--local ev = os.pullEvent("###")
+		print(" Click anywhere to exit...")
+		os.pullEvent("mouse_click")
 		OneOS.Close()
 	end
 
