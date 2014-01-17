@@ -23,6 +23,8 @@
 		end
 	end
 
+	Open = open
+
 	local function close(channel)
 		Peripheral.Call('wireless_modem', 'close', channel)
 	end
@@ -43,14 +45,15 @@
 		end
 	end
 
-	local function FormatMessage(message, messageID)
+	local function FormatMessage(message, messageID, destinationID)
 		return {
 			content = textutils.serialize(message),
 			senderID = os.getComputerID(),
 			senderName = os.getComputerLabel(),
 			channel = channel,
 			replyChannel = reply,
-			messageID = messageID or math.random(10000)
+			messageID = messageID or math.random(10000),
+			destinationID = destinationID
 		}
 	end
 
@@ -64,16 +67,21 @@
 
 	RecieveMessage = function(_channel, messageID, timeout)
 		open(_channel)
+		local done = false
 		local event, side, channel, replyChannel, message = nil
 		Timeout(function()
-			event, side, channel, replyChannel, message = os.pullEvent('modem_message')
-			if channel ~= _channel then
-				event, side, channel, replyChannel, message = nil
-			else
-				message = textutils.unserialize(message)
-				message.content = textutils.unserialize(message.content)
-				if messageID and messageID ~= message.messageID then
+			while not done do
+				event, side, channel, replyChannel, message = os.pullEvent('modem_message')
+				if channel ~= _channel then
 					event, side, channel, replyChannel, message = nil
+				else
+					message = textutils.unserialize(message)
+					message.content = textutils.unserialize(message.content)
+					if messageID and messageID ~= message.messageID or (message.destinationID ~= nil and message.destinationID ~= os.getComputerID()) then
+						event, side, channel, replyChannel, message = nil
+					else
+						done = true
+					end
 				end
 			end
 		end,
@@ -97,16 +105,17 @@
 			if message.content == 'Ping!' then
 				SendMessage(replyChannel, 'Pong!', nil, message.messageID)
 			end
+		elseif message.destinationID ~= nil and message.destinationID ~= os.getComputerID() then
 		elseif Wireless.Responder then
 			Wireless.Responder(event, side, channel, replyChannel, message, distance)
 		end
 	end
 
-	SendMessage = function(channel, message, reply, messageID)
+	SendMessage = function(channel, message, reply, messageID, destinationID)
 		reply = reply or channel + 1
 		open(channel)
 		open(reply)
-		local _message = FormatMessage(message, messageID)
+		local _message = FormatMessage(message, messageID, destinationID)
 		transmit(channel, reply, _message)
 		return _message
 	end

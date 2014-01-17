@@ -136,7 +136,7 @@ function installApplication(id, path, computerid, username, password)
 	if packrun then
 		packrun()
 
-		local function makeFile(_path,_content, true)
+		local function makeFile(_path,_content)
 		 local file=fs.open(_path,"w", true)
 		 file.write(_content)
 		 file.close()

@@ -1583,6 +1583,7 @@ Tools = {
 			else
 				Current.HandDragStart = {x, y}
 			end
+			sleep(0)
 		end,
 		Select = function(self)
 			return true
@@ -2957,7 +2958,15 @@ function DeleteLayer()
 	end
 end
 
+needsDraw = false
+isDrawing = false
 function Draw()
+	if isDrawing then
+		needsDraw = true
+		return
+	end
+	needsDraw = false
+	isDrawing = true
 	if not Current.Window then
 		Drawing.Clear(UIColours.Background)
 	else
@@ -2970,7 +2979,10 @@ function Draw()
 
 	if Current.InterfaceVisible then
 		Current.MenuBar:Draw()
+		Current.Toolbar.Width = Current.Toolbar.ExpandedWidth
 		Current.Toolbar:Draw()
+	else
+		Current.Toolbar.Width = Current.Toolbar.ExpandedWidth
 	end
 
 	if Current.InterfaceVisible and Current.Menu then
@@ -2996,6 +3008,10 @@ function Draw()
 
 	if Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
 		Current.SelectionDrawTimer = os.startTimer(0.5)
+	end
+	isDrawing = false
+	if needsDraw then
+		Draw()
 	end
 end
 

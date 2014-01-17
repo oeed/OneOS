@@ -85,7 +85,7 @@ end
 Extension = function(path, addDot)
 	if not path then
 		return nil
-	elseif not string.find(path, '%.') then
+	elseif not string.find(fs.getName(path), '%.') then
 		if not addDot then
 			return fs.getName(path)
 		else
