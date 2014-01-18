@@ -177,23 +177,6 @@ ClearBuffer = function()
 	Drawing.Buffer = {}
 end
 
-Offset = {
-	X = 0,
-	Y = 0,
-}
-
-SetOffset = function(x, y)
-	Drawing.Offset.X = x
-	Drawing.Offset.Y = y
-end
-
-ClearOffset = function()
-	Drawing.Offset = {
-		X = 0,
-		Y = 0,
-	}
-end
-
 WriteStringToBuffer = function (x, y, characters, textColour,bgColour)
 	for i = 1, #characters do
 			local character = characters:sub(i,i)
@@ -205,15 +188,11 @@ WriteToBuffer = function(x, y, character, textColour,bgColour)
 	x = round(x)
 	y = round(y)
 	if bgColour == colours.transparent then
-		x = x + Drawing.Offset.X
-		y = y + Drawing.Offset.Y
 		Drawing.Buffer[y] = Drawing.Buffer[y] or {}
 		Drawing.Buffer[y][x] = Drawing.Buffer[y][x] or {"", colours.white, colours.black}
 		Drawing.Buffer[y][x][1] = character
 		Drawing.Buffer[y][x][2] = textColour
 	else
-		x = x + Drawing.Offset.X
-		y = y + Drawing.Offset.Y
 		Drawing.Buffer[y] = Drawing.Buffer[y] or {}
 		Drawing.Buffer[y][x] = {character, textColour, bgColour}
 	end

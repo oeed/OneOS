@@ -1,0 +1,206 @@
+--[[
+    [API] rNet
+    @version 1.0, 30/12/2013, HK
+    @author Hellkid98, HK
+--]]
+
+
+
+
+
+--[[
+    @description    "Opens all modems available"
+	
+	@return         nil
+--]]
+function openSides()
+    
+	local bool = false
+    for _, side in pairs( rs.getSides() ) do
+        if peripheral.getType( side ) == "modem" then
+            rednet.open( side )
+			bool = true
+	    end
+    end
+	return bool
+end
+
+
+--[[
+    @description    "Closes all modems available"
+	
+	@return         nil
+--]]
+function closeSides()
+
+    for _, side in pairs( rs.getSides() ) do
+        if peripheral.getType(side) == "modem" then
+            rednet.close(side)
+	    end
+    end
+end
+
+
+--[[
+    @description    "Checks all modems available"
+	
+	@return         table
+--]]
+function checkOpenSides()
+
+    local tOpenSides = {}
+    for _,side in pairs(rs.getSides()) do
+        if peripheral.getType(side) == "modem" then
+            if rednet.isOpen(side) then 
+			    table.insert(tOpenSides,side) 
+			end
+	    end
+    end
+  return tOpenSides
+end
+
+
+--[[
+    @description    "Receive messages from only allowed IDs"
+	
+	@param          tIDs,    table
+	@param       timeout,   number
+	
+	@return         table, boolean
+--]]
+function receive(tIDs,timeout)
+
+    local tData = {}
+    local response = false
+    for i = 1,#tIDs do
+        local rID, msg = rednet.receive(timeout)
+        if rID == tIDs[i] then
+            nMsg = {}
+            nMsg.id = rID
+            nMsg.msg = msg
+            table.insert(tData,nMsg)
+            response = true
+        end
+    end
+     return tData, response
+end
+
+
+--[[
+    @description    "Sending messages to multiple computers"
+	
+	@param          msg,    string
+	@param         tIDs,    table
+	
+	@return         nil
+--]]
+function send(msg,tIDs)
+
+    for i = 1,#tIDs do
+        rednet.send(tIDs[i],msg)
+    end
+end
+
+
+--[[
+    @description    "Sends multiple messages to one computer"
+	
+	@param          messages,    table
+	@param                id,    number
+	
+	@return         nil
+--]]
+function sendMessages(messages,id)
+    for i = 1,#messages do
+	    rednet.send(id,messages[i])
+	end
+end
+
+
+--[[
+    @description    "Sends a table over rednet"
+	
+	@param          id,    number
+	@param           t,    table
+--]]
+function sendTable(id,t)
+    rednet.send(id,textutils.serialize(t))
+end
+
+--[[
+    @description    "Receives a table over rednet"
+	
+	@return         table
+--]]
+function receiveTable()
+    local id, msg = rednet.receive()
+	textutils.unserialize(msg)
+	return id, msg
+end
+
+
+--[[
+    @description    "Waits for one message"
+	
+	@param          tIDs,    table
+	
+	@return         id, string
+--]]
+function waitForMessage(tIDs)
+
+    evt, rID, msg = os.pullEvent("rednet_message")
+    for i = 1,#tIDs do
+        if rID == tIDs[i] then
+            return rID, msg
+        end
+    end
+end
+
+
+--[[
+    @description    "Waiting until all messages are received from all computers"
+	
+	@param          tIDs,    table
+	@return         table
+--]]
+function waitForAllMessages(tIDs)
+
+    local tData = {}
+    while true do
+        evt, rID, msg = os.pullEvent("rednet_message")
+            for i = 1,#tIDs do
+                if rID == tIDs[i] then
+                    local add = true
+	
+                    for k = 1,#tData do
+	                    if rID == tData[k].id then
+	                        add = false
+	                    end
+	                end
+	
+	                if add then
+	                    local nData = {}
+	                    nData.id = rID
+	                    nData.msg = msg
+	                    table.insert(tData,nData)
+                	end
+	            end
+	            if #tData == #tIDs then return tData end
+            end
+    end
+end
+
+
+--[[
+    @description    "Waits for a specific message and returns the ID"
+	
+	@param          msg,    string
+	@return         id
+--]]
+function getID( msg )
+    repeat 
+	    id, message = rednet.receive()
+	until message == msg
+	
+	return id
+end

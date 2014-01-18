@@ -1,0 +1,1606 @@
+--[[
+    [Game] Lasers
+    @version 1.2, 29/12/2013, HK98
+    @author Hellkid98, HK98
+--]]
+
+local w,h = term.getSize()
+
+local oldPullEvent = os.pullEvent
+os.pullEvent = os.pullEventRaw
+
+local player = {
+
+    
+	dead = false,
+	side = "down",
+	
+	["sides"] = {
+	    ["left"] = {
+		    art = "<",
+		},
+		
+		["right"] = {
+		    art = ">",
+		},
+		
+		["down"] = {
+		    art = "v",
+		},
+		
+		["up"] = {
+		    art = "^",
+		},
+	},
+}
+
+local player2 = {}
+
+
+
+
+
+
+
+local function pGet(hCode,file)
+
+    hResponse = http.get("http://pastebin.com/raw.php?i="..textutils.urlEncode(hCode))
+    if hResponse then
+        hFile = fs.open(file,"w")
+        local sCode = hResponse.readAll()
+		hResponse.close()
+        hFile.write(sCode)
+        hFile.close()
+	 
+    else 
+		error("Error getting file: "..file,0)
+		fs.delete(".Lasers_Data") -- If a file failed to download
+    end
+end
+  
+if not fs.exists(".Lasers_Data") then
+    local folders = {
+	    ".Lasers_Data/APIs", ".Lasers_Data/Settings", ".Lasers_Data/Themes",
+	}
+	
+	local apis = {
+	    [1] = {
+		    name = "gui",
+			code = "MQvDWS5M",
+		},
+		
+		[2] = {
+		    name = "rNet",
+			code = "r3ueCHfs",
+		}
+	}
+	
+	term.clear() 
+	term.setCursorPos(1,1)
+	
+	for i = 1, #folders do
+	    print("Creating: "..folders[i])
+	    fs.makeDir(folders[i])
+	end
+	
+	for i = 1,#apis do
+	    print("Downloading: "..apis[i].name)
+	    pGet(apis[i].code,".Lasers_Data/APIs/"..apis[i].name)
+	end
+end
+
+
+for _, file in ipairs( fs.list(".Lasers_Data/APIs/") ) do
+    os.unloadAPI(".Lasers_Data/APIs/" .. file)
+    os.loadAPI(".Lasers_Data/APIs/" .. file)
+end
+
+local default = {
+    lang = 1, nickname = "<Nickname>", theme = "Lasers",
+}
+
+if not fs.exists(".Lasers_Data/Settings/settings.cfg") then
+    gui.saveTable(".Lasers_Data/Settings/settings.cfg",default)
+end
+
+if not fs.exists(".Lasers_Data/Themes/Lasers") then
+    local theme = {
+        bColor = "white",
+    	defaultTextCol = "red",
+	    activeBackCol = "red",
+	    activeTextCol = "white",
+	    headerBackCol = "red",
+	    headerTextCol = "white",
+    }
+    local f = fs.open(".Lasers_Data/Themes/Lasers", "w")
+    for i, v in pairs( theme ) do
+        f.writeLine( i .. " = " .. tostring(v) )
+    end
+    f.close()
+end
+
+local tSettings = gui.getTable(".Lasers_Data/Settings/settings.cfg")
+player.nickname = tSettings.nickname
+local theme = gui.loadTheme( ".Lasers_Data/Themes/" .. tSettings.theme )
+
+
+
+--# Default data
+local language = "English"
+
+local languages = {
+    "English",
+}
+
+local function rebootGame()
+    shell.run(shell.getRunningProgram()) error()
+end
+
+
+local themes = {}
+local themes_downloadable = {}
+
+for _, file in ipairs( fs.list(".Lasers_Data/Themes/") ) do
+    local nTheme = {}
+	nTheme.name = file
+    table.insert( themes, nTheme )
+end
+
+local function changeName()
+    gui.drawBox( 2, w - 1, h/2 - 3, h/2 + 2, colors.red )
+	gui.drawLine( 2, w - 1, h/2 - 3, nil, colors.gray )
+	gui.drawLine( 3, w - 2, h/2, nil, colors.white)
+	gui.centerPrint( h/2 - 3, colors.red, colors.gray, "Change Name")
+    gui.centerPrint(h/2 - 1, colors.white, colors.red, "New Name")
+	term.setCursorPos(1, h/2)
+	local nName = ""
+	repeat
+	    term.setTextColor( colors.black )
+		term.setBackgroundColor(colors.white)
+	    nName = gui.mRead({centeredText = true, textLength = w - 7, exitOnKey = 29})
+	until nName ~= "" or nName == nil
+	if nName ~= nil then
+	    tSettings.nickname = nName
+		gui.saveTable(".Lasers_Data/Settings/settings.cfg", tSettings)
+	end
+end
+
+
+local function changeLang()
+    tSettings.lang = tSettings.lang + 1
+        if tSettings.lang > #languages then
+            tSettings.lang = 1
+        end
+	gui.saveTable(".Lasers_Data/Settings/settings.cfg",tSettings)
+	
+   for i = 5, 0, - 1 do
+	    gui.drawBox(w/2 - 12,w/2 + 12,6,13,colors.gray)
+		gui.centerPrint(7,colors.white,colors.gray,"The game will reboot")
+		gui.centerPrint(8,colors.white,colors.gray,"-for the changes to")
+		gui.centerPrint(9,colors.white,colors.gray,"-become active!")
+		gui.centerPrint(11,colors.white,colors.gray,"Rebooting in "..i)
+	    sleep(1)
+   end
+   rebootGame()
+end
+
+
+
+local function changeTheme()
+    local themes = gui.table_pages( themes, 5, h - 1 )
+    local page, mNum = 1, 1
+	local loop = true
+	while loop do
+        gui.clear( theme.bColor )
+        gui.drawBox(1,w,1,3,theme.headerBackCol)
+        gui.centerPrint(2,theme.headerTextCol,nil,"Themes")
+		gui.drawAt(2, h - 1, " < Back ")
+        for i = 1,#themes[page] do
+		    themes[page][i].sX = math.ceil(w/2 - #themes[page][i].name/2) - 1
+			themes[page][i].fX = math.ceil(w/2 + #themes[page][i].name/2)
+		    if mNum == i then
+		        gui.centerPrint(4 + i, theme.activeTextCol, theme.activeBackCol, " " .. themes[page][i].name .. " " )
+            else
+			    gui.centerPrint(4 + i, theme.defaultTextCol, theme.bColor, themes[page][i].name )
+            end
+        end
+        local e, p, mX, mY = os.pullEvent()
+        if e == "key" then
+            if p == keys.up then
+                mNum = mNum - 1
+				if mNum < 1 then
+				    page = page - 1
+					if page < 1 then
+					    page = 1
+						mNum = 1
+					else
+					    mNum = #themes[page]
+					end
+				end
+				
+			elseif p == keys.down then
+			    mNum = mNum + 1
+				if mNum > #themes[page] then
+				    page = page + 1
+					if page > #themes then
+					    page = #themes
+						mNum = #themes[page]
+					else
+					    mNum = 1
+					end
+				end
+				
+			elseif p == 28 then
+			    if fs.exists(".Lasers_Data/Themes/" .. themes[page][mNum].name) then
+				    tSettings.theme = themes[page][mNum].name
+					gui.saveTable(".Lasers_Data/Settings/settings.cfg", tSettings)
+					loop = false
+				end
+			end
+			
+		elseif e == "mouse_click" or e == "monitor_touch" then
+		    for i = 1, #themes[page] do
+			    if mX >= themes[page][i].sX and mX <= themes[page][i].fX and mY == 4 + i then
+				    if mNum == i then
+			            if fs.exists(".Lasers_Data/Themes/" .. themes[page][mNum].name) then
+				            tSettings.theme = themes[page][mNum].name
+					        gui.saveTable(".Lasers_Data/Settings/settings.cfg", tSettings)
+					        loop = false
+				        end
+					else
+					    mNum = i
+					end
+				    break
+				end
+			end
+			
+			if mX >= 2 and mX <= 9 and mY == h - 1 then
+			    term.setTextColor(theme.defaultTextCol)
+				term.setBackgroundColor(theme.bColor)
+				gui.drawAt(2, h - 1, " < Back ")
+				sleep(.15)
+			    loop = false
+			end
+		end
+	end
+end
+
+                
+
+
+
+local highscores = {}
+if fs.exists(".Lasers_Data/highscore.data") then
+    highscores = gui.getTable(".Lasers_Data/highscore.data")
+end
+	
+local function view_highscores()
+
+local hs = gui.table_pages(highscores,4,h - 3)
+local page = 1
+
+
+local tColors = {
+    [1] = {
+	    bColor  = colors.gray,
+		tColor  = colors.white,
+		bColor2 = colors.white,
+		tColor2 = colors.black,
+	},
+	
+	[2] = {
+	    bColor  = colors.lightGray,
+		tColor  = colors.white,
+		bColor2 = colors.red,
+		tColor2 = colors.white,
+	},
+}
+
+  if #highscores ~= 0 then
+    local viewing = true
+    while viewing do
+        gui.drawBox(1,w,1,2,theme.headerBackCol)
+		gui.drawBox(1,w/2,3,h,colors.gray)
+		gui.drawBox(math.ceil(w/2),w,3,h,colors.white)
+		gui.centerPrint(1,theme.headerTextCol,theme.headerBackCol,"Highscores")
+		gui.drawLine(1,w,h,nil,theme.headerBackCol)
+		gui.centerPrint(h,theme.headerTextCol,theme.headerBackCol," [Space]Exit  [Down]Next Page  [Up]Previous Page ")
+		local cNum = 1
+        for i = 1,#hs[page] do
+		    term.setTextColor(tColors[cNum].tColor)
+			term.setBackgroundColor(tColors[cNum].bColor)
+            gui.drawAt(2,3 + i,hs[page][i].pos .. ": " .. hs[page][i].name .. " ")
+		    term.setTextColor(tColors[cNum].tColor2)
+			term.setBackgroundColor(tColors[cNum].bColor2)
+	        gui.drawAt(w/2 + 4,3 + i," " .. hs[page][i].score .. " ")
+			cNum = cNum + 1
+			if cNum > 2 then
+			    cNum = 1
+			end
+        end
+		local evt, p1 = os.pullEvent("key")
+		    if p1 == keys.up then
+			    page = page - 1
+				if page < 1 then
+				    page = 1
+				end
+				
+			elseif p1 == keys.down then
+			    page = page + 1
+				if page > #hs then
+				    page = #hs
+				end
+			
+			elseif p1 == 57 then
+			    viewing = false
+			end
+    end
+  else
+      gui.clear(colors.white)
+      gui.drawBox(w/2 - 15, w/2 + 15,h/2 - 2,h/2 + 3,theme.headerBackCol)
+	  gui.drawBox(w/2 - 14, w/2 + 14,h/2 - 1,h/2 + 2,theme.bColor)
+	  gui.centerPrint(h/2 - 2,theme.headerTextCol,theme.headerBackCol,"Alert!")
+	  gui.centerPrint(h/2,theme.defaultTextCol,theme.bColor,"Currently no highscores")
+	  gui.centerPrint(h/2+ 1,theme.defaultTextCol,theme.bColor,"Press any key to continue")
+	  os.pullEvent("key")
+  end
+end
+
+
+
+
+
+
+
+
+
+local function main(botMode, multiplayer, host)
+
+
+local tScreen = {}
+
+
+
+local mNum       = 1
+local cTime      = 10
+local score      = 0
+local mvSpeed    = 0.5
+local powerupBar = 0
+
+local initializeLaser  =  false
+local laserBeam        =  false
+local won              =  false
+local tp               =  false
+local inMenu           =  false
+
+	
+local vNum
+local hNum
+local oldX
+local oldY
+local newX
+local newY
+local cID
+
+
+local function check_highscores()
+  if #highscores ~= 0 then
+    local pos  = #highscores
+	local sPos
+	local temp = {}
+    for i = #highscores, 1, -1 do
+	    sPos = i
+	    if score > highscores[i].score then
+            pos = i
+		else
+		    pos = i + 1
+			break
+		end
+	end
+
+	for i = sPos, #highscores do
+	    local n = {}
+		n.name  = highscores[i].name
+		n.score = highscores[i].score
+		n.pos   = highscores[i].pos + 1
+		table.insert(temp, n)
+	end
+	for i = 1,#temp do
+	    highscores[temp[i].pos] = temp[i]
+	end
+	
+	
+    highscores[pos].name  = tSettings.nickname
+    highscores[pos].score = score
+    gui.saveTable(".Lasers_Data/highscore.data",highscores)
+	
+  else
+    local n = {}
+	n.name  = tSettings.nickname
+	n.score = score
+	n.pos   = 1
+	table.insert(highscores, n)
+	gui.saveTable(".Lasers_Data/highscore.data",highscores)
+  end
+end
+		    
+
+--# Multiplayer connection
+if multiplayer then
+
+modemAttached = rNet.openSides()
+
+
+
+if modemAttached then	
+	gui.clear(colors.white)
+	local bar        = gui.initBar(w/2 - 14, w/2 + 14,h/2,0,3)
+	local barTexture = {barColor = colors.red, barBackgroundColor = colors.gray}
+	
+	
+	
+local function drawScreen(text,id,h)
+    gui.clear(colors.white)
+	gui.drawBar(bar, barTexture)
+    gui.centerPrint(bar.y - 1,colors.black,colors.white,bar.currentProgress .. "/" .. bar.maxLen)
+	gui.centerPrint(bar.y + 1,colors.black,colors.white,text)
+	if id ~= nil then
+    	if h then
+	        gui.centerPrint(2,colors.black,colors.white,"Your ID: ".. os.getComputerID() .. "    Client ID: "..id)
+	    else
+	        gui.centerPrint(2,colors.black,colors.white,"Your ID: ".. os.getComputerID() .. "    Host ID: "..id)
+	    end
+	end
+end	
+
+
+	
+	if host then
+	  --# Host
+	    player.x = math.ceil(w/2) - 1
+		player.y = math.ceil(h/2)
+		gui.updateBar(bar, bar.currentProgress + 1, barTexture)
+		local rID, msg
+	    for i = 1, 5 do
+		    drawScreen("Searching for clients",nil)
+		    rednet.broadcast("lasers_multiplayer_host")
+			repeat
+			    rID, msg = rednet.receive(1.5)
+			until rID ~= os.getComputerID()
+			if rID ~= nil then
+			    if msg == "lasers_multiplayer_client" then
+				break
+				end
+			end
+		end
+		
+		if rID == nil then
+		    gui.updateBar(bar, 0, barTexture)
+		    gui.clear(colors.white)
+			gui.drawBar(bar, barTexture)
+			gui.centerPrint(bar.y - 1,colors.black,colors.white,"No clients found")
+			gui.centerPrint(bar.y + 1,colors.black,colors.white,"Request timed out")
+			os.pullEvent("key")
+			shell.run(shell.getRunningProgram()) error()
+			
+		else
+		
+		    player2.id = rID
+			gui.clear(colors.white)
+			gui.updateBar(bar, bar.currentProgress + 1, barTexture)
+		    drawScreen("Sending data", player2.id, true)
+			
+			local rID
+			repeat
+			    rNet.sendTable(player2.id, player)
+			    rID, msg = rednet.receive(.5)
+			until rID == player2.id
+			
+			local rID
+			gui.updateBar(bar, bar.currentProgress + 1, barTexture)
+			drawScreen("Receiveing data", player2.id, true)
+			repeat
+			    rID, msg = rednet.receive()
+			until rID == player2.id
+	        player2 = textutils.unserialize(msg)
+			player2.id = rID
+		end
+		
+		
+		
+	else
+	
+	
+	
+	   --# Client
+	    player.x = math.ceil(w/2) + 1
+		player.y = math.ceil(h/2)
+	     gui.updateBar(bar, bar.currentProgress + 1, barTexture)
+	     drawScreen("Searching for hosts", nil)
+	     local rID, msg
+	     for i = 1,5 do
+		     rID, msg = rednet.receive(1.5)
+		     if msg == "lasers_multiplayer_host" then
+			     break
+			 end
+		 end
+	
+	    gui.clear(colors.white)
+	    if rID ~= nil and msg == "lasers_multiplayer_host" then
+		    rednet.send(rID,"lasers_multiplayer_client")
+			player2.id = rID
+	     gui.updateBar(bar, bar.currentProgress + 1, barTexture)
+	     drawScreen("Receiveing data", player2.id, false)
+		 
+			repeat
+			    rID, msg = rednet.receive() 
+			until rID == player2.id
+			rednet.send(player2.id,"lasers_multiplayer_data_received")
+			
+			player2 = textutils.unserialize(msg)
+			player2.id = rID
+			gui.clear(colors.white)
+			
+	        gui.updateBar(bar, bar.currentProgress + 1, barTexture)
+            drawScreen("Sending data", player2.id, false)
+			rNet.sendTable(player2.id, player)
+		else
+		    gui.updateBar(bar, 0, barTexture)
+		    gui.clear(colors.white)
+			gui.drawBar(bar, barTexture)
+			gui.centerPrint(bar.y - 1,colors.black,colors.white,"No hosts found")
+			gui.centerPrint(bar.y + 1,colors.black,colors.white,"Request timed out")
+			os.pullEvent("key")
+			shell.run(shell.getRunningProgram()) error()
+		end
+		
+	end
+else
+    gui.clear( colors.white )
+	gui.centerPrint(h/2, colors.red, colors.white,"No modems attached!")
+	os.pullEvent()
+	rebootGame()
+end
+	else
+	    player.x = math.ceil(w/2)
+		player.y = math.ceil(h/2)
+
+end
+
+			
+			
+	
+	
+	
+	
+
+
+
+
+local lasers = {
+   -- X axis
+    [1] = {
+	    axis = "vertical",
+		direction = "left",
+		x = math.ceil(w/2),
+		y = 1,
+		minX = 2,
+		maxX = w - 1,
+	},
+	
+	[2] = {
+	    axis = "vertical",
+		direction = "left",
+		x = math.ceil(w/2),
+		y = h - 1,
+		minX = 2,
+		maxX = w - 1,
+	},
+	
+   -- Y axis	
+	[3] = {
+	    axis = "horizontal",
+		direction = "down",
+		x = 1,
+		y = math.ceil(h/2),
+		minY = 2,
+		maxY = h - 2,
+	},
+	
+	[4] = {
+	    axis = "horizontal",
+		direction = "down",
+		x = w,
+		y = math.ceil(h/2),
+		minY = 2,
+		maxY = h - 2,
+	},
+}
+
+
+
+
+   
+    
+
+ local  mOpts = {
+			
+	[1] = {
+		name = " Resume ",
+		functionName = "_resume",
+	},
+			
+	[2] = {
+		name = " Exit ",
+		functionName = rebootGame,
+    },
+}
+
+local powerups = {
+    [1] = {
+	   -- Art
+	    bColor = colors.red,
+	    tColor = colors.white,
+	   
+	   -- Data
+	    bTimer = 3,
+	    booleanName = "slowdownLaser",
+	},
+	
+	[2] = {
+	   -- Art
+	    bColor = colors.purple,
+	    tColor = colors.white,
+	   
+	   -- Data
+	    bTimer = 5,
+	    booleanName = "teleport",
+	},
+	
+	[3] = {
+	   -- Art
+	    bColor = colors.lightBlue,
+	    tColor = colors.white,
+	   
+	   -- Data
+	    bTimer = 5,
+	    booleanName = "freezeLaser",
+	},
+}
+
+local tPowerup = {
+    ["booleans"] = {
+	    freezeLaser = false,
+		teleport = false,
+		slowdownLaser = false
+	},
+}
+
+local function createPowerup(index)
+  if #tPowerup < 2 then
+   nPowerup = {}
+   
+   
+   nPowerup.bColor = powerups[index].bColor
+   nPowerup.tColor = powerups[index].tColor
+   nPowerup.bTimer = powerups[index].bTimer
+   nPowerup.booleanName = powerups[index].booleanName
+   nPowerup.art = "P"
+   nPowerup.x = math.random(3,w - 2)
+   nPowerup.y = math.random(3,h - 3)
+   table.insert(tPowerup,nPowerup)
+  end
+end
+
+local function powerupBoolean(booleanName)
+    if booleanName == "freezeLaser" then
+	    tPowerup["booleans"].freezeLaser = true
+		
+	elseif booleanName == "slowdownLaser" then
+	    tPowerup["booleans"].slowdownLaser = true
+	
+	elseif booleanName == "teleport" then
+	    tPowerup["booleans"].teleport = true
+	end
+end
+
+
+
+	    
+
+
+
+--# Bot/A.I Stuff
+
+local bots = {}
+
+local defBot = {
+    ["tColors"] = {
+	    colors.red, colors.purple, colors.green, colors.blue,
+	},
+
+	["side"] = {
+	    ["left"] = {
+		    art = "<",
+		},
+		
+		["right"] = {
+		    art = ">",
+		},
+		
+		["down"] = {
+		    art = "v",
+		},
+		
+		["up"] = {
+		    art = "^",
+		},
+	},
+}
+
+local function spawnBot(addX)
+
+    local nBot = {}
+	
+	nBot.direction = "down"
+	nBot.x = math.ceil(w/2) + addX
+	nBot.y = math.ceil(h/2)
+	nBot.tColor = defBot["tColors"][math.random(1,#defBot["tColors"])]
+	nBot.side = defBot.side
+	
+	table.insert(bots,nBot)
+end
+
+if botMode then
+	spawnBot(1)
+	player.x = math.ceil(w/2) - 1
+end
+
+local function hBots()
+
+
+-- Getting the axises
+	    for i = 1,#lasers do
+	        if lasers[i].axis == "vertical" then
+		        vNum = i
+				break
+		    end
+	    end
+	    for i = 1,#lasers do
+	        if lasers[i].axis == "horizontal" then
+		        hNum = i
+				break
+		    end
+	    end
+
+
+    for i = 1,#bots do
+        if not laserBeam then
+          -- Y Axis
+		    if lasers[hNum].direction == "down" then
+			
+                if lasers[hNum].y <= h/2 then
+				  if not initializeLaser then
+				    bots[i].direction = "up"
+                    bots[i].y = bots[i].y - 1 if bots[i].y < 2 then bots[i].y = 2 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].y = bots[i].y + 1
+					end
+				  else
+				    bots[i].direction = "down"
+                    bots[i].y = bots[i].y + 1 if bots[i].y > h - 2 then bots[i].y = h - 2 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].y = bots[i].y - 1
+					end
+				  end
+				  
+				else
+				
+				  if not initializeLaser then
+				    bots[i].direction = "down"
+                    bots[i].y = bots[i].y + 1 if bots[i].y > h - 2 then bots[i].y = h - 2 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].y = bots[i].y - 1
+					end
+                  else
+				    bots[i].direction = "up"
+                    bots[i].y = bots[i].y - 1 if bots[i].y <  2 then bots[i].y = 2 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].y = bots[i].y + 1
+					end
+				  end
+            				  
+			    end
+		
+		    elseif lasers[hNum].direction == "up" then
+			
+			  if not initializeLaser then
+                if lasers[hNum].y >= h/2 then
+				    bots[i].direction = "down"
+                    bots[i].y = bots[i].y + 1 if bots[i].y > h - 2 then bots[i].y = h - 2 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].y = bots[i].y - 1
+					end
+				  else
+				    bots[i].direction = "up"
+                    bots[i].y = bots[i].y - 1 if bots[i].y < 2 then bots[i].y = 2 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].y = bots[i].y + 1
+					end  
+				  end
+				  
+				else
+				
+				  if not initializeLaser then
+				    bots[i].direction = "up"
+                    bots[i].y = bots[i].y - 1 if bots[i].y < 2 then bots[i].y = 2 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].y = bots[i].y + 1
+					end
+				  else
+				    bots[i].direction = "down"
+                    bots[i].y = bots[i].y + 1 if bots[i].y > h - 2 then bots[i].y = h - 2 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].y = bots[i].y - 1
+					end
+				  end
+				  
+			    end
+		    end
+			
+		  -- X axis
+		    if lasers[vNum].direction == "right" then
+			  if not initializeLaser then
+                if lasers[vNum].x >= w/2 then
+				    bots[i].direction = "left"
+                    bots[i].x = bots[i].x - 1 if bots[i].x < 2 then bots[i].x = 2 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].x = bots[i].x + 1
+					end
+				  else
+				    bots[i].direction = "right"
+                    bots[i].x = bots[i].x + 1 if bots[i].x > w - 1 then bots[i].x = w - 1 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].x = bots[i].x - 1
+					end  
+				  end
+				  
+				else
+				
+				  if not initializeLaser then
+				    bots[i].direction = "right"
+                    bots[i].x = bots[i].x + 1 if bots[i].x > w - 1 then bots[i].x = w - 1 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].x = bots[i].x - 1
+					end  
+				  else
+				    bots[i].direction = "left"
+                    bots[i].x = bots[i].x - 1 if bots[i].x < 2 then bots[i].x = 2 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].x = bots[i].x + 1
+					end
+				  end
+				  
+			    end
+		
+		
+		    elseif lasers[vNum].direction == "left" then
+			
+			  if not initializeLaser then
+                if lasers[vNum].x <= w/2 then
+				    bots[i].direction = "right"
+                    bots[i].x = bots[i].x + 1 if bots[i].x > w - 1 then bots[i].x = w - 1 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].x = bots[i].x - 1
+					end
+				  else
+				    bots[i].direction = "left"
+                    bots[i].x = bots[i].x - 1 if bots[i].x < 2 then bots[i].x = 2 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].x = bots[i].x + 1
+					end  
+				  end
+				  
+				else
+				
+				  if not initializeLaser then
+				    bots[i].direction = "left"
+                    bots[i].x = bots[i].x - 1 if bots[i].x < 2 then bots[i].x = 2 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].x = bots[i].x + 1
+					end  
+				  else
+				    bots[i].direction = "right"
+                    bots[i].x = bots[i].x + 1 if bots[i].x > w - 1 then bots[i].x = w - 1 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].x = bots[i].x - 1
+					end
+				  end
+				  
+			    end
+		    end
+			
+			
+		else
+		
+		   --# X axis
+		    if lasers[vNum].x > bots[i].x then 
+			    bots[i].direction = "left"
+			    bots[i].x = bots[i].x - 1 if bots[i].x < 2 then bots[i].x = 2 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].x = bots[i].x + 1
+					end
+					
+			elseif lasers[vNum].x < bots[i].x then
+			    bots[i].direction = "right"
+			    bots[i].x = bots[i].x + 1 if bots[i].x > w - 1 then bots[i].x = w - 1 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].x = bots[i].x - 1
+					end
+			end
+			
+		   --# Y axis
+		    if lasers[hNum].y > bots[i].y then 
+			    bots[i].direction = "up"
+			    bots[i].y = bots[i].y - 1 if bots[i].y < 2 then bots[i].y = 2 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].y = bots[i].y + 1
+					end
+					
+			elseif lasers[hNum].y < bots[i].y then
+			    bots[i].direction = "down"
+			    bots[i].y = bots[i].y + 1 if bots[i].y > h - 2 then bots[i].y = h - 2 end
+				    if bots[i].x == player.x and bots[i].y == player.y then
+					    bots[i].y = bots[i].y - 1
+					end
+			end
+			
+		end
+	end
+end
+
+
+local function checkCollision()
+    if not multiplayer then
+        for i = 1,#bots do
+	        if player.x == bots[i].x and player.y == bots[i].y then
+		        return true
+		    end
+	    end
+	else
+	    if player.x == player2.x and player.y == player2.y then
+		    return true
+		end
+	end
+end
+
+
+
+
+
+    local function events()
+	    for i = 1,#tPowerup do
+		    if player.x == tPowerup[i].x and player.y == tPowerup[i].y then
+                powerupBoolean(tPowerup[i].booleanName)
+				powerupBarTimer = os.startTimer(1)
+				powerupBar = 5
+				table.remove(tPowerup,i)
+				break
+			end
+		end
+	
+	    evt, p1, mX, mY = os.pullEvent()
+		    if evt == "key" then
+			    if p1 == keys.up then
+				  if not inMenu then
+				    player.side = "up"
+					player.y = player.y - 1
+					    if player.y < 2 then player.y = 2 end
+						local collision = checkCollision()
+						    if collision then
+						        player.y = player.y + 1
+							end
+		              if multiplayer then
+                          rNet.sendTable(player2.id, player)
+                      end		
+				  else
+				      if mNum > 1 then
+		                  mNum = mNum - 1
+			          end					  
+				  end
+				
+				elseif p1 == keys.down then
+				  if not inMenu then
+				    player.side = "down"
+					player.y = player.y + 1
+					    if player.y > h - 2 then player.y = h - 2 end
+						local collision = checkCollision()
+						    if collision then
+						        player.y = player.y - 1
+							end
+		              if multiplayer then
+                          rNet.sendTable(player2.id, player)
+                      end	
+				  else
+				      if mNum < #mOpts then
+			              mNum = mNum + 1
+			          end
+				  end
+				      
+						
+					
+				
+				elseif p1 == keys.left then
+				  if not inMenu then
+				    player.side = "left"
+					player.x = player.x - 1
+					    if player.x < 2 then player.x = 2 end
+						local collision = checkCollision()
+						    if collision then
+						        player.x = player.x + 1
+							end
+		              if multiplayer then
+                          rNet.sendTable(player2.id, player)
+                      end	
+				  end
+				
+				elseif p1 == keys.right then
+				  if not inMenu then
+				    player.side = "right"
+					player.x = player.x + 1
+					    if player.x > w - 1 then player.x = w - 1 end
+						local collision = checkCollision()
+						    if collision then
+						        player.x = player.x - 1
+							end
+		              if multiplayer then
+                          rNet.sendTable(player2.id, player)
+                      end	
+				  end
+
+				elseif p1 == 29 then
+				    if inMenu then
+					    inMenu = false
+						countdown = os.startTimer(1)
+					else
+					    inMenu = true
+					end
+				
+				elseif p1 == 28 then
+				    if inMenu then
+					    if mOpts[mNum].functionName ~= "_resume" then
+					        local callFunction = mOpts[mNum].functionName
+		                    callFunction()
+						end
+		                inMenu = false
+                    end  
+				end
+				
+			elseif evt == "rednet_message" then
+			    if multiplayer then
+				    if p1 == player2.id then
+					    player2 = textutils.unserialize(mX)
+						player2.id = p1
+					end
+				end
+				
+				
+			
+			elseif evt == "timer" then
+			    
+				if p1 == countdown then
+				    if not inMenu then
+						cTime = cTime - 1
+						if cTime < 0 then cTime = 0 end
+							if cTime > 0 then
+								countdown = os.startTimer(1)
+							else
+								spawnPowerup = os.startTimer(math.random(15,20))
+								moveTimer = os.startTimer(.5)
+								laserTimer = os.startTimer(math.random(3,5))
+								scoreTimer = os.startTimer(1)
+								if botMode then
+								botMove = os.startTimer(.35)
+						    end
+						end
+					end
+						
+				elseif p1 == moveTimer then
+                    for i = 1,#lasers do
+					
+                        if lasers[i].axis == "vertical" then
+                            if lasers[i].direction == "left" then
+                                lasers[i].x = lasers[i].x - 1
+                                if lasers[i].x < lasers[i].minX then
+                                    lasers[i].x = lasers[i].minX; lasers[i].direction = "right"
+                                end
+                            
+							elseif lasers[i].direction == "right" then
+							    lasers[i].x = lasers[i].x + 1
+                                if lasers[i].x > lasers[i].maxX then
+                                    lasers[i].x = lasers[i].maxX; lasers[i].direction = "left"
+                                end
+                            end
+						
+						elseif lasers[i].axis == "horizontal" then
+						    if lasers[i].direction == "up" then
+                                lasers[i].y = lasers[i].y - 1
+                                if lasers[i].y < lasers[i].minY then
+                                    lasers[i].y = lasers[i].minY; lasers[i].direction = "down"
+                                end
+                            
+							elseif lasers[i].direction == "down" then
+							    lasers[i].y = lasers[i].y + 1
+                                if lasers[i].y > lasers[i].maxY then
+                                    lasers[i].y = lasers[i].maxY; lasers[i].direction = "up"
+                                end
+                            end
+							
+                        end	
+						
+                    end -- For loop
+					
+					local levels = {
+					    [1] = {
+						    score   = 250,
+							mvSpeed = 0.45,
+						},
+						
+						[2] = {
+						    score   = 500,
+							mvSpeed = 0.4,
+						},
+						
+						[3] = {
+						    score = 750,
+							mvSpeed = 0.35,
+						},
+						
+						[4] = {
+						    score = 1000,
+							mvSpeed = 0.3,
+					    },
+						
+						[5] = {
+						    score = 1250,
+							mvSpeed = 0.25,
+						},
+						
+						[6] = {
+						    score = 1500,
+							mvSpeed = 0.2,
+						},
+						
+						[7] = {
+						    score = 2000,
+							mvSpeed = 0.1,
+						},
+					}
+				
+				if not tPowerup["booleans"].slowdownLaser then
+					for i = 1,#levels do
+					    if score >= levels[i].score then
+						    mvSpeed = levels[i].mvSpeed
+						end
+					end
+				
+				else
+				    mvSpeed = 0.8
+				end
+					
+				  if not tPowerup["booleans"].freezeLaser then	
+                      moveTimer = os.startTimer(mvSpeed)
+                  end
+                 
+                elseif p1 == laserTimer then
+                    initializeLaser = true
+                    beamTimer = os.startTimer(3)
+
+                elseif p1 == beamTimer then
+                    initializeLaser = false
+                    laserBeam = true
+                    fTimer = os.startTimer(2)
+                
+                elseif p1 == fTimer then
+                    laserBeam = false
+                    laserTimer = os.startTimer(math.random(3,5))					
+                
+                elseif p1 == scoreTimer then
+                    score = score + 10
+                    scoreTimer = os.startTimer(1)		
+
+                elseif p1 == spawnPowerup then
+				    if not multiplayer then
+                        createPowerup(math.random(1,#powerups))
+                        spawnPowerup = os.startTimer(math.random(15,20))
+					end
+				
+				elseif p1 == rmTimer then
+				    tp = false;
+					
+				elseif p1 == botMove then
+				    hBots()
+				    botMove = os.startTimer(.15)
+
+                elseif p1 == powerupBarTimer then
+                    powerupBar = powerupBar - 1
+                        if powerupBar > 0 then
+                            powerupBarTimer = os.startTimer(1)
+                        else
+						  powerupBar = 0
+                          tPowerup["booleans"].freezeLaser = false
+                          tPowerup["booleans"].slowdownLaser = false
+                          tPowerup["booleans"].teleport = false
+                          moveTimer = os.startTimer(mvSpeed)						  
+                        end							
+				end
+				
+			elseif evt == "mouse_click" then 
+			    if tPowerup["booleans"].teleport then
+				    if mX > 2 and mX < w and mY > 2 and mY < w - 1 then
+				        oldX = player.x; oldY = player.y
+                        newX = mX; newY = mY
+						player.x = mX; player.y = mY;
+						tp = true
+						rmTimer = os.startTimer(0.1)
+                    end
+                end
+				
+			end
+	end
+	
+	
+	
+	
+	
+local function draw()
+    term.setBackgroundColor(colors.white)
+    gui.clear()
+	
+	gui.drawLine(1,w,1,colors.lightGray,colors.white,"-")
+	gui.drawLine(1,w,h - 1,colors.lightGray,colors.white,"-")
+	for i = 1, h - 1 do
+	    gui.drawAt(1,i,"|")
+		gui.drawAt(w,i,"|")
+	end
+	
+	gui.drawAt(1,1,"+")
+	gui.drawAt(w,1,"+")
+	gui.drawAt(1,h - 1,"+")
+	gui.drawAt(w,h - 1,"+")
+	
+	for i = 1,#lasers do
+	    term.setBackgroundColor(colors.gray)
+		gui.drawAt(lasers[i].x,lasers[i].y," ")
+	end
+	
+	if initializeLaser then
+
+		
+	    for i = 1,#lasers do
+	        if lasers[i].axis == "vertical" then
+		        vNum = i
+				break
+		    end
+	    end
+	    for i = 1,#lasers do
+	        if lasers[i].axis == "horizontal" then
+		        hNum = i
+				break
+		    end
+	    end
+		
+		gui.drawLine(2,w - 1,lasers[hNum].y,colors.red,colors.white,"-")
+		for i = 2,h - 2 do
+		    gui.drawAt(lasers[vNum].x,i,"|")
+		end
+		
+	end
+	
+	if botMode then
+	   term.setBackgroundColor(colors.white)
+	    for i = 1,#bots do
+		    term.setTextColor(bots[i].tColor)
+			gui.drawAt(bots[i].x,bots[i].y,bots[i].side[bots[i].direction].art)
+		end
+	end
+	
+	--#Players
+    term.setBackgroundColor(colors.white)
+	term.setTextColor(colors.black)
+	gui.drawAt(player.x,player.y,player.sides[player.side].art)
+	term.setTextColor(colors.blue)
+	if multiplayer then
+	    gui.drawAt(player2.x, player2.y,player2.sides[player2.side].art)
+	end
+	
+	if tp then
+	    term.setTextColor(colors.purple)
+		gui.drawAt(oldX,oldY,"#")
+		gui.drawAt(newX,newY,"#")
+	end
+	
+
+	    for i = 1,#tPowerup do
+		    term.setTextColor(tPowerup[i].tColor)
+			term.setBackgroundColor(tPowerup[i].bColor)
+			gui.drawAt(tPowerup[i].x,tPowerup[i].y,tPowerup[i].art)
+		end
+	
+	if laserBeam then
+	    local vNum
+		local hNum
+		
+	    for i = 1,#lasers do
+	        if lasers[i].axis == "vertical" then
+		        vNum = i
+				break
+		    end
+	    end
+	    for i = 1,#lasers do
+	        if lasers[i].axis == "horizontal" then
+		        hNum = i
+				break
+		    end
+	    end
+	
+
+		gui.drawLine(2,w - 1,lasers[hNum].y,nil,colors.red," ")
+		for i = 2,h - 2 do
+		    gui.drawAt(lasers[vNum].x,i," ")
+		end
+		
+		if player.y == lasers[hNum].y or player.x == lasers[vNum].x then
+		    player.dead = true
+			if multiplayer then
+			    rNet.sendTable(player2.id, player)
+			end
+		end
+
+if botMode then	
+
+    for i = 1,#bots do
+		    if bots[i].y == lasers[hNum].y or bots[i].x == lasers[vNum].x then
+		       table.remove(bots,i)
+			   break
+		    end
+    end
+
+end
+
+
+		
+		
+	end
+	
+	gui.drawLine(1,w,h,colors.white,colors.lightGray)
+	if cTime > 0 then
+	    gui.centerPrint(h,colors.white,nil,"Lasers starting in "..cTime.." seconds")
+	
+	else
+	    gui.drawAt(2,h,"[SCORE] "..score)
+		    if powerupBar > 0 then
+			    gui.drawLine(w - 5,w - 1,h,nil,colors.gray)
+				gui.drawLine(w - 6,w - 6 + powerupBar,h,nil,colors.purple)
+			end
+	end
+
+if inMenu then
+		gui.drawBox(w/2 - 11,w/2 + 11,h/2 - 3,h/2 + 5,colors.gray)
+		gui.drawBox(w/2 - 10,w/2 + 10,h/2 - 2,h/2 + 4,colors.white)
+		for i = 1,#mOpts do
+		    if mNum == i then
+			    gui.centerPrint((h/2 - 2) + i,colors.white,colors.red,mOpts[i].name)
+			else
+			    gui.centerPrint((h/2 - 2) + i,colors.red,colors.white,mOpts[i].name)
+			end
+		end
+end		
+	
+end
+
+
+
+--# Main part
+countdown = os.startTimer(1)
+while not player.dead do
+
+    if player.y > h - 2 then
+	    player.y = h - 2
+	end
+
+    if botMode then
+	    if #bots == 0 then
+		    won = true
+		end
+		
+	    if won then
+		    break
+		end
+	end
+
+    if multiplayer then
+        if player2.dead then
+            won = true
+			break
+        end		
+    end		
+    draw()
+    events()
+end
+
+if won then
+    term.setBackgroundColor(colors.lime)
+    term.clear()
+    gui.centerPrint(h/2,colors.white,colors.lime,"You won!")
+    gui.centerPrint(h/2 + 1,colors.white,colors.lime,"Score: "..score)
+	check_highscores()
+else
+
+    term.setBackgroundColor(colors.red)
+    term.clear()
+    gui.centerPrint(h/2,colors.white,colors.red,"You died!")
+    gui.centerPrint(h/2 + 1,colors.white,colors.red,"Score: "..score)
+	check_highscores()
+end
+
+sleep(1)
+os.pullEvent("key")
+
+rebootGame()
+		
+end
+
+
+
+
+
+
+
+
+local menu = {
+
+    defLanguage = languages[tSettings.lang],
+    defMenu = "Main",
+	
+	["English"] = {
+	
+	    ["Main"] = {
+	        title = "Lasers",
+		
+		    [1] = {
+		        name = "Single Player",
+				destination = "SP",
+		    },
+		
+		    [2] = {
+		        name = "Multiplayer",
+				destination = "MP",
+		    },
+			
+			[3] = {
+			    name = "Highscore",
+				destination = "_function",
+				["tFunction"] = {
+				    name = view_highscores,
+				},
+			},
+				    
+		    
+			[4] = {
+			    name = "Settings",
+				destination = "Settings",
+			},
+		    
+		    [5] = {
+		        name = "Exit",
+			    destination = "_exit",
+		    },
+	    },
+		
+		["SP"] = {
+		    title = "Single Player",
+			
+		    [1] = {
+			    name = "Survival Mode",
+				destination = "_function",
+				["tFunction"] = {
+				    name = main,
+				},
+			},
+			
+			[2] = {
+			    name = "Bot Mode",
+				destination = "_function",
+				["tFunction"] = {
+				    name = main,
+					["args"] = {
+					    true,
+					},
+				},
+			},
+			
+			[3] = {
+			    name = "Back",
+				destination = "_back",
+			},
+		},
+		
+		
+		["MP"] = {
+		    title = "Multiplayer",
+			
+		    [1] = {
+			    name = "Host",
+				destination = "_function",
+				["tFunction"] = {
+				    name = main,
+					["args"] = {
+					    false,
+						true,
+						true,
+					},
+				},
+			},
+			
+			[2] = {
+			    name = "Join",
+				destination = "_function",
+				["tFunction"] = {
+				    name = main,
+					["args"] = {
+					    false,
+						true,
+						false,
+					},
+				},
+			},
+			
+			[3] = {
+			    name = "Back",
+				destination = "_back",
+			},
+		},
+		
+
+		
+		["Settings"] = {
+		    title = "Settings",
+			[1] = {
+				name = languages[tSettings.lang],
+			    destination = "_function",
+				    ["tFunction"] = {
+				        name = changeLang,
+				    },
+			},
+			
+			[2] = {
+			    name = "Change Theme",
+				destination = "_function",
+				["tFunction"] = {
+				    name = changeTheme,
+				},
+			},
+			
+			[3] = {
+			    name = "Change Name",
+				destination = "_function",
+				["tFunction"] = {
+				    name = changeName,
+				},
+			},
+			
+			[4] = {
+			    name = "Back",
+				destination = "_back",
+			},	
+		},	
+	},	
+}
+	
+
+
+
+
+
+gui.handleMenu(menu,theme)

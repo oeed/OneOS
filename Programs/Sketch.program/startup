@@ -183,23 +183,6 @@ Drawing = {
 		Drawing.Buffer = {}
 	end,
 
-	Offset = {
-		X = 0,
-		Y = 0,
-	},
-
-	SetOffset = function(x, y)
-		Drawing.Offset.X = x
-		Drawing.Offset.Y = y
-	end,
-
-	ClearOffset = function()
-		Drawing.Offset = {
-			X = 0,
-			Y = 0,
-		}
-	end,
-
 	WriteStringToBuffer = function (x, y, characters, textColour,bgColour)
 		for i = 1, #characters do
    			local character = characters:sub(i,i)
@@ -211,15 +194,11 @@ Drawing = {
 		x = round(x)
 		y = round(y)
 		if bgColour == colours.transparent then
-			x = x + Drawing.Offset.X
-			y = y + Drawing.Offset.Y
 			Drawing.Buffer[y] = Drawing.Buffer[y] or {}
 			Drawing.Buffer[y][x] = Drawing.Buffer[y][x] or {"", colours.white, colours.black}
 			Drawing.Buffer[y][x][1] = character
 			Drawing.Buffer[y][x][2] = textColour
 		else
-			x = x + Drawing.Offset.X
-			y = y + Drawing.Offset.Y
 			Drawing.Buffer[y] = Drawing.Buffer[y] or {}
 			Drawing.Buffer[y][x] = {character, textColour, bgColour}
 		end
@@ -262,7 +241,27 @@ Current = {
 	Selection = {},
 	SelectionDrawTimer = nil,
 	HandDragStart = {},
+	Modified = false,
 }
+
+local isQuitting = false
+
+OneOS.CanClose = function()
+	if isQuitting or not Current.Artboard or not Current.Modified then
+		return true
+	else
+		local _w = ButtonDialougeWindow:Initialise('Quit Sketch?', 'You have unsaved changes, do you want to quit anyway?', 'Quit', 'Cancel', function(window, success)
+			if success then
+				OneOS.Close(true)
+			end
+			window:Close()
+			Draw()
+		end):Show()
+		--it's hacky but it works
+		os.queueEvent('mouse_click', 1, _w.X, _w.Y)
+		return false
+	end
+end
 
 Lists = {
 	Artboards = {},
@@ -706,11 +705,13 @@ Artboard = {
 			end
 		end
 		file:close()
+		Current.Modified = false
 	end,
 
 	Click = function(self, side, x, y, drag)
 		if Current.Tool and Current.Layer and Current.Layer.Visible then
 			Current.Tool:Use(x, y, side, drag)
+			Current.Modified = true
 			return true
 		end
 	end
@@ -2686,6 +2687,7 @@ function NewDocument(path, width, height, format, backgroundColour)
 	ab = Artboard:New(fs.getName(path, true), path, width, height, format, backgroundColour)
 	Current.Tool = Tools[2]
 	Current.Toolbar:Update()
+	Current.Modified = false
 	Draw()
 end
 local function Extension(path, addDot)
@@ -2804,6 +2806,7 @@ function OpenDocument(path)
 		ab = Artboard:New(fs.getName('Image', true), path, width, height, format, nil, layers)
 		Current.Tool = Tools[2]
 		Current.Toolbar:Update()
+		Current.Modified = false
 		Draw()
 	end
 end
@@ -2970,7 +2973,7 @@ function Draw()
 	if not Current.Window then
 		Drawing.Clear(UIColours.Background)
 	else
-		Drawing.DrawArea(1, 1, Drawing.Screen.Width, Drawing.Screen.Height, '|', colours.black, colours.lightGrey)
+		Drawing.DrawArea(1, 2, Drawing.Screen.Width, Drawing.Screen.Height, '|', colours.black, colours.lightGrey)
 	end
 
 	if Current.Artboard then
@@ -3071,6 +3074,7 @@ function LoadMenuBar()
 		Button:Initialise(7, 1, nil, nil, colours.grey, Current.MenuBar, function(self, side, x, y, toggle)
 			if not self.Toggle then
 				Menu:New(7, 2, {
+--[[
 					{
 						Title = "Undo",
 						Click = function()
@@ -3099,6 +3103,7 @@ function LoadMenuBar()
 					{
 						Separator = true
 					},
+]]--
 					{
 						Title = 'Cut',
 						Click = function()
@@ -3379,6 +3384,7 @@ function HandleKey(...)
 		end
 
 		Current.Tool:Use(currentPos[1], currentPos[2])
+		Current.Modified = true
 		Draw()
 	elseif Current.Input then
 		if event == 'char' then

@@ -95,11 +95,21 @@ function UpdateButtons()
 			
 			if not Current.Program or Current.Program ~= program then
 				InsertButton(program.Title, false, toolBarColour, activeBackgroundColour, textColour, colours.white, function(self, side, x, y, toggle)
+					if side == 3 then
+						program:Close()
+						program = nil
+						return
+					end
 					SwitchToProgram(program, currentProgramI, i)
 				end)
 			else
 				currentProgramI = i
 				InsertButton("x "..Current.Program.Title, true, colours.white, activeBackgroundColour, textColour, colours.white, function(self, side, x, y, toggle)
+					if side == 3 then
+						program:Close()
+						program = nil
+						return
+					end
 					if x == 2 then
 						Current.Program:Close(side == 2)
 					end
@@ -136,6 +146,7 @@ function InsertMenu(title, items)
 end
 
 function InsertButton(title, active, backgroundColour, activeBackgroundColour, textColour, activeTextColour, click)
+	title = Helpers.TruncateString(title, 12)
 	local x = 2
 	if #Elements ~= 0 then
 		local elem = Elements[#Elements]
