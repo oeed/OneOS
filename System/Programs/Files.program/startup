@@ -43,6 +43,7 @@ Current = {
 	ScrollBarDragStartY = nil,
 	CursorPos = {1,1},
 	CursorColour = colours.black,
+	Peripheral = {}
 }
 
 Events = {
@@ -142,10 +143,31 @@ function DrawScrollBar(x, current, max)
 	Drawing.DrawBlankArea(x, 4+current, 1, barHeight, colours.lightGrey)
 end
 
+local diskOpenButton = nil
+
+function DrawPeripheral()
+	Drawing.DrawCharacters(Current.SidebarWidth+10, 6, Current.Peripheral.Type, colours.black, colours.white)
+	Drawing.DrawCharacters(Current.SidebarWidth+10, 7, Current.Peripheral.Side, colours.grey, colours.white)
+	Drawing.DrawImage(Current.SidebarWidth+3, 6, Current.Peripheral.Image, 5, 4)
+	local y = 11
+	local x = Helpers.LongestString(Current.Peripheral.Info, nil, true) + 5
+	for k, v in pairs(Current.Peripheral.Info) do
+		Drawing.DrawCharacters(Current.SidebarWidth+3, y, k, colours.grey, colours.white)
+		Drawing.DrawCharacters(Current.SidebarWidth+x, y, v, colours.black, colours.white)
+		y = y + 1
+	end
+	if Current.Peripheral.Type == 'Drive' and diskOpenButton then
+		diskOpenButton:Draw()
+	end
+end
+
 function DrawFiles()
 	local y = 5
 	Drawing.DrawCharacters(Current.SidebarWidth+1, y-1, Helpers.TidyPath(Current.Path), colours.lightGrey, colours.white)
-
+	if Current.Path:sub(1,13) == '/Peripherals/' then
+		DrawPeripheral()
+		return 
+	end
 	if Current.ListMode then
 
 		for i, v in ipairs(Current.FileList) do
@@ -218,7 +240,90 @@ end
 
 function RefreshFiles()
 	Current.FileList = {}
+	if Current.Path:sub(1,13) == '/Peripherals/' then
+		if peripheral.isPresent(Current.Peripheral.Side:lower()) then
+			if not Current.Peripheral.Image then
+				if Current.Peripheral.Type == 'wireless_modem' then
+					Current.Peripheral.Type = 'Wireless Modem'
+				end
+				Current.Peripheral.Type = Helpers.Capitalise(Current.Peripheral.Type)
+				Current.Peripheral.Side = Helpers.Capitalise(Current.Peripheral.Side)
+
+				Current.Peripheral.Image = Drawing.LoadImage('/System/Programs/Files.program/images/'..Current.Peripheral.Type)
+				if not Current.Peripheral.Image then
+					Current.Peripheral.Image = Drawing.LoadImage('/System/Programs/Files.program/images/Unknown')
+				end
+
+				Current.Peripheral.Info = {}
+
+				if Current.Peripheral.Type == 'Computer' then
+					Current.Peripheral.Info = {
+						ID = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getID'))
+					}
+				elseif Current.Peripheral.Type == 'Drive' then
+					local discType = 'No Disc'
+					local discID = nil
+					local mountPath = nil
+					local discLabel = nil
+					if peripheral.call(Current.Peripheral.Side:lower(), 'isDiskPresent') then
+						if peripheral.call(Current.Peripheral.Side:lower(), 'hasData') then
+							discType = 'Data'
+							discID = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getDiskID'))
+							mountPath = '/'..peripheral.call(Current.Peripheral.Side:lower(), 'getMountPath')..'/'
+							discLabel = peripheral.call(Current.Peripheral.Side:lower(), 'getDiskLabel')
+						else
+							discType = 'Audio'
+						end
+					end
+
+					if mountPath then
+						diskOpenButton = Button:Initialise(Current.SidebarWidth+10, 9, nil, nil, colours.lightGrey, nil, nil, nil, nil, function()GoToPath(mountPath)end, 'View Files')
+					else
+						diskOpenButton = nil
+					end
+
+					Current.Peripheral.Info = {
+						['Disc Type'] = discType,
+						['Disc Label'] = discLabel,
+						['Song Title'] = peripheral.call(Current.Peripheral.Side:lower(), 'getAudioTitle'),
+						['Disc ID'] = discID,
+						['Mount Path'] = mountPath
+					}
+				elseif Current.Peripheral.Type == 'Printer' then
+					local pageSize = 'No Loaded Page'
+					local _, err = pcall(function() return tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getPgaeSize')) end)
+					if not err then
+						pageSize = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getPageSize'))
+					end
+					Current.Peripheral.Info = {
+						['Paper Level'] = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getPaperLevel')),
+						['Paper Size'] = pageSize,
+						['Ink Level'] = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getInkLevel'))
+					}
+				elseif Current.Peripheral.Type == 'Modem' then
+					Current.Peripheral.Info = {
+						['Connected Peripherals'] = tostring(#peripheral.call(Current.Peripheral.Side:lower(), 'getNamesRemote'))
+					}
+				elseif Current.Peripheral.Type == 'Monitor' then
+					local w, h = peripheral.call(Current.Peripheral.Side:lower(), 'getSize')
+					local screenType = 'Black and White'
+					if peripheral.call(Current.Peripheral.Side:lower(), 'isColour') then
+						screenType = 'Colour'
+					end
+					Current.Peripheral.Info = {
+						['Type'] = screenType,
+						['Width'] = tostring(w),
+						['Height'] = tostring(h),
+					}
+				end
+			end
+			return
+		else
+			Current.Path = '/Desktop/'
+		end
+	end
 	for i, v in ipairs(fs.list(Current.Path, true)) do
+		Current.Peripheral = nil
 		if Current.ShowHidden or string.sub( v, 1, 1 ) ~= '.' then
 			local path = Current.Path .. '/' .. v
 			if Helpers.TidyPath(path) == '/rom/' then
@@ -250,7 +355,6 @@ function GoToPath(path, history)
 		Current.HistoryItem = #Current.History + 1
 	end
 	Current.FileScroll = 0
-
 	Current.Path = Helpers.TidyPath(path)
 	Update()
 end
@@ -609,7 +713,13 @@ function SidebarClick(x, y, side)
 	local pastHeight = 0
 	for k, items in pairs(Current.SidebarList) do
 		if y <= pastHeight + 2 + #items and items[y-pastHeight-1] then
-			GoToPath(items[y-pastHeight-1][2])
+			if k == 'Favourites' then
+				GoToPath(items[y-pastHeight-1][2])
+			else
+				Current.Peripheral = items[y-pastHeight-1]
+				GoToPath('/Peripherals/'..Helpers.Capitalise(items[y-pastHeight-1].Side))
+			end
+			return
 		end
 		pastHeight = pastHeight + 2 + #items
 	end

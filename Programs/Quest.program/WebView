@@ -15,7 +15,9 @@
 	end
 
 	CalculatePositions = function(self)
-
+		for i, v in ipairs(table_name) do
+			-- Code here...
+		end
 	end
 
 	InsertElement = function(self, element)
@@ -36,7 +38,6 @@
 	end
 
 	BuildPage = function(self)
-		print(textutils.serialize(self.Page))
 		for i, elem in ipairs(self.Page) do
 			self:InsertElement(elem)
 		end

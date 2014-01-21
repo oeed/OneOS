@@ -12,6 +12,35 @@ print(os.version())
 
 local commandHistory = {}
 
+local function _run( _sCommand, ... )
+	local sPath = nativeShell.resolveProgram(_sCommand)
+	if _sCommand:sub(1,3) ~= 'rom' then
+		sPath = nativeShell.resolveProgram(Helpers.RemoveFileName(appPath) .. '/' ..  _sCommand )
+	end
+	if sPath ~= nil then
+		tProgramStack[#tProgramStack + 1] = sPath
+   		local result = os.run( {fs = OneOS.FS}, sPath, ... )
+		tProgramStack[#tProgramStack] = nil
+		return result
+   	else
+    	printError( "No such program" )
+    	return false
+    end
+end
+
+local function runLine( _sLine )
+	local tWords = {}
+	for match in string.gmatch( _sLine, "[^ \t]+" ) do
+		table.insert( tWords, match )
+	end
+
+	local sCommand = tWords[1]
+	if sCommand then
+		return _run( sCommand, unpack( tWords, 2 ) )
+	end
+	return false
+end
+
 while true do
 	term.setTextColour(highlightTextColour)
 	term.setBackgroundColour(backgroundColour)
@@ -33,9 +62,9 @@ while true do
 			if path ~= nil then
 				args[1] = path
 				if path:sub(1,3) == 'rom' then
-					shell.run(unpack(args))
+					runLine( table.concat( args, " " ) )
 				else
-					shell.run(unpack(args))
+					runLine( table.concat( args, " " ) )
 				end
 			else
 				printError("The file '"..args[1].."' does not exist")

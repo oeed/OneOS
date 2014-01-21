@@ -58,3 +58,8 @@
 		
 		MainDraw()
 	end
+
+	Register = function(self)
+		RegisterElement(self)
+		return self
+	end

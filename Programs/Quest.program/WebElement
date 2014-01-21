@@ -28,7 +28,7 @@
 			local value = GetDefaultAttribute(self.Type, 'width')
 			if value:sub(#value) == '%' then
 				local num = tonumber(value:sub(1, #value-1))
-				if type(num) == 'number' and num > 0 then
+				if type(num) == 'number' and num > 0 and self.Parent and self.Parent.Width then
 					self.Width = (num / 100) * self.Parent.Width
 				end
 			elseif type(tonumber(value)) == 'number' and tonumber(value) > 0 then
@@ -39,13 +39,14 @@
 		self.Height = 1
 	end
 
-	Initialise = function(self, element, parentElement, webView)
+	Initialise = function(self, element, parentElement, children, webView)
 		local new = {}    -- the new instance
 		setmetatable( new, {__index = self} )
 		new.Type = element._tag:lower()
 		height = height or 1
 		width = width or #text + 2
 		new.Parent = parentElement
+		new.Children = children
 		new:CalculateSize()
 		return new
 	end

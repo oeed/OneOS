@@ -37,7 +37,7 @@ function Initialise()
 
 	--Update()
 	sleep(0)
-	local h = fs.open(runningLocation .. 'test.html', 'r')
+	local h = fs.open('test.html', 'r')
 	--print(textutils.serialize(HTML.parsestr(h.readAll())))
 	sleep(0)
 	--h.close()
@@ -45,8 +45,7 @@ function Initialise()
 	webView = WebView:Initialise(1, 1, 51, 19, HTML.parsestr(h.readAll()), nil)
 	webView:BuildPage()
 	h.close()
-
-	print(type(tonumber('100%')))
+	
 	EventHandler()
 end
 

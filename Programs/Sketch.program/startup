@@ -3059,12 +3059,14 @@ function LoadMenuBar()
 							return CheckOpenArtboard()
 						end
 					},
+			--[[
 					{
 						Title = 'Save As...',
 						Click = function()
 
 						end
 					}	
+			]]--
 				}, self, true)
 			else
 				Current.Menu = nil
@@ -3074,7 +3076,7 @@ function LoadMenuBar()
 		Button:Initialise(7, 1, nil, nil, colours.grey, Current.MenuBar, function(self, side, x, y, toggle)
 			if not self.Toggle then
 				Menu:New(7, 2, {
---[[
+			--[[
 					{
 						Title = "Undo",
 						Click = function()
@@ -3103,7 +3105,7 @@ function LoadMenuBar()
 					{
 						Separator = true
 					},
-]]--
+			]]--
 					{
 						Title = 'Cut',
 						Click = function()

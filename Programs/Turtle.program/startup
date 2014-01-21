@@ -1,8 +1,16 @@
-os.loadAPI('/System/API/Drawing')
-os.loadAPI('/System/API/Button')
-os.loadAPI('/System/API/Peripheral')
-os.loadAPI('/System/API/Wireless')
-os.loadAPI('/System/API/Turtle')
+if OneOS then
+	--running under OneOS
+	OneOS.ToolBarColour = colours.grey
+	OneOS.ToolBarTextColour = colours.white
+end
+
+os.loadAPI('/System/API/Drawing', true)
+os.loadAPI('/System/API/Button', true)
+os.loadAPI('/System/API/TextBox', true)
+os.loadAPI('/System/API/TextInput', true)
+os.loadAPI('/System/API/Peripheral', true)
+os.loadAPI('/System/API/Wireless', true)
+os.loadAPI('/System/API/Turtle', true)
 
 local dir = shell.getRunningProgram()
 dir = dir:sub(1, #dir-7)
@@ -15,15 +23,17 @@ Current = {
 	ConnectionStatus = 'Connecting...',
 	State = '...',
 	Miner = {},
+	Excavator = {},
 	HomeY = 63,
 	Title1 = "..",
 	Title2 = "",
 	Title3 = "",
-	NextPage = nil
+	NextPage = nil,
+	Input = nil
 }
 
-os.loadAPI(dir..'miner')
-sleep(1)
+os.loadAPI('miner')
+os.loadAPI('excavator')
 
 
 Images = {
@@ -61,6 +71,14 @@ function Initialise()
 	--if turtle then
 		Current.ConnectionStatus = 'Local Control'
 --	end
+	if not turtle then
+		Drawing.Clear(colours.grey)
+		Drawing.DrawCharactersCenter(nil, -1, nil, nil, 'This program must be used on a turtle.', colours.white, colours.grey)
+		Drawing.DrawCharactersCenter(nil, 1, nil, nil, 'Click anywhere to close.', colours.white, colours.grey)
+		Drawing.DrawBuffer()
+		os.pullEvent('mouse_click')
+		OneOS.Close()
+	end
 
 	Wireless.Responder = function(event, side, channel, replyChannel, message, distance)
 		if channel == Wireless.Channels.TurtleRemote then
@@ -91,7 +109,7 @@ function LoadPage(page)
 		local textColour = colours.white
 		Current.Page = page
 		Button:Initialise(x1, yStart, buttonWidth, buttonHeight, backgroundColour, textColour, nil, nil, nil, function() LoadPage('miner1') end, 'Miner'):Register()
-		Button:Initialise(x1, yStart + (buttonHeight + 1), buttonWidth, buttonHeight, backgroundColour, textColour, nil, nil, nil, function() LoadPage('excavator') end, 'Excavator'):Register()
+		Button:Initialise(x1, yStart + (buttonHeight + 1), buttonWidth, buttonHeight, backgroundColour, textColour, nil, nil, nil, function() LoadPage('excavator1') end, 'Excavator'):Register()
 		Button:Initialise(x2, yStart, buttonWidth, buttonHeight, backgroundColour, textColour, nil, nil, nil, function() LoadPage('builder') end, 'Builder'):Register()
 		Button:Initialise(x2, yStart + (buttonHeight + 1), buttonWidth, buttonHeight, backgroundColour, textColour, nil, nil, nil, function() LoadPage('farmer') end, 'Farmer'):Register()
 	elseif page == 'miner1' then
@@ -108,6 +126,7 @@ function LoadPage(page)
 		Button:Initialise(2, yStart, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function() end, 'Auto Refuel', Current.Miner.autoRefuel):Register()
 		Button:Initialise(2, yStart+3, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function()  end, 'Use Chest', Current.Miner.useChest):Register()
 		Button:Initialise(2, yStart+6, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function()  end, 'Safe Return', Current.Miner.safeReturn):Register()
+		Button:Initialise(2, 2, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function()LoadPage('home')end, '<'):Register()
 	elseif page == 'refuel' then
 		Current.Page = page
 		refuelOkButton = Button:Initialise(Drawing.Screen.Width - (#'Done'+3), Drawing.Screen.Height - 1, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function()  LoadPage(Current.NextPage) end, 'Done'):Register()
@@ -122,6 +141,24 @@ function LoadPage(page)
 		Button:Initialise(Drawing.Screen.Width - (#'Stop Now'+3) - 10, Drawing.Screen.Height - 1, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function() LoadPage('miner1') end, 'Stop Now'):Register()
 		Draw()
 		RunJob(miner)
+	elseif page == 'excavator1' then
+		Current.Excavator = {
+			width = 5,
+			length = 5,
+			depth = 5,
+			safeReturn = true,
+			autoRefuel = true,
+		}
+		Current.Page = page
+		local buttonX = 1
+		local yStart = (Drawing.Screen.Height - 6)/2 + 1
+		Button:Initialise(Drawing.Screen.Width - (#'Start'+3) + 1, Drawing.Screen.Height - 1, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function() if Current.Miner.useChest then Current.NextPage = 'miner2' else Current.NextPage = 'miner3' end LoadPage('refuel') end, 'Start'):Register()
+		Button:Initialise(2, yStart+3, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function() end, 'Auto Refuel', Current.Excavator.autoRefuel):Register()
+		Button:Initialise(2, yStart+6, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function()  end, 'Safe Return', Current.Excavator.safeReturn):Register()
+		Button:Initialise(2, 2, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function()LoadPage('home')end, '<'):Register()
+		TextBox:Initialise(8, yStart+1, 5, 1, nil, '5', colours.white, nil, function(self) Current.Input = self.TextInput Current.Excavator.width = tonumber(self.TextInput) end, true):Register()
+		TextBox:Initialise(21, yStart+1, 5, 1, nil, '5', colours.white, nil, function(self) Current.Input = self.TextInput Current.Excavator.height = tonumber(self.TextInput) end, true):Register()
+		TextBox:Initialise(33, yStart+1, 5, 1, nil, '5', colours.white, nil, function(self) Current.Input = self.TextInput Current.Excavator.height = tonumber(self.TextInput) end, true):Register()
 	end
 end
 
@@ -199,6 +236,16 @@ function DrawPage()
 		Drawing.DrawCharactersCenter(1, - 3, nil, nil, Current.Title1 , colours.white, colours.grey)
 		Drawing.DrawCharactersCenter(1, - 1, nil, nil, Current.Title2, colours.white, colours.grey)
 		Drawing.DrawCharactersCenter(1, 0, nil, nil, Current.Title3, colours.white, colours.grey)
+	elseif Current.Page == 'excavator1' then
+		Drawing.DrawCharactersCenter(1, - 5, nil, nil, 'Digs an area below and', colours.white, colours.grey)
+		Drawing.DrawCharactersCenter(1, - 4, nil, nil, 'to the right of the Turtle', colours.white, colours.grey)
+		Drawing.DrawCharacters(2, (Drawing.Screen.Height - 6)/2 + 2, "Width", colours.white, colours.grey)
+		Drawing.DrawCharacters(14, (Drawing.Screen.Height - 6)/2 + 2, "Height", colours.white, colours.grey)
+		Drawing.DrawCharacters(27, (Drawing.Screen.Height - 6)/2 + 2, "Depth", colours.white, colours.grey)
+		Drawing.DrawCharacters(2, (Drawing.Screen.Height - 6)/2 + 5, "Refuel using found coal", colours.white, colours.grey)
+		Drawing.DrawCharacters(2, (Drawing.Screen.Height - 6)/2 + 8, "Return before", colours.white, colours.grey)
+		Drawing.DrawCharacters(2, (Drawing.Screen.Height - 6)/2 + 9, "running out of fuel", colours.white, colours.grey)
+
 	end
 end
 
@@ -247,6 +294,13 @@ function Draw()
 --	DrawStatusBar()
 
 	Drawing.DrawBuffer()
+	if Current.Input then
+		term.setCursorPos(Current.CursorPos[1], Current.CursorPos[2])
+		term.setCursorBlink(true)
+		term.setTextColour(Current.CursorColour)
+	else
+		term.setCursorBlink(false)
+	end
 
 	if Current.Page == 'refuel' then
 		drawTimer = os.startTimer(0.5)
@@ -256,6 +310,8 @@ function Draw()
 		--drawTimer = os.startTimer(1)
 	end
 end
+
+MainDraw = Draw
 
 function Update(_, timer)
 	if timer == drawTimer then
@@ -305,7 +361,13 @@ function HandleKey(...)
 	local args = {...}
 	local event = args[1]
 	local keychar = args[2]
-
+	if Current.Input then
+		if event == 'char' then
+			Current.Input:Char(keychar)
+		elseif event == 'key' then
+			Current.Input:Key(keychar)
+		end
+	end
 end
 
 function GetAbsolutePosition(obj)

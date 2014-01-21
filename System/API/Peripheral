@@ -25,8 +25,8 @@
 						name = 'W '..name
 					end
 				end
-
-				table.insert(peripherals, {Name = name .. ' '..code, Side = side, Type = _type, Wireless = isWireless})
+				
+				table.insert(peripherals, {Name = name:sub(1,8) .. ' '..code, Side = side, Type = _type, Wireless = isWireless})
 			end
 		end
 		return peripherals

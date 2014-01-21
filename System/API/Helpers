@@ -1,17 +1,26 @@
-LongestString = function(input, key)
+LongestString = function(input, key, isKey)
 	local length = 0
-	for i = 1, #input do
-		local value = input[i]
-		if key then
-			if value[key] then
-				value = value[key]
-			else
-				value = ''
+	if isKey then
+		for k, v in pairs(input) do
+			local titleLength = string.len(k)
+			if titleLength > length then
+				length = titleLength
 			end
 		end
-		local titleLength = string.len(value)
-		if titleLength > length then
-			length = titleLength
+	else
+		for i = 1, #input do
+			local value = input[i]
+			if key then
+				if value[key] then
+					value = value[key]
+				else
+					value = ''
+				end
+			end
+			local titleLength = string.len(value)
+			if titleLength > length then
+				length = titleLength
+			end
 		end
 	end
 	return length
@@ -195,7 +204,7 @@ end
 
 TidyPath = function(path)
 	path = '/'..path
-	if fs.isDir(path) then
+	if fs.exists(path) and fs.isDir(path) then
 		path = path .. '/'
 	end
 
@@ -204,4 +213,8 @@ TidyPath = function(path)
 		path, n = path:gsub("//", "/")
 	end
 	return path
+end
+
+Capitalise = function(str)
+	return str:sub(1, 1):upper() .. str:sub(2, -1)
 end
