@@ -53,6 +53,23 @@ function PrintCentered(text, y)
 end
 
 function LoadingScreen()
+	if fs.getFreeSpace('/') < 51200 then
+		term.setBackgroundColor(colours.grey)
+		term.setTextColor(colours.white)
+		term.clear()
+
+		PrintCentered('You have less than 50KB of free space remaining!', 6)
+		PrintCentered('You may encounter crashes due to this.' , 7)
+		term.setTextColor(colours.lightGrey)
+
+		PrintCentered('Try to free up some space, open \'About OneOS\'' , 9)
+		PrintCentered('in the One menu for more information.' , 10)
+		term.setTextColor(colours.white)
+
+		PrintCentered('Click anywhere to continue.', 12)
+
+		os.pullEvent('mouse_click')
+	end
 	local screenWidth, screenHeight = term.getSize()
 	term.setBackgroundColour(colours.white)	
 	term.clear()
@@ -80,6 +97,7 @@ function LoadingScreen()
 			
 			term.clearLine()
 			PrintCentered('Loading API '..file, y + 11)
+			sleep(0)
 			if not LoadAPI(root .. 'System/API/' .. file) then
 				term.setTextColour(colours.red)
 				PrintCentered('Error While Loading API '..file, y + 11)
@@ -99,11 +117,12 @@ if not term.isColour() then
 
 	PrintCentered('OneOS requires an advanced (gold) computer.', 8)
 
-	PrintCentered('Click any key to return to the shell.', 10)
+	PrintCentered('Press any key to return to the shell.', 10)
 
 	os.pullEvent('key')
 	term.clear()
 	term.setCursorPos(1,1)
+
 elseif LoadingScreen() then
 
 	if fs.exists('/.update/') and fs.isDir('/.update/') then
@@ -156,7 +175,13 @@ elseif LoadingScreen() then
 		term.setTextColor(colours.lightGrey)
 		table.remove(ok, 1)
 		for i, v in ipairs(ok) do
-			PrintCentered(v, i+12)
+			local w, h = term.getSize()
+		    x = math.ceil(math.ceil((w / 2) - (#v / 2)), 0)+1
+		    if x < 1 then
+		    	x = 1
+		    end
+		    term.setCursorPos(x, i+12)
+		    print(v)
 		end
 
 		PrintCentered('An error report has been sent to oeed.', Drawing.Screen.Height-1)

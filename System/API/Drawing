@@ -51,6 +51,10 @@ DrawImage = function(_x,_y,tImage, w, h)
 				local bgColour = tImage[y][x]
 	            local textColour = tImage.textcol[y][x] or colours.white
 	            local char = tImage.text[y][x]
+	            if not _x then
+	            	print('yayaya')
+	            	sleep(1)
+	            end
 	            Drawing.WriteToBuffer(x+_x-1, y+_y-1, char, textColour, bgColour)
 			end
 		end

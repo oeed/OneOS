@@ -4,6 +4,7 @@ if OneOS then
 	OneOS.ToolBarTextColour = colours.white
 end
 
+
 --  
 --  Lua IDE
 --  Made by GravityScore
@@ -38,7 +39,7 @@ local curLanguage = {}
 local event_distract = "luaide_distractionEvent"
 
 -- Locations
-local updateURL = "https://raw.github.com/GravityScore/LuaIDE/master/luaide.lua"
+--local updateURL = "https://raw.github.com/GravityScore/LuaIDE/master/luaide.lua"
 local ideLocation = "/" .. shell.getRunningProgram()
 local themeLocation = "/.LuaIDE-Theme"
 
@@ -244,6 +245,7 @@ local normalTheme = {
 	comment = "white"
 }
 
+--[[
 local availableThemes = {
 	{"Water (Default)", "https://raw.github.com/GravityScore/LuaIDE/master/themes/default.txt"},
 	{"Fire", "https://raw.github.com/GravityScore/LuaIDE/master/themes/fire.txt"},
@@ -255,6 +257,7 @@ local availableThemes = {
 	{"Night", "https://raw.github.com/GravityScore/LuaIDE/master/themes/night.txt"},
 	{"Original", "https://raw.github.com/GravityScore/LuaIDE/master/themes/original.txt"},
 }
+]]--
 
 local function loadTheme(path)
 	local f = io.open(path)
@@ -367,10 +370,10 @@ local function prompt(list, dir, isGrid)
 		elseif e == "key" and but == key2 and ((err == true and sel < #list - 1) or (sel < #list)) then
 			sel = sel + 1
 			draw(sel)
-		elseif isGrid and e == "key" and but == 203 and sel > 2 then
+		elseif isGrid and e == "key" and but == 203 and sel > 2 and #list == 4 then
 			sel = sel - 2
 			draw(sel)
-		elseif isGrid and e == "key" and but == 205 and sel < 3 then
+		elseif isGrid and e == "key" and but == 205 and sel < 3 and #list == 4 then
 			sel = sel + 2
 			draw(sel)
 		elseif e == "mouse_click" then
@@ -497,7 +500,7 @@ end
 
 --  -------- Saving and Loading
 
-local function download(url, path)
+--[[local function download(url, path)
 	for i = 1, 3 do
 		local response = http.get(url)
 		if response then
@@ -513,16 +516,16 @@ local function download(url, path)
 	end
 
 	return false
-end
+end]]
 
 local function saveFile(path, lines)
-	local dir = path:sub(1, path:len() - fs.getName(path):len())
-	if not fs.exists(dir) then fs.makeDir(dir) end
-	if not fs.isDir(path) and not fs.isReadOnly(path) then
+	local dir = path:sub(1, path:len() - fs.getName(path):len(), true)
+	if not fs.exists(dir, true) then fs.makeDir(dir, true) end
+	if not fs.isDir(path, true) and not fs.isReadOnly(path, true) then
 		local a = ""
 		for _, v in pairs(lines) do a = a .. v .. "\n" end
 
-		local f = io.open(path, "w")
+		local f = io.open(path, "w", true)
 		f:write(a)
 		f:close()
 		return true
@@ -530,17 +533,17 @@ local function saveFile(path, lines)
 end
 
 local function loadFile(path)
-	if not fs.exists(path) then
-		local dir = path:sub(1, path:len() - fs.getName(path):len())
-		if not fs.exists(dir) then fs.makeDir(dir) end
-		local f = io.open(path, "w")
+	if not fs.exists(path, true) then
+		local dir = path:sub(1, path:len() - fs.getName(path, true):len())
+		if not fs.exists(dir, true) then fs.makeDir(dir, true) end
+		local f = io.open(path, "w", true)
 		f:write("")
 		f:close()
 	end
 
 	local l = {}
-	if fs.exists(path) and not fs.isDir(path) then
-		local f = io.open(path, "r")
+	if fs.exists(path, true) and not fs.isDir(path, true) then
+		local f = io.open(path, "r", true)
 		if f then
 			local a = f:read("*l")
 			while a do
@@ -1913,7 +1916,7 @@ local function newFile()
 	title("Lua IDE - New File")
 	local name = centerRead(wid, "/Desktop/")
 	if not name or name == "" then return "menu" end
-	name = "/Desktop/" .. name
+	name = "/" .. name
 
 	-- Clear
 	title("Lua IDE - New File")
@@ -1924,11 +1927,11 @@ local function newFile()
 		term.write(string.rep(" ", wid))
 	end
 	term.setCursorPos(1, 9)
-	if fs.isDir(name) then
+	if fs.isDir(name, true) then
 		centerPrint("Cannot Edit a Directory!")
 		sleep(1.6)
 		return "menu"
-	elseif fs.exists(name) then
+	elseif fs.exists(name, true) then
 		centerPrint("File Already Exists!")
 		local opt = prompt({{"Open", w/2 - 9, 14}, {"Cancel", w/2 + 2, 14}}, "horizontal")
 		if opt == "Open" then return "edit", name
@@ -1954,11 +1957,11 @@ local function openFile()
 		term.write(string.rep(" ", wid))
 	end
 	term.setCursorPos(1, 9)
-	if fs.isDir(name) then
+	if fs.isDir(name, true) then
 		centerPrint("Cannot Open a Directory!")
 		sleep(1.6)
 		return "menu"
-	elseif not fs.exists(name) then
+	elseif not fs.exists(name, true) then
 		centerPrint("File Doesn't Exist!")
 		local opt = prompt({{"Create", w/2 - 11, 14}, {"Cancel", w/2 + 2, 14}}, "horizontal")
 		if opt == "Create" then return "edit", name
@@ -1970,6 +1973,7 @@ end
 --  -------- Settings
 
 local function update()
+--[[
 	local function draw(status)
 		title("LuaIDE - Update")
 		term.setBackgroundColor(colors[theme.prompt])
@@ -2036,13 +2040,20 @@ local function update()
 			break
 		end
 	end
+]]--
 
 	return "settings"
 end
 
 local function changeTheme()
 	title("LuaIDE - Theme")
+	term.setCursorPos(1, 7)
+	centerPrint("Themes are not available on the")
+	centerPrint("treasure disk version of LuaIDE!")
+	centerPrint("Download the full program from the")
+	centerPrint("ComputerCraft Forums!")
 
+--[[
 	if isAdvanced() then
 		local disThemes = {"Back"}
 		for _, v in pairs(availableThemes) do table.insert(disThemes, v[1]) end
@@ -2092,16 +2103,17 @@ local function changeTheme()
 		centerPrint("Themes are not available on")
 		centerPrint("normal computers!")
 	end
+]]--
 end
 
 local function settings()
 	title("LuaIDE - Settings")
 
-	local opt = prompt({{"Change Theme", w/2 - 17, 8}, {"Return to Menu", w/2 - 22, 13},
-		{"Check for Updates", w/2 + 2, 8}, {"Exit IDE", w/2 + 2, 13, bg = colors[theme.err], 
+	local opt = prompt({{"Change Theme", w/2 - 17, 8}, {"Return to Menu", w/2 - 19, 13},
+		--[[{"Check for Updates", w/2 + 2, 8},]] {"Exit IDE", w/2 + 2, 13, bg = colors[theme.err], 
 		highlight = colors[theme.errHighlight]}}, "vertical", true)
 	if opt == "Change Theme" then return changeTheme()
-	elseif opt == "Check for Updates" then return update()
+--	elseif opt == "Check for Updates" then return update()
 	elseif opt == "Return to Menu" then return "menu"
 	elseif opt == "Exit IDE" then return "exit" end
 end
@@ -2130,7 +2142,7 @@ local function main(arguments)
 	-- Check arguments
 	if type(arguments) == "table" and #arguments > 0 then
 		local f = "/" .. shell.resolve(arguments[1])
-		if fs.isDir(f) then print("Cannot edit a directory.") end
+		if fs.isDir(f, true) then print("Cannot edit a directory.") end
 		opt, data = "edit", f
 	end
 

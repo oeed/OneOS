@@ -123,9 +123,9 @@ function LoadPage(page)
 		local buttonX = 1
 		local yStart = (Drawing.Screen.Height - 6)/2 + 1
 		Button:Initialise(Drawing.Screen.Width - (#'Start'+3) - 3, Drawing.Screen.Height - 1, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function() if Current.Miner.useChest then Current.NextPage = 'miner2' else Current.NextPage = 'miner3' end LoadPage('refuel') end, 'Start'):Register()
-		Button:Initialise(2, yStart, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function() end, 'Auto Refuel', Current.Miner.autoRefuel):Register()
-		Button:Initialise(2, yStart+3, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function()  end, 'Use Chest', Current.Miner.useChest):Register()
-		Button:Initialise(2, yStart+6, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function()  end, 'Safe Return', Current.Miner.safeReturn):Register()
+		Button:Initialise(2, yStart, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function(self) Current.Miner.autoRefuel = not self.Toggle end, 'Auto Refuel', Current.Miner.autoRefuel):Register()
+		Button:Initialise(2, yStart+3, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function(self) Current.Miner.useChest = not self.Toggle end, 'Use Chest', Current.Miner.useChest):Register()
+		Button:Initialise(2, yStart+6, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function(self) Current.Miner.safeReturn = not self.Toggle end, 'Safe Return', Current.Miner.safeReturn):Register()
 		Button:Initialise(2, 2, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function()LoadPage('home')end, '<'):Register()
 	elseif page == 'refuel' then
 		Current.Page = page
@@ -152,13 +152,18 @@ function LoadPage(page)
 		Current.Page = page
 		local buttonX = 1
 		local yStart = (Drawing.Screen.Height - 6)/2 + 1
-		Button:Initialise(Drawing.Screen.Width - (#'Start'+3) + 1, Drawing.Screen.Height - 1, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function() if Current.Miner.useChest then Current.NextPage = 'miner2' else Current.NextPage = 'miner3' end LoadPage('refuel') end, 'Start'):Register()
+		Button:Initialise(Drawing.Screen.Width - (#'Start'+3) + 1, Drawing.Screen.Height - 1, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function() Current.NextPage = 'excavator2' LoadPage('refuel') end, 'Start'):Register()
 		Button:Initialise(2, yStart+3, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function() end, 'Auto Refuel', Current.Excavator.autoRefuel):Register()
 		Button:Initialise(2, yStart+6, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function()  end, 'Safe Return', Current.Excavator.safeReturn):Register()
 		Button:Initialise(2, 2, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function()LoadPage('home')end, '<'):Register()
 		TextBox:Initialise(8, yStart+1, 5, 1, nil, '5', colours.white, nil, function(self) Current.Input = self.TextInput Current.Excavator.width = tonumber(self.TextInput) end, true):Register()
 		TextBox:Initialise(21, yStart+1, 5, 1, nil, '5', colours.white, nil, function(self) Current.Input = self.TextInput Current.Excavator.height = tonumber(self.TextInput) end, true):Register()
 		TextBox:Initialise(33, yStart+1, 5, 1, nil, '5', colours.white, nil, function(self) Current.Input = self.TextInput Current.Excavator.height = tonumber(self.TextInput) end, true):Register()
+	elseif page == 'excavator2' then
+		Current.Page = page
+		Button:Initialise(Drawing.Screen.Width - (#'Stop Now'+3), Drawing.Screen.Height - 1, nil, nil, colours.lightGrey, colours.white, nil, nil, nil, function() LoadPage('excavator1') end, 'Stop Now'):Register()
+		Draw()
+		RunJob(excavator)
 	end
 end
 
@@ -240,12 +245,13 @@ function DrawPage()
 		Drawing.DrawCharactersCenter(1, - 5, nil, nil, 'Digs an area below and', colours.white, colours.grey)
 		Drawing.DrawCharactersCenter(1, - 4, nil, nil, 'to the right of the Turtle', colours.white, colours.grey)
 		Drawing.DrawCharacters(2, (Drawing.Screen.Height - 6)/2 + 2, "Width", colours.white, colours.grey)
-		Drawing.DrawCharacters(14, (Drawing.Screen.Height - 6)/2 + 2, "Height", colours.white, colours.grey)
+		Drawing.DrawCharacters(14, (Drawing.Screen.Height - 6)/2 + 2, "Length", colours.white, colours.grey)
 		Drawing.DrawCharacters(27, (Drawing.Screen.Height - 6)/2 + 2, "Depth", colours.white, colours.grey)
 		Drawing.DrawCharacters(2, (Drawing.Screen.Height - 6)/2 + 5, "Refuel using found coal", colours.white, colours.grey)
 		Drawing.DrawCharacters(2, (Drawing.Screen.Height - 6)/2 + 8, "Return before", colours.white, colours.grey)
 		Drawing.DrawCharacters(2, (Drawing.Screen.Height - 6)/2 + 9, "running out of fuel", colours.white, colours.grey)
-
+	elseif Current.Page == 'excavator2' then
+		Drawing.DrawCharactersCenter(1, nil, nil, nil, 'Excavating...', colours.white, colours.grey)
 	end
 end
 

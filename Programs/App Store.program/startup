@@ -1,3 +1,5 @@
+os.loadAPI('/System/JSON', true)
+
 _print = print
 
 isMenuVisible = false
@@ -204,6 +206,10 @@ Drawing = {
 	end,
 
 	WriteStringToBuffer = function (x, y, characters, textColour,bgColour)
+		if type(characters) ~= 'string' then
+			print(characters)
+			sleep(1)
+		end
 		for i = 1, #characters do
    			local character = characters:sub(i,i)
    			Drawing.WriteToBuffer(x + i - 1, y, character, textColour, bgColour)
@@ -602,15 +608,14 @@ end
 
 function Initialise()
 	os.loadAPI('api')
-	print(api)
-	sleep(2)
 	--sleep(0.5)
 	--DownloadData()
-	ChangePage('Top Charts')
-	
+	--ChangePage('Top Charts')
+	print('install')
+	api.installApplication(71,"/Programs/test.program/")
 	--print(api.getAllApplications())
 	--BuildListItems()
-	Draw()
+	--Draw()
 	EventHandler()
 end
 

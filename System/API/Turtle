@@ -19,8 +19,8 @@
 		}
 	end
 
-	function GoHome()
-		if Turtle.RelativePosition.X ~= 0 then
+	function GoHome(x, y, z)
+		if x == nil and Turtle.RelativePosition.X ~= 0 then
 			if Turtle.RelativePosition.X < 0 then
 				Turtle.DigMoveForward(-1*Turtle.RelativePosition.X)
 			elseif Turtle.RelativePosition.X > 0 then
@@ -29,7 +29,7 @@
 			end
 		end
 
-		if Turtle.RelativePosition.Z ~= 0 then
+		if z == nil and Turtle.RelativePosition.Z ~= 0 then
 			if Turtle.RelativePosition.Z < 0 then
 				RotateTo(1)
 				Turtle.DigMoveForward(-1*Turtle.RelativePosition.Z)
@@ -39,7 +39,7 @@
 			end
 		end
 		
-		if Turtle.RelativePosition.Y ~= 0 then
+		if y == nil and Turtle.RelativePosition.Y ~= 0 then
 			if Turtle.RelativePosition.Y < 0 then
 				Turtle.DigMoveUp(-1*Turtle.RelativePosition.Y)
 			elseif Turtle.RelativePosition.Y > 0 then
@@ -51,6 +51,7 @@
 	end
 
 	function RotateTo(rotation)
+		print(Turtle.RelativePosition.Rotation..' i')
 		if Turtle.RelativePosition.Rotation ~= rotation then
 			if Turtle.RelativePosition.Rotation < rotation + 1 then
 				print('one')
@@ -62,6 +63,7 @@
 				Turtle.TurnLeft(-1*(rotation-Turtle.RelativePosition.Rotation))
 			end				
 		end
+		print(Turtle.RelativePosition.Rotation..' b')		
 	end
 
 	function UpdateRelativePosition(deltaX, deltaY, deltaRotation)

@@ -64,7 +64,7 @@
 		print(levelEnd)
 		print(levels)
 		while continue do
-			if Turtle.FuelLevel() < 80 then
+			if Turtle.FuelLevel() <= 0 then
 				print('Needs refuel!')
 				Turtle.SetState('Fuel empty')
 				Turtle.Refuel()

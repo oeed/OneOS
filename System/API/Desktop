@@ -17,12 +17,15 @@ local function IconLocation(i, ignoreOverlay)
 	local collumn = math.ceil((i / maxRow)+0.1) - 1
 	x = x + (slotWidth * collumn)
 	y = y + (i % maxRow) * slotHeight
-	if #files == 1 then
+	--[[
+if #files == 1 then
 		return nil
 	end
+]]--
 
 	for _i, file in ipairs(files) do
 		if not ignoreOverlay and settings.layout[file] and x == settings.layout[file].x and y == settings.layout[file].y then
+			print('else')
 			return IconLocation(i+2)
 		end
 	end
@@ -54,7 +57,7 @@ function RefreshFiles()
 	end
 
 	for i, file in ipairs(notSet) do
-		local x, y = IconLocation(count)
+		local x, y = IconLocation(i, true)
 		table.insert(files, file)
         count = count + 1
         layout[file] = {x = x, y = y}
@@ -156,29 +159,38 @@ function Click(event, side, x, y)
 					{
 						Title = 'Rename...',
 						Click = function()
-							TextDialogueWindow:Initialise("Rename '"..Helpers.TruncateString(name, 17).."'", function(success, value)
-								if success then
-									fs.move('Desktop/'..name, 'Desktop/'..value)
+							if name == 'Documents' then
+								ButtonDialogueWindow:Initialise("Unable to rename!", 'You can not rename the Documents folder.', 'Ok', nil, function()end):Show()
+							else
+								TextDialogueWindow:Initialise("Rename '"..Helpers.TruncateString(name, 17).."'", function(success, value)
+									if success then
+										fs.move('Desktop/'..name, 'Desktop/'..value)
 
-									settings.layout[value..Helpers.Extension(name, true)] = settings.layout[name]
-									settings.layout[name] = nil
-									SaveSettings()
-									RefreshFiles()
-								end
-							end):Show()
+										settings.layout[value..Helpers.Extension(name, true)] = settings.layout[name]
+										settings.layout[name] = nil
+										SaveSettings()
+										RefreshFiles()
+									end
+								end):Show()
+							end
 						end
 					},
 					{
 						Title = 'Delete...',
 						Click = function()
-							ButtonDialogueWindow:Initialise("Delete '"..Helpers.TruncateString(Helpers.RemoveExtension(name), 16).."'?", "Are you sure you want to delete '"..name.."'?", 'Yes', 'Cancel', function(success)
-								if success then
-									fs.delete('Desktop/'..name)
-									settings.layout[name] = nil
-									SaveSettings()
-									RefreshFiles()
-								end
-							end):Show()
+							if name == 'Documents' then
+								ButtonDialogueWindow:Initialise("Unable to delete!", 'You can not delete the Documents folder.', 'Ok', nil, function()end):Show()
+								MainDraw()
+							else
+								ButtonDialogueWindow:Initialise("Delete '"..Helpers.TruncateString(Helpers.RemoveExtension(name), 16).."'?", "Are you sure you want to delete '"..name.."'?", 'Yes', 'Cancel', function(success)
+									if success then
+										fs.delete('Desktop/'..name)
+										settings.layout[name] = nil
+										SaveSettings()
+										RefreshFiles()
+									end
+								end):Show()
+							end
 						end
 					},
 					{
@@ -267,7 +279,6 @@ function DrawFile(fileName)
 	--Drawing.DrawArea(layout.x, layout.y, 4, 3, " ", colours.black, colours.grey)
 	local shortenedName = Helpers.RemoveExtension(fileName)
 	shortenedName = Helpers.TruncateString(shortenedName, 10)
-
 	Drawing.DrawImage(layout.x, layout.y, Helpers.IconForFile('Desktop/'..fileName), 4, 3)
 
 	--shortcut indicator, not sure about thsi
@@ -288,8 +299,12 @@ function OpenSelected()
 end
 
 function DeleteSelected()
-	if selectedFile then
-		ButtonDialogueWindow:Initialise("Delete '"..Helpers.TruncateString(Helpers.RemoveExtension(selectedFile), 16).."'?", "Are you sure you want to delete '"..selectedFile.."'?", 'Yes', 'Cancel', function(success)
+	if selectedFile and selectedFile == 'Documents' then
+		ButtonDialogueWindow:Initialise("Unable to delete!", 'You can not delete the Documents folder.', 'Ok', nil, function()end):Show()
+		MainDraw()
+		return true
+	elseif selectedFile then
+		ButtonDialogueWindow:Initialise("Delete!!! '"..Helpers.TruncateString(Helpers.RemoveExtension(selectedFile), 16).."'?", "Are you sure you want to delete '"..selectedFile.."'?", 'Yes', 'Cancel', function(success)
 			if success then
 				fs.delete('Desktop/'..selectedFile)
 				settings.layout[selectedFile] = nil

@@ -126,20 +126,25 @@ function saveApplicationIcon(id, path)
 end
 
 function installApplication(id, path, computerid, username, password)
+	print('dling')
 	local package = downloadApplication(id)
 	if type(package) ~= 'string' or #package == 0 then
 		error('The application did not download correctly or is empty. Try again.')
 	end
-	local packrun = loadstring(package)
-	local env = getfenv()
-	setfenv( packrun, env)
-	if packrun then
-		packrun()
+	term.setTextColour(colours.white)
+	print(JSON)
+	print(JSON.decode)
+	print('*')
+	sleep(1)
+	local pack = JSON.decode(package)
+	if pack then
 
 		local function makeFile(_path,_content)
+			sleep(0)
 		 local file=fs.open(_path,"w", true)
 		 file.write(_content)
 		 file.close()
+
 		end
 		local function makeFolder(_path,_content)
 		 fs.makeDir(_path, true)
@@ -151,11 +156,7 @@ function installApplication(id, path, computerid, username, password)
 		  end
 		 end
 		end
-		local sDest= resolve(path) or '/'
-		if sDest=="root" then
-		 sDest="/"
-		end
-		makeFolder(sDest,env.pkg)
+		makeFolder('/TEST/',pack)
 
 		if computerid and username and password then
 			doRequest('computer', 'install', {id = id, computerid = computerid, username = username, password = password})

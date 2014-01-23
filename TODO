@@ -1,12 +1,24 @@
 TODO:
 
+ask a pro about fs... global and local
+
+space is becomming an issue! only 200kb left
+
+ask about total disc space
+shell broken
+
 Bugs:
+keyboard shortcuts in Sketch
 
 Features:
 - AppStore
 - Turtle program completion
 - Error report sending
+- Disc space warning
 
 Done:
 
 new folder in files not working
+crash message
+desktop icon arragment
+luaide
