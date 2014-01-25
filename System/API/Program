@@ -18,7 +18,7 @@
 			local _, err = pcall(function()
 				--os.run(new.Environment, path, unpack(args))
 
-				local fnFile, err = loadfile( path, true)
+				local fnFile, err = OneOS.LoadFile( path)
 		        local tEnv = new.Environment
 				setmetatable( tEnv, { __index = _G } )
 				setfenv( fnFile, tEnv )

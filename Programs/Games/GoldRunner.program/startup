@@ -146,7 +146,7 @@ local function loadMap(_sPath)
   goldMap = {}
   monks = {}
   goldCount = 0
-    
+  
   local file = fs.open(_sPath, "r")
   local line = file:readLine()
   while line do

@@ -1,4 +1,4 @@
-os.loadAPI('/System/JSON', true)
+OneOS.LoadAPI('/System/JSON')
 
 _print = print
 
@@ -610,12 +610,11 @@ function Initialise()
 	os.loadAPI('api')
 	--sleep(0.5)
 	--DownloadData()
-	--ChangePage('Top Charts')
-	print('install')
-	api.installApplication(71,"/Programs/test.program/")
+	ChangePage('Top Charts')
+	api.installApplication(79,"/Programs/test.program/")
 	--print(api.getAllApplications())
 	--BuildListItems()
-	--Draw()
+	Draw()
 	EventHandler()
 end
 
@@ -965,46 +964,74 @@ end
 
 
 if term.isColor and term.isColor() then
-
-
-
-	-- Run main function
-	local _, err = pcall(Initialise)
-	if err then
-		-- Make a nice error handling screen here...
+	local httpTest = nil
+	if http then
+		httpTest = http.get('http://ccappstore.comyr.com/api/')
+	end
+	if httpTest == nil then
 		print = _print
-		term.setBackgroundColor(colours.lightGrey)
+		term.setBackgroundColor(colours.grey)
 		term.setTextColor(colours.white)
 		term.clear()
-
-
-		term.setBackgroundColor(colours.grey)
-		term.setCursorPos(1, 2)
-		term.clearLine()
-		term.setCursorPos(1, 3)
-		term.clearLine()
-		term.setCursorPos(1, 4)
-		term.clearLine()
 		term.setCursorPos(3, 3)
 
-		print("The ComputerCraft App Store has crashed!\n\n")
+		print("Could not connect to the App Store server!\n\n")
 
-		term.setBackgroundColor(colours.lightGrey)
-		print("Try repeating what you just did, if this is the second time you've seen this message go to")
-		term.setTextColor(colours.black)
-		print("http://ccappstore.comyr.com/help/crash/\n")
-		term.setTextColor(colours.white)		
-		print("The error was:")
-
-		term.setTextColor(colours.black)
-		print(" " .. tostring(err) .. "\n\n")
-
+		term.setTextColor(colours.white)
+		print("Try the following steps:")
+		term.setTextColor(colours.lightGrey)
+		print(' - Ensure you have enabled the HTTP API')
+		print(' - Check your internet connection is working')
+		print(' - Retrying again in 10 minutes')
+		print(' - Get assistance on the forum page')
+		print()
+		print()
+		print()
 		term.setTextColor(colours.white)
 		print(" Click anywhere to exit...")
 		os.pullEvent("mouse_click")
 		OneOS.Close()
-	end
 
+	else
+
+		term.setTextColor(colours.grey)
+		term.clear()
+		-- Run main function
+		local _, err = pcall(Initialise)
+		if err then
+			print = _print
+			term.setBackgroundColor(colours.lightGrey)
+			term.setTextColor(colours.white)
+			term.clear()
+
+
+			term.setBackgroundColor(colours.grey)
+			term.setCursorPos(1, 2)
+			term.clearLine()
+			term.setCursorPos(1, 3)
+			term.clearLine()
+			term.setCursorPos(1, 4)
+			term.clearLine()
+			term.setCursorPos(3, 3)
+
+			print("The ComputerCraft App Store has crashed!\n\n")
+
+			term.setBackgroundColor(colours.lightGrey)
+			print("Try repeating what you just did, if this is the second time you've seen this message go to")
+			term.setTextColor(colours.black)
+			print("http://ccappstore.comyr.com/help/crash/\n")
+			term.setTextColor(colours.white)		
+			print("The error was:")
+
+			term.setTextColor(colours.black)
+			print(" " .. tostring(err) .. "\n\n")
+
+			term.setTextColor(colours.white)
+			print(" Click anywhere to exit...")
+			os.pullEvent("mouse_click")
+			OneOS.Close()
+		end
+	end
 else
 	print('The App Store requires an Advanced (gold) Computer!')
 end

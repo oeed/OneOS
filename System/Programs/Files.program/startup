@@ -1,13 +1,13 @@
 tArgs = {...}
 
-os.loadAPI('/System/API/Drawing', true)
-os.loadAPI('/System/API/Button', true)
-os.loadAPI('/System/API/Helpers', true)
-os.loadAPI('/System/API/Menu', true)
-os.loadAPI('/System/API/Peripheral', true)
-os.loadAPI('/System/API/TextInput', true)
-os.loadAPI('/System/API/TextDialogueWindow', true)
-os.loadAPI('/System/API/ButtonDialogueWindow', true)
+OneOS.LoadAPI('/System/API/Drawing')
+OneOS.LoadAPI('/System/API/Button')
+OneOS.LoadAPI('/System/API/Helpers')
+OneOS.LoadAPI('/System/API/Menu')
+OneOS.LoadAPI('/System/API/Peripheral')
+OneOS.LoadAPI('/System/API/TextInput')
+OneOS.LoadAPI('/System/API/TextDialogueWindow')
+OneOS.LoadAPI('/System/API/ButtonDialogueWindow')
 
 local startPath = tArgs[1] or '/Desktop/'
 local dragRelPos = nil
@@ -322,7 +322,7 @@ function RefreshFiles()
 			Current.Path = '/Desktop/'
 		end
 	end
-	for i, v in ipairs(fs.list(Current.Path, true)) do
+	for i, v in ipairs(OneOS.FS.list(Current.Path)) do
 		Current.Peripheral = nil
 		if Current.ShowHidden or string.sub( v, 1, 1 ) ~= '.' then
 			local path = Current.Path .. '/' .. v
@@ -330,10 +330,10 @@ function RefreshFiles()
 				break
 			end
 			table.insert(Current.FileList,{
-				name = fs.getName(path, true),
-				shortName = Helpers.RemoveExtension(fs.getName(path, true)),
-				size = fs.getSize(path, true),
-				isDirectory = fs.isDir(path, true),
+				name = OneOS.FS.getName(path),
+				shortName = Helpers.RemoveExtension(OneOS.FS.getName(path)),
+				size = OneOS.FS.getSize(path),
+				isDirectory = OneOS.FS.isDir(path),
 				path = Helpers.TidyPath(path)
 			})
 		end
@@ -449,10 +449,10 @@ MainDraw = Draw
 function OpenFile(file, ignoreProgram)
 	local extension = Helpers.Extension(file.path)
 	if extension == 'shortcut' then
-		h = fs.open(file.path, 'r', true)
+		h = OneOS.FS.open(file.path, 'r')
 		local shortcutPointer = h.readLine()
 		h.close()
-		if fs.isDir(shortcutPointer, true) then
+		if OneOS.FS.isDir(shortcutPointer) then
 			OpenFile({path = shortcutPointer, isDirectory = true}, ignoreProgram)
 			return
 		end
@@ -460,9 +460,9 @@ function OpenFile(file, ignoreProgram)
 	if file.isDirectory and (ignoreProgram or extension ~= 'program') then
 		GoToPath(file.path)
 	elseif not ignoreProgram and extension == 'program' then
-		if fs.isDir(file.path, true) and fs.exists(file.path..'/startup', true) then
+		if OneOS.FS.isDir(file.path) and OneOS.FS.exists(file.path..'/startup') then
 			OneOS.OpenFile(file.path)
-		elseif not fs.isDir(file.path, true) or (fs.isDir(file.path, true) and fs.exists(file.path..'/startup', true)) then
+		elseif not OneOS.FS.isDir(file.path) or (OneOS.FS.isDir(file.path) and OneOS.FS.exists(file.path..'/startup')) then
 			OneOS.OpenFile(file.path)
 		else
 			GoToPath(file.path)
@@ -536,7 +536,7 @@ function FilesClick(event, x, y, side)
 						Click = function()
 							TextDialogueWindow:Initialise("Create a Folder", function(success, value)
 								if success then
-									fs.makeDir(Current.Path..'/'..value)
+									OneOS.FS.makeDir(Current.Path..'/'..value)
 									Update()
 								end
 							end):Show()
@@ -548,13 +548,13 @@ function FilesClick(event, x, y, side)
 					{
 						Title = 'Paste',
 						Click = function()
-							local destPath = Helpers.TidyPath(Current.Path..'/'..fs.getName(Current.Clipboard.Content, true))
+							local destPath = Helpers.TidyPath(Current.Path..'/'..OneOS.FS.getName(Current.Clipboard.Content))
 							if not Current.Clipboard.IsCut then
-								fs.copy(Current.Clipboard.Content, destPath, true)
+								OneOS.FS.copy(Current.Clipboard.Content, destPath)
 								Update()
 							elseif Current.Clipboard.IsCut then
 								local content = Current.Clipboard.Paste()
-								fs.move(content, destPath, true)
+								OneOS.FS.move(content, destPath)
 								Update()
 							end
 						end
@@ -580,7 +580,7 @@ function RightClickFile(file, absX, absY)
 		}
 
 	local extension = Helpers.Extension(file.path)
-	if not extension == 'program' or not fs.isDir(file.path, true) then
+	if not extension == 'program' or not OneOS.FS.isDir(file.path) then
 		openContent = nil
 	end
 
@@ -603,7 +603,7 @@ function RightClickFile(file, absX, absY)
 				else
 					local tdw = TextDialogueWindow:Initialise("Rename '"..Helpers.TruncateString(file.name, 17).."'", function(success, value)
 						if success then
-							fs.move(file.path, Helpers.RemoveFileName(file.path)..value, true)
+							OneOS.FS.move(file.path, Helpers.RemoveFileName(file.path)..value)
 							Update()
 						end
 					end):Show()
@@ -618,7 +618,7 @@ function RightClickFile(file, absX, absY)
 				else
 					ButtonDialogueWindow:Initialise("Delete '"..Helpers.TruncateString(Helpers.RemoveExtension(file.name), 16).."'?", "Are you sure you want to delete '"..file.name.."'?", 'Yes', 'Cancel', function(success)
 						if success then
-							fs.delete(file.path, true)
+							OneOS.FS.delete(file.path)
 							Update()
 						end
 					end):Show()
@@ -648,7 +648,7 @@ function RightClickFile(file, absX, absY)
 			Click = function()
 				TextDialogueWindow:Initialise("Create a folder", function(success, value)
 					if success then
-						fs.makeDir('Desktop/'..value, true)
+						OneOS.FS.makeDir('Desktop/'..value)
 						RefreshFiles()
 					end
 				end):Show()
@@ -670,7 +670,7 @@ function RightClickFile(file, absX, absY)
 				local env = getfenv()
 				setfenv( packrun, env)
 				local path = file.path:sub(1,#file.path-1)
-				packrun(file.path, Helpers.RemoveFileName(path)..Helpers.RemoveExtension(fs.getName(path))..'.pkg')
+				packrun(file.path, Helpers.RemoveFileName(path)..Helpers.RemoveExtension(OneOS.FS.getName(path))..'.pkg')
 				Update()
 			end
 		})
@@ -837,7 +837,7 @@ function HandleKey(...)
 				if file then
 					ButtonDialogueWindow:Initialise("Delete '"..Helpers.TruncateString(Helpers.RemoveExtension(file.name), 16).."'?", "Are you sure you want to delete '"..file.name.."'?", 'Yes', 'Cancel', function(success)
 						if success then
-							fs.delete(file.path, true)
+							OneOS.FS.delete(file.path)
 						end
 					end):Show()
 					Draw()

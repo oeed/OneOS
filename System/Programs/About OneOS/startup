@@ -1,8 +1,8 @@
 tArgs = {...}
 
-os.loadAPI('/System/API/Drawing', true)
-os.loadAPI('/System/API/Button', true)
-os.loadAPI('/System/API/Helpers', true)
+OneOS.LoadAPI('/System/API/Drawing')
+OneOS.LoadAPI('/System/API/Button')
+OneOS.LoadAPI('/System/API/Helpers')
 --[[
 os.loadAPI('/System/API/Menu')
 os.loadAPI('/System/API/Peripheral')
@@ -22,7 +22,6 @@ InterfaceElements = {
 	
 }
 
-
 function Initialise()
 	EventRegister('mouse_click', TryClick)
 	EventRegister('mouse_drag', TryClick)
@@ -33,13 +32,13 @@ function Initialise()
 	EventRegister('timer', Update)
 
 
-	systemSize = FolderSize('/System/') + fs.getSize('startup', true)
+	systemSize = FolderSize('/System/') + OneOS.FS.getSize('startup')
 	desktopSize = FolderSize('/Desktop/')
 	programsSize = FolderSize('/Programs/')
 	totalSize = FolderSize('/')
 	logo = Drawing.LoadImage('/System/Images/Logo')
-	maxSpace = fs.getFreeSpace('/', true) + totalSize
-	thanksLines = Helpers.WrapText('Thanks to GravityScore (LuaIDE), NitrogenFingers(GoldRunner, image stuff), Symmetryc (GitHub issues), Jesusthekiller (Maze3D), Vilsol (Huge help with App Store) & superaxander (Turtle program assistance)!', Drawing.Screen.Width-2)
+	maxSpace = OneOS.FS.getFreeSpace('/') + totalSize
+	thanksLines = Helpers.WrapText('Thanks to GravityScore (LuaIDE), NitrogenFingers(GoldRunner, image stuff), Symmetryc & superaxander (GitHub issues), Jesusthekiller (Maze3D), Vilsol (Huge help with App Store) and beta testers!', Drawing.Screen.Width-2)
 	Update()
 	EventHandler()
 end
@@ -120,12 +119,15 @@ function FormatBytes(bytes)
 end
 
 function FolderSize(path)
+	if path == '//.git' then
+		return 0
+	end
 	local totalSize = 0
-	for i, v in ipairs(fs.list(path, true)) do
-		if fs.isDir(path..'/'..v, true) and path..'/'..v ~= '//rom' then
+	for i, v in ipairs(OneOS.FS.list(path)) do
+		if OneOS.FS.isDir(path..'/'..v) and path..'/'..v ~= '//rom' then
 			totalSize = totalSize + FolderSize(path..'/'..v)
 		else
-			totalSize = totalSize + fs.getSize(path..'/'..v, true)
+			totalSize = totalSize + OneOS.FS.getSize(path..'/'..v)
 		end
 	end
 	return totalSize

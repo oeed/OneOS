@@ -21,7 +21,45 @@ local round = function(num, idp)
 	return math.floor(num * mult + 0.5) / mult
 end
 
-Clipboard = OneOS.Clipboard
+Clipboard = {
+	Content = nil,
+	Type = nil,
+	IsCut = false,
+
+	Empty = function()
+		Clipboard.Content = nil
+		Clipboard.Type = nil
+		Clipboard.IsCut = false
+	end,
+
+	isEmpty = function()
+		return Clipboard.Content == nil
+	end,
+
+	Copy = function(content, _type)
+		Clipboard.Content = content
+		Clipboard.Type = _type or 'generic'
+		Clipboard.IsCut = false
+	end,
+
+	Cut = function(content, _type)
+		Clipboard.Content = content
+		Clipboard.Type = _type or 'generic'
+		Clipboard.IsCut = true
+	end,
+
+	Paste = function()
+		local c, t = Clipboard.Content, Clipboard.Type
+		if Clipboard.IsCut then
+			Clipboard.Empty()
+		end
+		return c, t
+	end
+}
+
+if OneOS and OneOS.Clipboard then
+	Clipboard = OneOS.Clipboard
+end
 
 Drawing = {
 	
@@ -81,8 +119,16 @@ Drawing = {
 			text = {},
 			textcol = {}
 		}
-		if fs.exists(path, true) then
-	        local file = io.open(path, "r")
+		local _fs = fs
+		if OneOS then
+			_fs = OneOS.FS
+		end
+		if _fs.exists(path) then
+			local _open = io.open
+			if OneOS then
+				_open = OneOS.IOOpen
+			end
+	        local file = _open(path, "r")
 	        local sLine = file:read()
 	        local num = 1
 	        while sLine do  
@@ -246,13 +292,41 @@ Current = {
 
 local isQuitting = false
 
-OneOS.CanClose = function()
+function PrintCentered(text, y)
+    local w, h = term.getSize()
+    x = math.ceil(math.ceil((w / 2) - (#text / 2)), 0)+1
+    term.setCursorPos(x, y)
+    print(text)
+end
+
+function DoVanillaClose()
+	term.setBackgroundColour(colours.black)
+	term.setTextColour(colours.white)
+	term.clear()
+	term.setCursorPos(1, 1)
+	PrintCentered("Thanks for using Sketch!", (Drawing.Screen.Height/2)-1)
+	term.setTextColour(colours.lightGrey)
+	PrintCentered("Photoshop Inspired Image Editor for ComputerCraft", (Drawing.Screen.Height/2))
+	term.setTextColour(colours.white)
+	PrintCentered("(c) oeed 2013 - 2014", (Drawing.Screen.Height/2)+3)
+	term.setCursorPos(1, Drawing.Screen.Height)
+	error('', 0)
+end
+
+function Close()
 	if isQuitting or not Current.Artboard or not Current.Modified then
+		if not OneOS then
+			DoVanillaClose()
+		end
 		return true
 	else
 		local _w = ButtonDialougeWindow:Initialise('Quit Sketch?', 'You have unsaved changes, do you want to quit anyway?', 'Quit', 'Cancel', function(window, success)
 			if success then
-				OneOS.Close(true)
+				if OneOS then
+					OneOS.Close(true)
+				else
+					DoVanillaClose()
+				end
 			end
 			window:Close()
 			Draw()
@@ -260,6 +334,12 @@ OneOS.CanClose = function()
 		--it's hacky but it works
 		os.queueEvent('mouse_click', 1, _w.X, _w.Y)
 		return false
+	end
+end
+
+if OneOS then
+	OneOS.CanClose = function()
+		return Close()
 	end
 end
 
@@ -688,8 +768,11 @@ Artboard = {
 	Save = function(self, path)
 		Current.Artboard = self
 		path = path or self.Path
-
-        local file = io.open(path, "w", true)
+		local _open = io.open
+		if OneOS then
+			_open = OneOS.IOOpen
+		end
+        local file = _open(path, "w", true)
 		if self.Format == '.skch' then
 			file:write(textutils.serialize(SaveSKCH()))
 		else
@@ -1834,7 +1917,11 @@ NewDocumentWindow = {
 			local ok = true
 			new.NameLabelHighlight = false
 			new.SizeLabelHighlight = false
-			if path:sub(-1) == '/' or fs.isDir(path, true) or #path == 0 then
+			local _fs = fs
+			if OneOS then
+				_fs = OneOS.FS
+			end
+			if path:sub(-1) == '/' or _fs.isDir(path) or #path == 0 then
 				ok = false
 				new.NameLabelHighlight = true
 			end
@@ -1961,7 +2048,11 @@ NewDocumentWindow = {
 
 local TidyPath = function(path)
 	path = '/'..path
-	if fs.isDir(path, true) then
+	local _fs = fs
+	if OneOS then
+		_fs = OneOS.FS
+	end
+	if _fs.isDir(path) then
 		path = path .. '/'
 	end
 
@@ -2026,7 +2117,11 @@ OpenDocumentWindow = {
 		Drawing.DrawBlankArea(self.X, self.Y + self.Height - 5, self.Width, 5, colours.lightGrey)
 		self:DrawFiles()
 
-		if (fs.exists(self.PathTextBox.TextInput.Value, true)) or (self.SelectedFile and #self.SelectedFile > 0 and fs.exists(self.CurrentDirectory .. self.SelectedFile, true)) then
+		local _fs = fs
+		if OneOS then
+			_fs = OneOS.FS
+		end
+		if (_fs.exists(self.PathTextBox.TextInput.Value)) or (self.SelectedFile and #self.SelectedFile > 0 and _fs.exists(self.CurrentDirectory .. self.SelectedFile)) then
 			self.OpenButton.TextColour = colours.black
 		else
 			self.OpenButton.TextColour = colours.lightGrey
@@ -2039,11 +2134,15 @@ OpenDocumentWindow = {
 	end,
 
 	DrawFiles = function(self)
+		local _fs = fs
+		if OneOS then
+			_fs = OneOS.FS
+		end
 		for i, file in ipairs(self.Files) do
 			if i > self.Scroll and i - self.Scroll <= 11 then
 				if file == self.SelectedFile then
 					Drawing.DrawCharacters(self.X + 1, self.Y + i - self.Scroll, file, colours.white, colours.lightBlue)
-				elseif string.find(file, '%.skch') or string.find(file, '%.nft') or string.find(file, '%.nfp') or fs.isDir(self.CurrentDirectory .. file, true) then
+				elseif string.find(file, '%.skch') or string.find(file, '%.nft') or string.find(file, '%.nfp') or _fs.isDir(self.CurrentDirectory .. file) then
 					Drawing.DrawCharacters(self.X + 1, self.Y + i - self.Scroll, file, colours.black, colours.white)
 				else
 					Drawing.DrawCharacters(self.X + 1, self.Y + i - self.Scroll, file, colours.grey, colours.white)
@@ -2071,10 +2170,14 @@ OpenDocumentWindow = {
 		if OneOS then
 			new.CurrentDirectory = '/Desktop/'
 		end
+		local _fs = fs
+		if OneOS then
+			_fs = OneOS.FS
+		end
 		new.OpenButton = Button:Initialise(new.Width - 6, new.Height - 1, nil, nil, colours.white, new, function(self, side, x, y, toggle)
-			if fs.exists(new.PathTextBox.TextInput.Value, true) and self.TextColour == colours.black and not fs.isDir(new.PathTextBox.TextInput.Value, true) then
+			if _fs.exists(new.PathTextBox.TextInput.Value) and self.TextColour == colours.black and not _fs.isDir(new.PathTextBox.TextInput.Value) then
 				returnFunc(new, true, TidyPath(new.PathTextBox.TextInput.Value))
-			elseif new.SelectedFile and self.TextColour == colours.black and fs.isDir(new.CurrentDirectory .. new.SelectedFile, true) then
+			elseif new.SelectedFile and self.TextColour == colours.black and _fs.isDir(new.CurrentDirectory .. new.SelectedFile) then
 				new:GoToDirectory(new.CurrentDirectory .. new.SelectedFile)
 			elseif new.SelectedFile and self.TextColour == colours.black then
 				returnFunc(new, true, TidyPath(new.CurrentDirectory .. '/' .. new.SelectedFile))
@@ -2084,7 +2187,7 @@ OpenDocumentWindow = {
 			returnFunc(new, false)
 		end, 'Cancel', colours.black)
 		new.GoUpButton = Button:Initialise(2, new.Height - 1, nil, nil, colours.white, new, function(self, side, x, y, toggle)
-			local folderName = fs.getName(new.CurrentDirectory, true)
+			local folderName = _fs.getName(new.CurrentDirectory)
 			local parentDirectory = new.CurrentDirectory:sub(1, #new.CurrentDirectory-#folderName-1)
 			new:GoToDirectory(parentDirectory)
 		end, 'Go Up', colours.black)
@@ -2111,7 +2214,11 @@ OpenDocumentWindow = {
 		self.SelectedFile = nil
 		self.Typed = false
 		self.PathTextBox.TextInput.Value = path
-		self.Files = fs.list(self.CurrentDirectory, true)
+		local _fs = fs
+		if OneOS then
+			_fs = OneOS.FS
+		end
+		self.Files = _fs.list(self.CurrentDirectory)
 		Draw()
 	end,
 
@@ -2141,7 +2248,11 @@ OpenDocumentWindow = {
 
 		if not found then
 			if y <= 12 then
-				self.SelectedFile = fs.list(self.CurrentDirectory, true)[y-1]
+				local _fs = fs
+				if OneOS then
+					_fs = OneOS.FS
+				end
+				self.SelectedFile = _fs.list(self.CurrentDirectory)[y-1]
 				self.PathTextBox.TextInput.Value = TidyPath(self.CurrentDirectory .. '/' .. self.SelectedFile)
 				Draw()
 			end
@@ -2648,7 +2759,11 @@ function DisplayNewDocumentWindow()
 			Current.Input = nil
 			Current.Window = nil
 			makeDocument = function()oldWindow:Close()NewDocument(path, width, height, format, backgroundColour)end
-			if fs.exists(path, true) then
+			local _fs = fs
+			if OneOS then
+				_fs = OneOS.FS
+			end
+			if _fs.exists(path) then
 				ButtonDialougeWindow:Initialise('File Exists', path..' already exists! Use a different name and try again.', 'Ok', nil, function(window, ok)
 					window:Close()
 					oldWindow:Show()
@@ -2684,7 +2799,11 @@ function DisplayNewDocumentWindow()
 end
 
 function NewDocument(path, width, height, format, backgroundColour)
-	ab = Artboard:New(fs.getName(path, true), path, width, height, format, backgroundColour)
+	local _fs = fs
+	if OneOS then
+		_fs = OneOS.FS
+	end
+	ab = Artboard:New(_fs.getName(path), path, width, height, format, backgroundColour)
 	Current.Tool = Tools[2]
 	Current.Toolbar:Update()
 	Current.Modified = false
@@ -2693,7 +2812,11 @@ end
 local function Extension(path, addDot)
 	if not string.find(path, '%.') then
 		if not addDot then
-			return fs.getName(path, true)
+			local _fs = fs
+			if OneOS then
+				_fs = OneOS.FS
+			end
+			return _fs.getName(path)
 		else
 			return nil
 		end
@@ -2733,7 +2856,11 @@ end
 	Attempt to figure out what format the image is if it doesn't have an extension
 ]]--
 function GetFormat(path)
-	local file = fs.open(path, 'r', true)
+	local _fs = fs
+	if OneOS then
+		_fs = OneOS.FS
+	end
+	local file = _fs.open(path, 'r')
 	local content = file.readAll()
 	file.close()
 	if type(textutils.unserialize(content)) == 'table' then
@@ -2761,7 +2888,11 @@ end
 	Open a documet at a given path
 ]]--
 function OpenDocument(path)
-	if fs.exists(path, true) and not fs.isDir(path, true) then
+	local _fs = fs
+	if OneOS then
+		_fs = OneOS.FS
+	end
+	if _fs.exists(path) and not _fs.isDir(path) then
 		local format = Extension(path, true)
 		if not format then
 			format = GetFormat(path)
@@ -2803,7 +2934,11 @@ function OpenDocument(path)
 		local height = #layers[1].Pixels[1]
 
 		Current.Artboard = nil
-		ab = Artboard:New(fs.getName('Image', true), path, width, height, format, nil, layers)
+		local _fs = fs
+		if OneOS then
+			_fs = OneOS.FS
+		end
+		ab = Artboard:New(_fs.getName('Image'), path, width, height, format, nil, layers)
 		Current.Tool = Tools[2]
 		Current.Toolbar:Update()
 		Current.Modified = false
@@ -3059,6 +3194,17 @@ function LoadMenuBar()
 							return CheckOpenArtboard()
 						end
 					},
+					{
+						Separator = true
+					},
+					{
+						Title = 'Quit',
+						Click = function()
+							if Close() then
+								OneOS.Close()
+							end
+						end
+					},
 			--[[
 					{
 						Title = 'Save As...',
@@ -3297,6 +3443,7 @@ function Initialise(arg)
 	EventRegister('key', HandleKey)
 	EventRegister('char', HandleKey)
 	EventRegister('timer', Timer)
+	EventRegister('terminate', function(event) if Close() then error( "Terminated", 0 ) end end)
 
 
 	Current.Toolbar = Toolbar:New('right', true)
@@ -3310,7 +3457,11 @@ function Initialise(arg)
 
 	LoadMenuBar()
 
-	if arg and fs.exists(arg, true) then
+	local _fs = fs
+	if OneOS then
+		_fs = OneOS.FS
+	end
+	if arg and _fs.exists(arg) then
 		OpenDocument(arg)
 	else
 		--NewDocument()
@@ -3394,7 +3545,7 @@ function HandleKey(...)
 		elseif event == 'key' then
 			Current.Input:Key(keychar)
 		end
-	else
+	elseif event == 'key' then
 		CheckKeyboardShortcut(keychar)
 	end
 end
@@ -3422,11 +3573,9 @@ function CheckKeyboardShortcut(key)
 		shortcuts[keys.n] = function() DisplayNewDocumentWindow() end
 		shortcuts[keys.o] = function() DisplayOpenDocumentWindow() end
 		shortcuts[keys.s] = function() Current.Artboard:Save() end
-		shortcuts[keys.z] = function()  end
-		shortcuts[keys.y] = function()  end
-		shortcuts[keys.x] = function()  end
-		shortcuts[keys.c] = function()  end
-		shortcuts[keys.v] = function()  end
+		shortcuts[keys.x] = function() if Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then Clipboard.Cut(Current.Layer:PixelsInSelection(true), 'sketchpixels') end end
+		shortcuts[keys.c] = function() if Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then Clipboard.Copy(Current.Layer:PixelsInSelection(), 'sketchpixels') end end
+		shortcuts[keys.v] = function() if (not Clipboard.isEmpty()) and Clipboard.Type == 'sketchpixels' then Current.Layer:InsertPixels(Clipboard.Paste()) end end
 		shortcuts[keys.r] = function() ResizeDocument() end
 		shortcuts[keys.l] = function() MakeNewLayer() end
 	end
@@ -3530,7 +3679,7 @@ end
 ]]--
 function EventHandler()
 	while true do
-		local event, arg1, arg2, arg3, arg4 = os.pullEvent()
+		local event, arg1, arg2, arg3, arg4 = os.pullEventRaw()
 		if Events[event] then
 			for i, e in ipairs(Events[event]) do
 				e(event, arg1, arg2, arg3, arg4)
@@ -3641,7 +3790,11 @@ end
 ]]--
 function ReadNFP(path)
 	local pixels = {}
-	local file = fs.open(path, 'r', true)
+	local _fs = fs
+	if OneOS then
+		_fs = OneOS.FS
+	end
+	local file = _fs.open(path, 'r')
 	local line = file.readLine()
 	local y = 1
 	while line do
@@ -3662,7 +3815,11 @@ end
 	Reads a .nft file from the given path
 ]]--
 function ReadNFT(path)
-	local file = fs.open(path, 'r', true)
+	local _fs = fs
+	if OneOS then
+		_fs = OneOS.FS
+	end
+	local file = _fs.open(path, 'r')
 	local line = file.readLine()
 	local lines = {}
 	while line do
@@ -3717,7 +3874,11 @@ end
 	Read a .skch file from the given path
 ]]--
 function ReadSKCH(path)
-	local file = fs.open(path, 'r', true)
+	local _fs = fs
+	if OneOS then
+		_fs = OneOS.FS
+	end
+	local file = _fs.open(path, 'r')
 	local _layers = textutils.unserialize(file.readAll())
 	file.close()
 	local layers = {}

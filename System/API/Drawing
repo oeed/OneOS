@@ -51,10 +51,6 @@ DrawImage = function(_x,_y,tImage, w, h)
 				local bgColour = tImage[y][x]
 	            local textColour = tImage.textcol[y][x] or colours.white
 	            local char = tImage.text[y][x]
-	            if not _x then
-	            	print('yayaya')
-	            	sleep(1)
-	            end
 	            Drawing.WriteToBuffer(x+_x-1, y+_y-1, char, textColour, bgColour)
 			end
 		end
@@ -70,50 +66,54 @@ LoadImage = function(path, global)
 		textcol = {}
 	}
 	if fs.exists(path) then
-        local file = io.open(path, "r", true)
+		local _io = io
+		if OneOS then
+			_io = OneOS.IO
+		end
+        local file = _io.open(path, "r")
         local sLine = file:read()
         local num = 1
         while sLine do  
-                table.insert(image, num, {})
-                table.insert(image.text, num, {})
-                table.insert(image.textcol, num, {})
-                                            
-                --As we're no longer 1-1, we keep track of what index to write to
-                local writeIndex = 1
-                --Tells us if we've hit a 30 or 31 (BG and FG respectively)- next char specifies the curr colour
-                local bgNext, fgNext = false, false
-                --The current background and foreground colours
-                local currBG, currFG = nil,nil
-                for i=1,#sLine do
-                        local nextChar = string.sub(sLine, i, i)
-                        if nextChar:byte() == 30 then
-                                bgNext = true
-                        elseif nextChar:byte() == 31 then
-                                fgNext = true
-                        elseif bgNext then
-                                currBG = Drawing.GetColour(nextChar)
-			                    if currBG == nil then
-			                    	currBG = colours.transparent
-			                    end
-                                bgNext = false
-                        elseif fgNext then
-                                currFG = Drawing.GetColour(nextChar)
-			                    if currFG == nil or currFG == colours.transparent then
-			                    	currFG = colours.white
-			                    end
-                                fgNext = false
-                        else
-                                if nextChar ~= " " and currFG == nil then
-                                        currFG = colours.white
-                                end
-                                image[num][writeIndex] = currBG
-                                image.textcol[num][writeIndex] = currFG
-                                image.text[num][writeIndex] = nextChar
-                                writeIndex = writeIndex + 1
-                        end
-                end
-                num = num+1
-                sLine = file:read()
+            table.insert(image, num, {})
+            table.insert(image.text, num, {})
+            table.insert(image.textcol, num, {})
+                                        
+            --As we're no longer 1-1, we keep track of what index to write to
+            local writeIndex = 1
+            --Tells us if we've hit a 30 or 31 (BG and FG respectively)- next char specifies the curr colour
+            local bgNext, fgNext = false, false
+            --The current background and foreground colours
+            local currBG, currFG = nil,nil
+            for i=1,#sLine do
+                    local nextChar = string.sub(sLine, i, i)
+                    if nextChar:byte() == 30 then
+                            bgNext = true
+                    elseif nextChar:byte() == 31 then
+                            fgNext = true
+                    elseif bgNext then
+                            currBG = Drawing.GetColour(nextChar)
+		                    if currBG == nil then
+		                    	currBG = colours.transparent
+		                    end
+                            bgNext = false
+                    elseif fgNext then
+                            currFG = Drawing.GetColour(nextChar)
+		                    if currFG == nil or currFG == colours.transparent then
+		                    	currFG = colours.white
+		                    end
+                            fgNext = false
+                    else
+                            if nextChar ~= " " and currFG == nil then
+                                    currFG = colours.white
+                            end
+                            image[num][writeIndex] = currBG
+                            image.textcol[num][writeIndex] = currFG
+                            image.text[num][writeIndex] = nextChar
+                            writeIndex = writeIndex + 1
+                    end
+            end
+            num = num+1
+            sLine = file:read()
         end
         file:close()
     else

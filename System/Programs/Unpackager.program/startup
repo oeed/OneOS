@@ -1,18 +1,18 @@
 tArgs = {...}
 
-if not tArgs[1] or not fs.exists(tArgs[1], true) then
+if not tArgs[1] or not OneOS.FS.exists(tArgs[1]) then
 	OneOS.Close()
 end
 
-os.loadAPI('/System/API/Helpers', true)
-os.loadAPI('/System/API/Drawing', true)
+OneOS.LoadAPI('/System/API/Helpers')
+OneOS.LoadAPI('/System/API/Drawing')
 
 Drawing.Clear(colours.white)
 Drawing.DrawCharactersCenter(nil, nil, nil, nil, 'Extracting Package...', colours.black, colours.white)
 Drawing.DrawBuffer()
 
 
-local packrun, err = loadfile(tArgs[1], true)
+local packrun, err = OneOS.LoadFile(tArgs[1])
 local env = getfenv()
 env['installLocation'] = Helpers.RemoveFileName(tArgs[1])..'/'
 setfenv( packrun, env)

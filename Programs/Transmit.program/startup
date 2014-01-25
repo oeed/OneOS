@@ -145,7 +145,7 @@ function RecieveFile()
 			end
 		elseif channel == Wireless.Channels.TransmitSend then
 			if replyChannel and message.content.fileName and message.content.data then
-				local h = fs.open('/Desktop/Documents/'..message.content.fileName, 'w', true)
+				local h = OneOS.FS.open('/Desktop/Documents/'..message.content.fileName, 'w')
 				h.write(message.content.data)
 				h.close()
 				savedFile = '/Desktop/Documents/'..message.content.fileName
@@ -160,7 +160,7 @@ end
 function SendToComputer(computer)
 	Current.Destination = computer
 
-	local h = fs.open(tArgs[1], 'r', true)
+	local h = OneOS.FS.open(tArgs[1], 'r')
 	local f = h.readAll()
 	h.close()
 
