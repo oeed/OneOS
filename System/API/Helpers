@@ -109,7 +109,8 @@ Extension = function(path, addDot)
 		if extension then
 			extension = extension:sub(2)
 		else
-			extension = nil
+			--extension = nil
+			return ''
 		end
 		if addDot then
 			extension = '.'..extension

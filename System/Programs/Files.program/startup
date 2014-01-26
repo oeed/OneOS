@@ -547,8 +547,15 @@ function FilesClick(event, x, y, side)
 					},
 					{
 						Title = 'Paste',
-						Click = function()
-							local destPath = Helpers.TidyPath(Current.Path..'/'..OneOS.FS.getName(Current.Clipboard.Content))
+						Click = function()							
+							local destName = OneOS.FS.getName(Current.Clipboard.Content)
+							local copyNumber = 1
+							while OneOS.FS.exists(Current.Path..'/'..destName) do
+								destName = Helpers.RemoveExtension(OneOS.FS.getName(Current.Clipboard.Content)).. ' ' .. copyNumber .. Helpers.Extension(OneOS.FS.getName(Current.Clipboard.Content), true)
+								copyNumber = copyNumber + 1
+							end
+							local destPath = Helpers.TidyPath(Current.Path..'/'..destName)
+
 							if not Current.Clipboard.IsCut then
 								OneOS.FS.copy(Current.Clipboard.Content, destPath)
 								Update()

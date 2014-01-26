@@ -2,16 +2,12 @@ TODO:
 - Test error with internet connection
 
 Bugs:
-- Tool size not working on eraser
-- Files copy same location exists 553
-
 Features:
 - AppStore
 - Turtle program completion
 
 Done:
 
-adding cropping
-splash in sketch
-Shortcuts for tools in Sketch
+Tool size not working on eraser
+Files copy same location exists 553
 error sending

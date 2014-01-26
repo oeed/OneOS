@@ -1704,15 +1704,7 @@ Tools = {
 		Use = function(self, x, y, side)
 			Current.Input = nil
 			Current.Layer:SetPixel(x, y, nil, Current.Layer.BackgroundColour, nil)
-			for i, pixel in ipairs(ToolAffectedPixels(_x, _y)) do
-				--[[
-f side == 1 then
-					pixel[1].BackgroundColour = Current.Colour
-				elseif side == 2 then
-					pixel[1].TextColour = Current.Colour
-				end
-				pixel[1]:Draw(pixel[2], pixel[3])
-]]--
+			for i, pixel in ipairs(ToolAffectedPixels(x, y)) do
 				Current.Layer:SetPixel(pixel[2], pixel[3], nil, Current.Layer.BackgroundColour, nil)
 			end
 		end,

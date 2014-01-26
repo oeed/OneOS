@@ -190,11 +190,21 @@ elseif LoadingScreen() then
 			PrintCentered('Sending error report, please wait.', Drawing.Screen.Height-3)
 			local success = false
 			parallel.waitForAny(function()sleep(2) end, function()
-				local detail = {}
+				local detail = {message='Crashed Before Main Initialise', time = os.clock(), errors = ok}
 				if Current and Current.Programs then
 					detail.programs = Current.Programs
 				end
-				local _ = http.post('http://olivercooper.me/errorSubmit.php', {product = 'OneOS', error = ok, detail = detail})
+				local version = '?'
+
+				local h = fs.open('.version', 'r')
+				version = h.readAll()
+				h.close()
+
+				local _ = http.post('http://olivercooper.me/errorSubmit.php', 
+                                "product="..textutils.urlEncode(tostring('OneOS')).."&"..
+                                "version="..textutils.urlEncode(tostring(version)).."&"..
+                                "error="..textutils.urlEncode(ok[1]).."&"..
+                                "detail="..textutils.urlEncode(textutils.serialize(detail)));
 				if _ then
 					success = true
 				end
