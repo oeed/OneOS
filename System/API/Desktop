@@ -25,7 +25,6 @@ if #files == 1 then
 
 	for _i, file in ipairs(files) do
 		if not ignoreOverlay and settings.layout[file] and x == settings.layout[file].x and y == settings.layout[file].y then
-			print('else')
 			return IconLocation(i+2)
 		end
 	end
@@ -57,7 +56,7 @@ function RefreshFiles()
 	end
 
 	for i, file in ipairs(notSet) do
-		local x, y = IconLocation(i, true)
+		local x, y = IconLocation(i)
 		table.insert(files, file)
         count = count + 1
         layout[file] = {x = x, y = y}
@@ -304,7 +303,7 @@ function DeleteSelected()
 		MainDraw()
 		return true
 	elseif selectedFile then
-		ButtonDialogueWindow:Initialise("Delete!!! '"..Helpers.TruncateString(Helpers.RemoveExtension(selectedFile), 16).."'?", "Are you sure you want to delete '"..selectedFile.."'?", 'Yes', 'Cancel', function(success)
+		ButtonDialogueWindow:Initialise("Delete '"..Helpers.TruncateString(Helpers.RemoveExtension(selectedFile), 16).."'?", "Are you sure you want to delete '"..selectedFile.."'?", 'Yes', 'Cancel', function(success)
 			if success then
 				fs.delete('Desktop/'..selectedFile)
 				settings.layout[selectedFile] = nil

@@ -7,10 +7,6 @@ end
 colours.transparent = -1
 colors.transparent = -1
 
---TODO: make and insert logo
---SketchLogo = [[]]
-
-
 --APIS--
 
 --This is my drawing API, is is pretty much identical to what drives OneOS, PearOS, etc.
@@ -126,7 +122,7 @@ Drawing = {
 		if _fs.exists(path) then
 			local _open = io.open
 			if OneOS then
-				_open = OneOS.IOOpen
+				_open = OneOS.IO.open
 			end
 	        local file = _open(path, "r")
 	        local sLine = file:read()
@@ -142,7 +138,6 @@ Drawing = {
 	                local bgNext, fgNext = false, false
 	                --The current background and foreground colours
 	                local currBG, currFG = nil,nil
-	                term.setCursorPos(1,1)
 	                for i=1,#sLine do
 	                        local nextChar = string.sub(sLine, i, i)
 	                        if nextChar:byte() == 30 then
@@ -184,12 +179,14 @@ Drawing = {
 		Drawing.DrawCharacters(x, y, characters, textColour, bgColour)
 	end,
 
-	GetColour = function(str)
-		local colours = {}
-		for n=1,16 do
-			colours[ string.byte( "0123456789abcdef",n,n ) ] = 2^(n-1)
+	GetColour = function(hex)
+		if hex == ' ' then
+			return colours.transparent
 		end
-		return colours[str]
+	    local value = tonumber(hex, 16)
+	    if not value then return nil end
+	    value = math.pow(2,value)
+	    return value
 	end,
 
 	Clear = function (_colour)
@@ -770,7 +767,7 @@ Artboard = {
 		path = path or self.Path
 		local _open = io.open
 		if OneOS then
-			_open = OneOS.IOOpen
+			_open = OneOS.IO.open
 		end
         local file = _open(path, "w", true)
 		if self.Format == '.skch' then
@@ -1337,6 +1334,16 @@ Menu = {
 			return 'L'
 		elseif key == keys.t then
 			return 'T'
+		elseif key == keys.h then
+			return 'H'
+		elseif key == keys.e then
+			return 'E'
+		elseif key == keys.p then
+			return 'P'
+		elseif key == keys.f then
+			return 'F'
+		elseif key == keys.m then
+			return 'M'
 		else
 			return '?'		
 		end
@@ -1697,6 +1704,17 @@ Tools = {
 		Use = function(self, x, y, side)
 			Current.Input = nil
 			Current.Layer:SetPixel(x, y, nil, Current.Layer.BackgroundColour, nil)
+			for i, pixel in ipairs(ToolAffectedPixels(_x, _y)) do
+				--[[
+f side == 1 then
+					pixel[1].BackgroundColour = Current.Colour
+				elseif side == 2 then
+					pixel[1].TextColour = Current.Colour
+				end
+				pixel[1]:Draw(pixel[2], pixel[3])
+]]--
+				Current.Layer:SetPixel(pixel[2], pixel[3], nil, Current.Layer.BackgroundColour, nil)
+			end
 		end,
 		Select = function(self)
 			return true
@@ -1838,6 +1856,15 @@ Tools = {
 		end
 	}
 }
+
+
+function ToolNamed(name)
+	for i, v in ipairs(Tools) do
+		if v.Name == name then
+			return v
+		end
+	end
+end
 
 --Windows--
 
@@ -3314,6 +3341,39 @@ function LoadMenuBar()
 						end
 					},
 					{
+						Title = "Crop",
+						Click = function()
+							local top = 0
+							local left = 0
+							local bottom = 0
+							local right = 0
+							if Current.Selection[1].x < Current.Selection[2].x then
+								left = Current.Selection[1].x - 1
+								right = Current.Artboard.Width - Current.Selection[2].x
+							else
+								left = Current.Selection[2].x - 1
+								right = Current.Artboard.Width - Current.Selection[1].x
+							end
+							if Current.Selection[1].y < Current.Selection[2].y then
+								top = Current.Selection[1].y - 1
+								bottom = Current.Artboard.Height - Current.Selection[2].y
+							else
+								top = Current.Selection[2].y - 1
+								bottom = Current.Artboard.Height - Current.Selection[1].y
+							end
+							Current.Artboard:Resize(-1*top, -1*bottom, -1*left, -1*right)
+
+							Current.Selection[2] = nil
+						end,
+						Enabled = function()
+							if CheckSelectedLayer() and Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
+								return true
+							else
+								return false
+							end
+						end
+					},
+					{
 						Separator = true
 					},
 					{
@@ -3401,7 +3461,8 @@ function LoadMenuBar()
 						Separator = true
 					}
 				}
-
+				
+				local _keys = {'h','p','e','f','s','m','t'}
 				for i, tool in ipairs(Tools) do
 					table.insert(menuItems, {
 						Title = tool.Name,
@@ -3410,6 +3471,9 @@ function LoadMenuBar()
 							local m = ModuleNamed('Tools')
 							m:Update(m.ToolbarItem)
 						end,
+						Keys = {
+							keys[_keys[i]]
+						},
 						Enabled = function()
 							return CheckOpenArtboard()
 						end
@@ -3437,6 +3501,9 @@ function Timer(event, timer)
 end
 
 function Initialise(arg)
+	if not OneOS then
+		SplashScreen()
+	end
 	EventRegister('mouse_click', TryClick)
 	EventRegister('mouse_drag', function(event, side, x, y)TryClick(event, side, x, y, true)end)
 	EventRegister('mouse_scroll', Scroll)
@@ -3473,16 +3540,17 @@ function Initialise(arg)
 	end, 'Show Interface')
 
 	Draw()
+	sleep(0)
 
 	EventHandler()
 end
 
 function SplashScreen()
+	local splashIcon = {{1,1,1,256,256,256,256,256,256,256,256,1,1,1,},{1,256,256,8,8,8,8,8,8,8,8,256,256,1,},{256,8,8,8,8,8,8,8,8,8,8,8,8,256,},{256,256,256,8,8,8,8,8,8,8,8,256,256,256,},{256,256,256,256,256,256,256,256,256,256,256,256,256,256,},{2048,2048,256,256,256,256,256,256,256,256,256,256,2048,2048,},{2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,},{2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,},{2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,},{2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,},{256,256,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,256,256,},{1,256,256,256,256,256,256,256,256,256,256,256,256,1,},{1,1,1,256,256,256,256,256,256,256,256,1,1,1,},["text"]={{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," ","S","k","e","t","c","h"," "," "," "," ",},{" "," "," "," "," "," ","b","y"," "," "," "," "," "," ",},{" "," "," "," "," ","o","e","e","d"," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},},["textcol"]={{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,256,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,1,1,1,1,1,1,32768,32768,32768,32768,},{32768,32768,32768,32768,8,8,8,8,8,8,8,32768,32768,32768,},{32768,32768,32768,32768,1,1,1,1,1,32768,8,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},},}
 	Drawing.Clear(colours.white)
-	--Drawing.DrawImage(1, 1, Drawing.LoadImage())
-	Drawing.DrawCharactersCenter(nil,nil,nil,nil, "Sketch by oeed", colours.magenta, colours.white)
+	Drawing.DrawImage((Drawing.Screen.Width - 14)/2, (Drawing.Screen.Height - 13)/2, splashIcon, 14, 13)
 	Drawing.DrawBuffer()
-	sleep(1)
+	parallel.waitForAny(function()sleep(1)end, function()os.pullEvent('mouse_click')end)
 end
 
 LongestString = function(input, key)
@@ -3583,8 +3651,13 @@ function CheckKeyboardShortcut(key)
 	shortcuts[keys.delete] = function()  end
 	shortcuts[keys.tab] = function()  end
 
-	shortcuts[keys.e] = function() SetTool(Tools.Eraser) end
-	shortcuts[keys.p] = function() SetTool(Tools.Pencil) end
+	shortcuts[keys.h] = function() SetTool(ToolNamed('Hand')) ModuleNamed('Tools'):Update() Draw() end
+	shortcuts[keys.e] = function() SetTool(ToolNamed('Eraser')) ModuleNamed('Tools'):Update() Draw() end
+	shortcuts[keys.p] = function() SetTool(ToolNamed('Pencil')) ModuleNamed('Tools'):Update() Draw() end
+	shortcuts[keys.f] = function() SetTool(ToolNamed('Fill Bucket')) ModuleNamed('Tools'):Update() Draw() end
+	shortcuts[keys.m] = function() SetTool(ToolNamed('Move')) ModuleNamed('Tools'):Update() Draw() end
+	shortcuts[keys.a] = function() SetTool(ToolNamed('Select')) ModuleNamed('Tools'):Update() Draw() end
+	shortcuts[keys.t] = function() SetTool(ToolNamed('Text')) ModuleNamed('Tools'):Update() Draw() end
 
 	if shortcuts[key] then
 		shortcuts[key]()
@@ -3899,5 +3972,4 @@ end
 --[[
 	Start the program after all functions and tables are loaded
 ]]--
---SplashScreen()
 Initialise(...)

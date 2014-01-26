@@ -61,7 +61,7 @@ function Initialise()
 	desktopRefreshTimer = os.startTimer(5)
 	--LaunchProgram('/Programs/LuaIDE/startup', {}, 'LuaIDE')
 	--LaunchProgram('/Programs/Games/Mario.program/startup', {}, 'Mario')
-	LaunchProgram('/Programs/Shell.program/startup', {}, 'Other')
+	--LaunchProgram('/Programs/Shell.program/startup', {}, 'Other')
 	--LaunchProgram('Applications/Files/other', {}, 'Other')
 	--LaunchProgram('/System/Programs/Files.program/startup', {'programs/'}, 'Files')
 	--LaunchProgram('Programs/Shell', {}, 'Shell')
@@ -72,7 +72,7 @@ function Initialise()
 	--LaunchProgram('Programs/Games/GoldRunner/startup', {}, 'Goldrunner')
 	--LaunchProgram('Programs/App Store.program/startup', {}, 'App Store')
 	--LaunchProgram('Programs/test!.program/startup', {}, 'Test')
-	--LaunchProgram('Programs/Sketch.program/startup', {'/desktop/icon.nft'}, 'Sketch')
+	LaunchProgram('Programs/Sketch.program/startup', {'/desktop/hi.skch'}, 'Sketch')
 	--LaunchProgram('Programs/Pik/startup', {}, 'Pik')
 	--LaunchProgram('Programs/About OneOS/startup', {}, 'About OneOS')
 	--LaunchProgram('rom/programs/color/paint', {'boo'}, 'Paint')
@@ -323,7 +323,7 @@ function HandleKey(...)
 	local keychar = args[2]
 	
 	--REMOVE THIS AT RELEASE!
-	if keychar == 'r' then
+	if keychar == '\\' then
 		os.reboot()
 	end
 

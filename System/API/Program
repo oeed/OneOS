@@ -23,7 +23,7 @@
 				setmetatable( tEnv, { __index = _G } )
 				setfenv( fnFile, tEnv )
 
-				if err then
+				if not fnFile or err then
 					term.setTextColour(colours.red)
 					term.setBackgroundColour(colours.black)
 					print(err)

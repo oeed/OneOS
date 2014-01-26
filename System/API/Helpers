@@ -119,6 +119,9 @@ Extension = function(path, addDot)
 end
 
 RemoveExtension = function(path)
+	if path:sub(1,1) == '.' then
+		return path
+	end
 	local extension = Helpers.Extension(path)
 	if extension == path then
 		return fs.getName(path)

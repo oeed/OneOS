@@ -184,8 +184,29 @@ elseif LoadingScreen() then
 		    print(v)
 		end
 
-		PrintCentered('An error report has been sent to oeed.', Drawing.Screen.Height-1)
-		PrintCentered('However, please report this on the forum.', Drawing.Screen.Height)
+		PrintCentered('Please report this on the forum.', Drawing.Screen.Height)
+		term.setTextColor(colours.white)
+		if http then
+			PrintCentered('Sending error report, please wait.', Drawing.Screen.Height-3)
+			local success = false
+			parallel.waitForAny(function()sleep(2) end, function()
+				local detail = {}
+				if Current and Current.Programs then
+					detail.programs = Current.Programs
+				end
+				local _ = http.post('http://olivercooper.me/errorSubmit.php', {product = 'OneOS', error = ok, detail = detail})
+				if _ then
+					success = true
+				end
+			end)
+			local message = 'Error report failed!'
+			if success then
+				message = 'Error report sent!'
+			end
+			term.setCursorPos(1, Drawing.Screen.Height-3)
+			term.clearLine()
+			PrintCentered(message..' Click to reboot.', Drawing.Screen.Height-3)
+		end
 
 		os.pullEvent('mouse_click')
 		os.reboot()

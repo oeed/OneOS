@@ -4,6 +4,10 @@ if OneOS then
 	OneOS.ToolBarTextColour = colours.white
 end
 
+local _fs = fs
+if OneOS then
+	_fs = OneOS.FS
+end
 
 --  
 --  Lua IDE
@@ -519,13 +523,13 @@ end
 end]]
 
 local function saveFile(path, lines)
-	local dir = path:sub(1, path:len() - fs.getName(path):len(), true)
-	if not fs.exists(dir, true) then fs.makeDir(dir, true) end
-	if not fs.isDir(path, true) and not fs.isReadOnly(path, true) then
+	local dir = path:sub(1, path:len() - _fs.getName(path):len())
+	if not _fs.exists(dir) then _fs.makeDir(dir) end
+	if not _fs.isDir(path) and not _fs.isReadOnly(path) then
 		local a = ""
 		for _, v in pairs(lines) do a = a .. v .. "\n" end
 
-		local f = io.open(path, "w", true)
+		local f = OneOS.IO.open(path, "w", true)
 		f:write(a)
 		f:close()
 		return true
@@ -533,17 +537,17 @@ local function saveFile(path, lines)
 end
 
 local function loadFile(path)
-	if not fs.exists(path, true) then
-		local dir = path:sub(1, path:len() - fs.getName(path, true):len())
-		if not fs.exists(dir, true) then fs.makeDir(dir, true) end
-		local f = io.open(path, "w", true)
+	if not _fs.exists(path) then
+		local dir = path:sub(1, path:len() - _fs.getName(path):len())
+		if not _fs.exists(dir) then _fs.makeDir(dir) end
+		local f = OneOS.IO.open(path, "w", true)
 		f:write("")
 		f:close()
 	end
 
 	local l = {}
-	if fs.exists(path, true) and not fs.isDir(path, true) then
-		local f = io.open(path, "r", true)
+	if _fs.exists(path) and not _fs.isDir(path) then
+		local f = OneOS.IO.open(path, "r", true)
 		if f then
 			local a = f:read("*l")
 			while a do
@@ -1914,7 +1918,7 @@ local function newFile()
 
 	-- Get name
 	title("Lua IDE - New File")
-	local name = centerRead(wid, "/Desktop/")
+	local name = centerRead(wid, "/")
 	if not name or name == "" then return "menu" end
 	name = "/" .. name
 
@@ -1927,11 +1931,11 @@ local function newFile()
 		term.write(string.rep(" ", wid))
 	end
 	term.setCursorPos(1, 9)
-	if fs.isDir(name, true) then
+	if _fs.isDir(name) then
 		centerPrint("Cannot Edit a Directory!")
 		sleep(1.6)
 		return "menu"
-	elseif fs.exists(name, true) then
+	elseif _fs.exists(name) then
 		centerPrint("File Already Exists!")
 		local opt = prompt({{"Open", w/2 - 9, 14}, {"Cancel", w/2 + 2, 14}}, "horizontal")
 		if opt == "Open" then return "edit", name
@@ -1957,11 +1961,11 @@ local function openFile()
 		term.write(string.rep(" ", wid))
 	end
 	term.setCursorPos(1, 9)
-	if fs.isDir(name, true) then
+	if _fs.isDir(name) then
 		centerPrint("Cannot Open a Directory!")
 		sleep(1.6)
 		return "menu"
-	elseif not fs.exists(name, true) then
+	elseif not _fs.exists(name) then
 		centerPrint("File Doesn't Exist!")
 		local opt = prompt({{"Create", w/2 - 11, 14}, {"Cancel", w/2 + 2, 14}}, "horizontal")
 		if opt == "Create" then return "edit", name

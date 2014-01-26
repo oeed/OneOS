@@ -1,16 +1,17 @@
 TODO:
+- Test error with internet connection
 
 Bugs:
+- Tool size not working on eraser
+- Files copy same location exists 553
 
 Features:
 - AppStore
 - Turtle program completion
-- Error report sending
 
 Done:
 
-new folder in files not working
-crash message
-desktop icon arragment
-luaide
-keyboard shortcuts in Sketch
+adding cropping
+splash in sketch
+Shortcuts for tools in Sketch
+error sending
