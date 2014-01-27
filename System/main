@@ -299,7 +299,7 @@ function HandleKey(...)
 	
 	--REMOVE THIS AT RELEASE!
 	if keychar == '\\' then
-		os.reboot()
+		--os.reboot()
 	end
 
 	if Current.Input then
