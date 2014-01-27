@@ -60,6 +60,10 @@ function Initialise()
 	OneOSVersion = h.readAll()
 	h.close()
 
+
+	--Helpers.OpenFile('/System/Programs/Files.program/')
+	--Helpers.OpenFile('/Programs/LuaIDE.program/')
+
 	CheckAutoUpdate()
 
 	EventHandler()

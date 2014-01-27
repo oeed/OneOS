@@ -109,7 +109,7 @@
 		elseif coroutine.status(self.Process) == "dead" then
 	    	print()
 	    	term.setTextColour(colours.red)
-	    	print('The program has finnished.')
+	    	print('The program has finished.')
 	    	self:Kill(0)
 	    end
 	    term.restore()

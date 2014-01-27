@@ -1,8 +1,8 @@
-os.loadAPI('/System/API/Drawing', true)
-os.loadAPI('/System/API/Button', true)
-os.loadAPI('/System/API/Helpers', true)
-os.loadAPI('/System/API/TextInput', true)
-os.loadAPI('/System/API/TextBox', true)
+OneOS.LoadAPI('/System/API/Drawing', true)
+OneOS.LoadAPI('/System/API/Button', true)
+OneOS.LoadAPI('/System/API/Helpers', true)
+OneOS.LoadAPI('/System/API/TextInput', true)
+OneOS.LoadAPI('/System/API/TextBox', true)
 --[[
 os.loadAPI('/System/API/Menu')
 os.loadAPI('/System/API/Peripheral')

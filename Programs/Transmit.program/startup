@@ -1,11 +1,11 @@
 tArgs = {...}
 
-os.loadAPI('/System/API/Drawing', true)
-os.loadAPI('/System/API/Button', true)
-os.loadAPI('/System/API/Helpers', true)
-os.loadAPI('/System/API/Peripheral', true)
-os.loadAPI('/System/API/Wireless', true)
-os.loadAPI('/System/API/ButtonDialogueWindow', true)
+OneOS.LoadAPI('/System/API/Drawing', true)
+OneOS.LoadAPI('/System/API/Button', true)
+OneOS.LoadAPI('/System/API/Helpers', true)
+OneOS.LoadAPI('/System/API/Peripheral', true)
+OneOS.LoadAPI('/System/API/Wireless', true)
+OneOS.LoadAPI('/System/API/ButtonDialogueWindow', true)
 
 
 Current = {

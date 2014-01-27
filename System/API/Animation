@@ -66,7 +66,7 @@ SwipeProgram = function(currentProgram, newProgram, direction)
 		return
 	end
 	local fps = 20
-	local steps = fps * 0.5
+	local steps = fps * 0.2
 	local deltaX = ((Drawing.Screen.Width + 4) / steps) * direction
 
 	local timer = os.startTimer(1 / fps)
@@ -88,12 +88,12 @@ SwipeProgram = function(currentProgram, newProgram, direction)
 		Drawing.DrawBlankArea(currentOffset + blankOffset, 2, 5, Drawing.Screen.Height-1, colours.black)
 		for y, row in ipairs(currentBuffer) do
 			for x, pixel in pairs(row) do
-				Drawing.WriteToBuffer(x-1 + math.ceil(currentOffset), y+1, pixel[1], pixel[2], pixel[3])
+				Drawing.WriteToBuffer(x + math.ceil(currentOffset), y+1, pixel[1], pixel[2], pixel[3])
 			end
 		end
 		for y, row in ipairs(newBuffer) do
 			for x, pixel in pairs(row) do
-				Drawing.WriteToBuffer(x-1 + math.ceil(newOffset), y+1, pixel[1], pixel[2], pixel[3])
+				Drawing.WriteToBuffer(x + math.ceil(newOffset), y+1, pixel[1], pixel[2], pixel[3])
 			end
 		end
 

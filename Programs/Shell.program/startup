@@ -44,7 +44,7 @@ end
 while true do
 	term.setTextColour(highlightTextColour)
 	term.setBackgroundColour(backgroundColour)
-	term.write("> ")
+	term.write(shell.dir().."> ")
 	term.setTextColour(mainTextColour)
 	local cursorPosX, cursorPosY = term.getCursorPos()
 	term.setCursorPos(cursorPosX, cursorPosY)

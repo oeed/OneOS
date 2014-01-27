@@ -160,10 +160,17 @@ elseif LoadingScreen() then
 	local ok = {pcall(Initialise)}
 
 	if not ok[1] then
+		xpcall(function()loadfile('/System/main')end, function(err)
+			table.insert(ok, err)
+		end)
 		term.setBackgroundColor(colours.grey)
 		term.setTextColor(colours.white)
 		term.clear()
-		paintutils.drawImage(paintutils.loadImage('/crash'), (Drawing.Screen.Width-7)/2 + 1, 3)
+		if fs.exists('crash') then
+			paintutils.drawImage(paintutils.loadImage('crash'), (Drawing.Screen.Width-7)/2 + 1, 3)
+		else
+			table.insert(ok, 'Crash image non-existant!r')
+		end
 		term.setBackgroundColor(colours.grey)
 		term.setTextColor(colours.white)
 

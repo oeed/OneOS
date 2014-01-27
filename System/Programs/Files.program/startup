@@ -12,7 +12,6 @@ OneOS.LoadAPI('/System/API/ButtonDialogueWindow')
 local startPath = tArgs[1] or '/Desktop/'
 local dragRelPos = nil
 local lastClick = nil
-local showHidden = true
 
 Current = {
 	Clicks = {},
@@ -23,7 +22,6 @@ Current = {
 	FileScroll = 0,
 	MaxFileScroll = 0,
 	SidebarScroll = 0,
-	ListMode = false,
 	SelectedFile = nil,
 	SidebarWidth = 12,
 	SidebarList = {
@@ -38,7 +36,6 @@ Current = {
 	Menu = nil,
 	Window = nil,
 	IconCache = {},
-	ShowHidden = false,
 	Clipboard = OneOS.Clipboard,
 	ScrollBarDragStartY = nil,
 	CursorPos = {1,1},
@@ -54,7 +51,29 @@ InterfaceElements = {
 	
 }
 
+Settings = {
+	ShowHidden = false,
+	ListMode = false,
+}
+
+function WriteSettings()
+	local h = fs.open('.Files.settings', 'w')
+	h.write(textutils.serialize(Settings))
+	h.close()
+end
+
+function ReadSettings()
+	local h = fs.open('.Files.settings', 'r')
+	if h then
+		Settings = textutils.unserialize(h.readAll())
+		h.close()
+	else
+		WriteSettings()
+	end
+end
+
 function Initialise()
+	ReadSettings()
 	EventRegister('mouse_click', TryClick)
 	EventRegister('mouse_drag', TryClick)
 	EventRegister('monitor_touch', TryClick)
@@ -85,28 +104,34 @@ function Initialise()
 	end, '>', 3):Register()
 
 	ListToggleButton = Button:Initialise(9, 2, nil, 1, colours.white, colours.black, colours.lightBlue, colours.white, nil, function(self)
-		Current.ListMode = not Current.ListMode
-		if Current.ListMode then
+		Settings.ListMode = not Settings.ListMode
+		if Settings.ListMode then
 			self.Text = 'Icon'
 		else
 			self.Text = 'List'
 		end
+		WriteSettings()
 		Current.FileScroll = 0
 		os.startTimer(0.5)
 	end, 'List', 3):Register()
 
+
 	HiddenToggleButton = Button:Initialise(16, 2, nil, 1, colours.white, colours.black, colours.lightBlue, colours.white, nil, function(self)
-		Current.ShowHidden = not Current.ShowHidden
-		if Current.ShowHidden then
+		Settings.ShowHidden = not Settings.ShowHidden
+		if Settings.ShowHidden then
 			self.Text = 'Hide Hidden'
 		else
 			self.Text = 'Show Hidden'
 		end
+		WriteSettings()
 		Update()
 		os.startTimer(0.5)
 	end, 'Show Hidden', 3):Register()
+	if Settings.ShowHidden then
+		HiddenToggleButton.Text = 'Hide Hidden'
+	end
 
-	if Current.ListMode then
+	if Settings.ListMode then
 		ListToggleButton.Text = 'Icon'
 	else
 		ListToggleButton.Text = 'List'
@@ -168,7 +193,7 @@ function DrawFiles()
 		DrawPeripheral()
 		return 
 	end
-	if Current.ListMode then
+	if Settings.ListMode then
 
 		for i, v in ipairs(Current.FileList) do
 			if i > Current.FileScroll then
@@ -324,7 +349,7 @@ function RefreshFiles()
 	end
 	for i, v in ipairs(OneOS.FS.list(Current.Path)) do
 		Current.Peripheral = nil
-		if Current.ShowHidden or string.sub( v, 1, 1 ) ~= '.' then
+		if Settings.ShowHidden or string.sub( v, 1, 1 ) ~= '.' then
 			local path = Current.Path .. '/' .. v
 			if Helpers.TidyPath(path) == '/rom/' then
 				break
@@ -360,7 +385,7 @@ function GoToPath(path, history)
 end
 
 function UpdateScroll()
-	if Current.ListMode then
+	if Settings.ListMode then
 		Current.MaxFileScroll = #Current.FileList - (Drawing.Screen.Height - 4)
 		if Current.MaxFileScroll < 0 then
 			Current.MaxFileScroll = 0
@@ -488,7 +513,7 @@ function FilesClick(event, x, y, side)
 		ScrollBarDrag(event, x, y)
 	elseif event == 'mouse_click' and x == Drawing.Screen.Width - Current.SidebarWidth and Current.MaxFileScroll ~= 0 then
 		Current.ScrollBarDragStartY = y
-	elseif Current.ListMode then
+	elseif Settings.ListMode then
 		if Current.FileList[y] then
 			if side == 1 then
 				if Current.SelectedFile == Current.FileList[y].name and lastClick and (os.clock() - lastClick) < 0.5 then
