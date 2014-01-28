@@ -97,6 +97,7 @@
 		end
 
 		_term.clear = function()
+			local cursorPosX, cursorPosY = self.CursorPos[1], self.CursorPos[2]
 			for x = 1, self.Size[1] do
 				self.CursorPos[1] = x
 				for y = 1, self.Size[2] do
@@ -104,13 +105,16 @@
 					self:WriteToBuffer(' ', self.TextColour, self.BackgroundColour)
 				end
 			end
+			self.CursorPos = {cursorPosX, cursorPosY}
 		end	
 
 		_term.clearLine = function()
+			local cursorPosX, cursorPosY = self.CursorPos[1], self.CursorPos[2]
 			for x = 1, self.Size[1] do
 				self.CursorPos[1] = x
 				self:WriteToBuffer(' ', self.TextColour, self.BackgroundColour)
 			end
+			self.CursorPos = {cursorPosX, cursorPosY}
 		end	
 
 		_term.getCursorPos = function()

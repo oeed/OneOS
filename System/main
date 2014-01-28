@@ -60,7 +60,7 @@ function Initialise()
 	OneOSVersion = h.readAll()
 	h.close()
 
-
+	Helpers.OpenFile('/Programs/Shell.program/')
 	--Helpers.OpenFile('/System/Programs/Files.program/')
 	--Helpers.OpenFile('/Programs/LuaIDE.program/')
 
@@ -303,7 +303,7 @@ function HandleKey(...)
 	
 	--REMOVE THIS AT RELEASE!
 	if keychar == '\\' then
-		--os.reboot()
+		os.reboot()
 	end
 
 	if Current.Input then

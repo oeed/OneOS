@@ -162,7 +162,7 @@ function Click(event, side, x, y)
 								ButtonDialogueWindow:Initialise("Unable to rename!", 'You can not rename the Documents folder.', 'Ok', nil, function()end):Show()
 							else
 								TextDialogueWindow:Initialise("Rename '"..Helpers.TruncateString(name, 17).."'", function(success, value)
-									if success then
+									if success and #value ~= 0 then
 										fs.move('Desktop/'..name, 'Desktop/'..value)
 
 										settings.layout[value..Helpers.Extension(name, true)] = settings.layout[name]

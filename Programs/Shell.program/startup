@@ -19,7 +19,7 @@ local function _run( _sCommand, ... )
 	local sPath = OneOS.Shell.resolveProgram(_sCommand)
 	if sPath ~= nil then
 		tProgramStack[#tProgramStack + 1] = sPath
-   		local result = OneOS.OSRun( {fs = OneOS.FS, shell = shell, io = OneOS.IO, loadfile = OneOS.LoadFile, os = os, sleep = os.sleep}, sPath, ... )
+   		local result = OneOS.OSRun( {fs = OneOS.FS, shell = OneOS.Shell, io = OneOS.IO, loadfile = OneOS.LoadFile, os = os, sleep = os.sleep}, sPath, ... )
 		tProgramStack[#tProgramStack] = nil
 		return result
    	else
@@ -74,4 +74,3 @@ while true do
 		table.insert(commandHistory, command)
 	end
 end
-

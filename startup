@@ -166,10 +166,10 @@ elseif LoadingScreen() then
 		term.setBackgroundColor(colours.grey)
 		term.setTextColor(colours.white)
 		term.clear()
-		if fs.exists('crash') then
-			paintutils.drawImage(paintutils.loadImage('crash'), (Drawing.Screen.Width-7)/2 + 1, 3)
+		if fs.exists('System/Images/crash') then
+			paintutils.drawImage(paintutils.loadImage('System/Images/crash'), (Drawing.Screen.Width-7)/2 + 1, 3)
 		else
-			table.insert(ok, 'Crash image non-existant!r')
+			table.insert(ok, 'Crash image nonexistent!')
 		end
 		term.setBackgroundColor(colours.grey)
 		term.setTextColor(colours.white)
@@ -196,10 +196,14 @@ elseif LoadingScreen() then
 		if http then
 			PrintCentered('Sending error report, please wait.', Drawing.Screen.Height-3)
 			local success = false
-			parallel.waitForAny(function()sleep(2) end, function()
+			parallel.waitForAny(function()sleep(4) end, function()
 				local detail = {message='Crashed Before Main Initialise', time = os.clock(), errors = ok}
 				if Current and Current.Programs then
-					detail.programs = Current.Programs
+					detail.message = 'Crashed After Main Initialise'
+					detail.programs = {}
+					for i, v in ipairs(Current.Programs) do
+						table.insert(detail.programs, v.Name)
+					end
 				end
 				local version = '?'
 

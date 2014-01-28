@@ -1,1 +1,1 @@
-{["layout"]={["Shell.shortcut"]={["y"]=8,["x"]=16,},["Sketch.shortcut"]={["y"]=13,["x"]=16,},["Programs.shortcut"]={["y"]=3,["x"]=16,},["LuaIDE.shortcut"]={["y"]=13,["x"]=5,},["Files.shortcut"]={["y"]=8,["x"]=5,},["Documents"]={["y"]=3,["x"]=5,},},["colour"]=512,}
+{["layout"]={["Hello"]={["y"]=3,["x"]=27,},["Files.shortcut"]={["y"]=8,["x"]=5,},["Documents"]={["y"]=3,["x"]=5,},["LuaIDE.shortcut"]={["y"]=13,["x"]=5,},["Programs.shortcut"]={["y"]=3,["x"]=16,},["Sketch.shortcut"]={["y"]=13,["x"]=16,},["Shell.shortcut"]={["y"]=8,["x"]=16,},},["colour"]=512,}

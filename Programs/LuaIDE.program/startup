@@ -4,6 +4,11 @@ if OneOS then
 	OneOS.ToolBarTextColour = colours.white
 end
 
+local _io = io
+if OneOS then
+	_io = OneOS.IO
+end
+
 local _fs = fs
 if OneOS then
 	_fs = OneOS.FS
@@ -43,7 +48,7 @@ local curLanguage = {}
 local event_distract = "luaide_distractionEvent"
 
 -- Locations
---local updateURL = "https://raw.github.com/GravityScore/LuaIDE/master/luaide.lua"
+local updateURL = "https://raw.github.com/GravityScore/LuaIDE/master/luaide.lua"
 local ideLocation = "/" .. shell.getRunningProgram()
 local themeLocation = "/.LuaIDE-Theme"
 
@@ -249,7 +254,6 @@ local normalTheme = {
 	comment = "white"
 }
 
---[[
 local availableThemes = {
 	{"Water (Default)", "https://raw.github.com/GravityScore/LuaIDE/master/themes/default.txt"},
 	{"Fire", "https://raw.github.com/GravityScore/LuaIDE/master/themes/fire.txt"},
@@ -261,7 +265,6 @@ local availableThemes = {
 	{"Night", "https://raw.github.com/GravityScore/LuaIDE/master/themes/night.txt"},
 	{"Original", "https://raw.github.com/GravityScore/LuaIDE/master/themes/original.txt"},
 }
-]]--
 
 local function loadTheme(path)
 	local f = io.open(path)
@@ -374,10 +377,10 @@ local function prompt(list, dir, isGrid)
 		elseif e == "key" and but == key2 and ((err == true and sel < #list - 1) or (sel < #list)) then
 			sel = sel + 1
 			draw(sel)
-		elseif isGrid and e == "key" and but == 203 and sel > 2 and #list == 4 then
+		elseif isGrid and e == "key" and but == 203 and sel > 2 then
 			sel = sel - 2
 			draw(sel)
-		elseif isGrid and e == "key" and but == 205 and sel < 3 and #list == 4 then
+		elseif isGrid and e == "key" and but == 205 and sel < 3 then
 			sel = sel + 2
 			draw(sel)
 		elseif e == "mouse_click" then
@@ -504,7 +507,7 @@ end
 
 --  -------- Saving and Loading
 
---[[local function download(url, path)
+local function download(url, path)
 	for i = 1, 3 do
 		local response = http.get(url)
 		if response then
@@ -520,7 +523,7 @@ end
 	end
 
 	return false
-end]]
+end
 
 local function saveFile(path, lines)
 	local dir = path:sub(1, path:len() - _fs.getName(path):len())
@@ -529,7 +532,7 @@ local function saveFile(path, lines)
 		local a = ""
 		for _, v in pairs(lines) do a = a .. v .. "\n" end
 
-		local f = OneOS.IO.open(path, "w", true)
+		local f = _io.open(path, "w")
 		f:write(a)
 		f:close()
 		return true
@@ -540,14 +543,14 @@ local function loadFile(path)
 	if not _fs.exists(path) then
 		local dir = path:sub(1, path:len() - _fs.getName(path):len())
 		if not _fs.exists(dir) then _fs.makeDir(dir) end
-		local f = OneOS.IO.open(path, "w", true)
+		local f = _io.open(path, "w")
 		f:write("")
 		f:close()
 	end
 
 	local l = {}
 	if _fs.exists(path) and not _fs.isDir(path) then
-		local f = OneOS.IO.open(path, "r", true)
+		local f = _io.open(path, "r")
 		if f then
 			local a = f:read("*l")
 			while a do
@@ -1977,7 +1980,6 @@ end
 --  -------- Settings
 
 local function update()
---[[
 	local function draw(status)
 		title("LuaIDE - Update")
 		term.setBackgroundColor(colors[theme.prompt])
@@ -2044,20 +2046,13 @@ local function update()
 			break
 		end
 	end
-]]--
 
 	return "settings"
 end
 
 local function changeTheme()
 	title("LuaIDE - Theme")
-	term.setCursorPos(1, 7)
-	centerPrint("Themes are not available on the")
-	centerPrint("treasure disk version of LuaIDE!")
-	centerPrint("Download the full program from the")
-	centerPrint("ComputerCraft Forums!")
 
---[[
 	if isAdvanced() then
 		local disThemes = {"Back"}
 		for _, v in pairs(availableThemes) do table.insert(disThemes, v[1]) end
@@ -2107,17 +2102,16 @@ local function changeTheme()
 		centerPrint("Themes are not available on")
 		centerPrint("normal computers!")
 	end
-]]--
 end
 
 local function settings()
 	title("LuaIDE - Settings")
 
-	local opt = prompt({{"Change Theme", w/2 - 17, 8}, {"Return to Menu", w/2 - 19, 13},
-		--[[{"Check for Updates", w/2 + 2, 8},]] {"Exit IDE", w/2 + 2, 13, bg = colors[theme.err], 
+	local opt = prompt({{"Change Theme", w/2 - 17, 8}, {"Return to Menu", w/2 - 22, 13},
+		{"Check for Updates", w/2 + 2, 8}, {"Exit IDE", w/2 + 2, 13, bg = colors[theme.err], 
 		highlight = colors[theme.errHighlight]}}, "vertical", true)
 	if opt == "Change Theme" then return changeTheme()
---	elseif opt == "Check for Updates" then return update()
+	elseif opt == "Check for Updates" then return update()
 	elseif opt == "Return to Menu" then return "menu"
 	elseif opt == "Exit IDE" then return "exit" end
 end
@@ -2146,7 +2140,7 @@ local function main(arguments)
 	-- Check arguments
 	if type(arguments) == "table" and #arguments > 0 then
 		local f = "/" .. shell.resolve(arguments[1])
-		if fs.isDir(f, true) then print("Cannot edit a directory.") end
+		if _fs.isDir(f) then print("Cannot edit a directory.") end
 		opt, data = "edit", f
 	end
 

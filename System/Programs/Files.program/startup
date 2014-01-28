@@ -551,7 +551,7 @@ function FilesClick(event, x, y, side)
 			end
 		end
 
-		if not found then
+		if not found and Current.Path:sub(1,13) ~= '/Peripherals/' then
 			if side == 1 then
 				Current.SelectedFile = nil
 			elseif side == 2 then
@@ -630,11 +630,11 @@ function RightClickFile(file, absX, absY)
 		{
 			Title = 'Rename...',
 			Click = function()
-				if file.path == '/Desktop/Documents/' then
-					ButtonDialogueWindow:Initialise("Unable to rename!", 'You can not rename the Documents folder.', 'Ok', nil, function()end):Show()
+				if file.path == '/Desktop/Documents/' or file.path == '/Programs/' or file.path == '/System/' then
+					ButtonDialogueWindow:Initialise("Unable to rename!", 'You can not rename that folder.', 'Ok', nil, function()end):Show()
 				else
 					local tdw = TextDialogueWindow:Initialise("Rename '"..Helpers.TruncateString(file.name, 17).."'", function(success, value)
-						if success then
+						if success and #value ~= 0 then
 							OneOS.FS.move(file.path, Helpers.RemoveFileName(file.path)..value)
 							Update()
 						end
