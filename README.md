@@ -17,8 +17,8 @@ Obviously, any bugs you find create issues for. However, if it is an entire syst
 
 The installer can be found at:
 
-http://pastebin.com/wCnHwedD
+http://pastebin.com/E1xftzLa
 
 or
 
-pastebin get wCnHwedD installer
+pastebin run E1xftzLa
