@@ -3526,7 +3526,7 @@ function Initialise(arg)
 	if arg and _fs.exists(arg) then
 		OpenDocument(arg)
 	else
-		NewDocument()
+		DisplayNewDocumentWindow()
 	end
 
 	ShowInterfaceButton = Button:Initialise(Drawing.Screen.Width - 15, 1, nil, 1, colours.grey, nil, function(self)
