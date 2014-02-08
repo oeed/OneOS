@@ -10,11 +10,6 @@
 			Default = colours.cyan,
 			Controls = {}
 		},
-		UseMonitor = {
-			Type = 'Bool',
-			Label = 'Use Monitor',
-			Default = false,
-		},
 		UseAnimations = {
 			Type = 'Bool',
 			Label = 'Use Animations',

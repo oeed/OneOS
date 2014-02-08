@@ -2829,27 +2829,30 @@ function NewDocument(path, width, height, format, backgroundColour)
 	Draw()
 end
 local function Extension(path, addDot)
-	if not string.find(path, '%.') then
+	if not path then
+		return nil
+	elseif not string.find(fs.getName(path), '%.') then
 		if not addDot then
-			local _fs = fs
-			if OneOS then
-				_fs = OneOS.FS
-			end
-			return _fs.getName(path)
+			return fs.getName(path)
 		else
-			return nil
+			return ''
 		end
 	else
-		local extension = path:gmatch('\.[0-9a-z]+$')()
+		local _path = path
+		if path:sub(#path) == '/' then
+			_path = path:sub(1,#path-1)
+		end
+		local extension = _path:gmatch('\.[0-9a-z]+$')()
 		if extension then
 			extension = extension:sub(2)
 		else
-			extension = path
+			--extension = nil
+			return ''
 		end
 		if addDot then
 			extension = '.'..extension
 		end
-		return extension
+		return extension:lower()
 	end
 end
 
@@ -2913,7 +2916,7 @@ function OpenDocument(path)
 	end
 	if _fs.exists(path) and not _fs.isDir(path) then
 		local format = Extension(path, true)
-		if not format then
+		if (not format or format == '') and (format ~= '.nfp' and format ~= '.nft' and format ~= '.skch') then
 			format = GetFormat(path)
 		end
 		local layers = {}
@@ -3523,7 +3526,7 @@ function Initialise(arg)
 	if arg and _fs.exists(arg) then
 		OpenDocument(arg)
 	else
-		--NewDocument()
+		NewDocument()
 	end
 
 	ShowInterfaceButton = Button:Initialise(Drawing.Screen.Width - 15, 1, nil, 1, colours.grey, nil, function(self)

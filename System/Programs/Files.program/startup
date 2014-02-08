@@ -6,8 +6,10 @@ OneOS.LoadAPI('/System/API/Helpers')
 OneOS.LoadAPI('/System/API/Menu')
 OneOS.LoadAPI('/System/API/Peripheral')
 OneOS.LoadAPI('/System/API/TextInput')
+OneOS.LoadAPI('/System/API/ListView')
 OneOS.LoadAPI('/System/API/TextDialogueWindow')
 OneOS.LoadAPI('/System/API/ButtonDialogueWindow')
+OneOS.LoadAPI('/System/API/OpenWithDialougeWindow')
 
 local startPath = tArgs[1] or '/Desktop/'
 local dragRelPos = nil
@@ -610,10 +612,36 @@ function RightClickFile(file, absX, absY)
 				OpenFile(file, true)
 			end
 		}
+	local runWithArgs = {
+		Title = 'Open With Arguments...',
+		Click = function()
+			TextDialogueWindow:Initialise("Arguments", function(success, value)
+				if success and #value ~= 0 then
+					local tWords = {}
+					for match in string.gmatch( value, "[^ \t]+" ) do
+						table.insert( tWords, match )
+					end
+					OneOS.Run(file.path, unpack(tWords))
+				end
+			end):Show()
+		end
+	}
+	local openWith = {
+			Title = 'Open With...',
+			Click = function()
+				OpenWithDialougeWindow:Initialise("Select Program", "Choose a program to open the file with.", "Ok", "Cancel", function(success, value)
+					if success and #value ~= 0 then
+						OneOS.Run(value, file.path)
+					end
+				end):Show()
+			end
+		}
 
 	local extension = Helpers.Extension(file.path)
 	if not extension == 'program' or not OneOS.FS.isDir(file.path) then
 		openContent = nil
+	else
+		openWith = nil
 	end
 
 	Current.SelectedFile = file.name
@@ -623,7 +651,7 @@ function RightClickFile(file, absX, absY)
 			Click = function()
 				OpenFile(file)
 			end
-		},
+		}, 
 		{
 			Separator = true
 		},
@@ -727,6 +755,9 @@ function RightClickFile(file, absX, absY)
 	end
 	if openContent then
 		table.insert(items, 2, openContent)
+		table.insert(items, 3, runWithArgs)
+	elseif openWith then
+		table.insert(items, 2, openWith)
 	end
 	Menu:Initialise(absX, absY, nil, nil, nil, items):Show()
 	Draw()

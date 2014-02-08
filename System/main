@@ -60,7 +60,7 @@ function Initialise()
 	OneOSVersion = h.readAll()
 	h.close()
 
-	Helpers.OpenFile('/Programs/Shell.program/')
+	--Helpers.OpenFile('/Programs/Shell.program/')
 	--Helpers.OpenFile('/System/Programs/Files.program/')
 	--Helpers.OpenFile('/Programs/LuaIDE.program/')
 
@@ -150,8 +150,7 @@ function LaunchProgram(path, args, title)
 		end
 		Program:Initialise(shell, path, title, args)
 		Overlay.UpdateButtons()
-		Overlay:Draw()
-		Current.Program.AppRedirect:Draw()
+		Draw()
 	end)
 
 end
@@ -208,7 +207,7 @@ function Draw()
 	Current.Clicks = {}
 
 	if Current.Program then
-		--Current.Program.AppRedirect:Draw()
+		Current.Program.AppRedirect:Draw()
 	else
 		Desktop:Draw()
 		term.setCursorBlink(false)

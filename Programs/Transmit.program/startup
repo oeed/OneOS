@@ -212,7 +212,7 @@ function DrawComputer(computer, angle, radius)
 end
 
 function DrawComputers()
-	--max of 4, with 75˚ between them
+	--max of 4, with 75?? between them
 	while #Current.DiscoverdComputers > 4 do
 		table.remove(Current.DiscoverdComputers, #Current.DiscoverdComputers)
 	end
