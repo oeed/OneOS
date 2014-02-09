@@ -1730,7 +1730,7 @@ Tools = {
 					if side == 2 then
 						replacing = Current.Layer.Pixels[node.X][node.Y].TextColour
 					end
-					if replacing == replaceColour then
+					if replacing == replaceColour and replacing ~= Current.Colour then
 						if side == 1 then
 							Current.Layer.Pixels[node.X][node.Y].BackgroundColour = Current.Colour
 						elseif side == 2 then

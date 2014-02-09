@@ -209,8 +209,10 @@
 			Desktop:RefreshFiles()
 			Overlay.UpdateButtons()
 			if Current.Program then
-				MainDraw()
-				Current.Program.AppRedirect:Draw()
+				Drawing.Clear(colours.black)
+				Drawing.DrawBuffer()
+				sleep(0)
+				os.queueEvent('oneos_draw')
 			else
 				Desktop:Draw()
 			end

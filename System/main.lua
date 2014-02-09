@@ -61,6 +61,7 @@ function Initialise()
 	EventRegister('mouse_click', TryClick)
 	EventRegister('mouse_drag', TryClick)
 	EventRegister('monitor_touch', TryClick)
+	EventRegister('oneos_draw', Draw)
 	EventRegister('key', HandleKey)
 	EventRegister('char', HandleKey)
 	EventRegister('timer', Update)
@@ -73,6 +74,7 @@ function Initialise()
 	local h = fs.open('.version', 'r')
 	OneOSVersion = h.readAll()
 	h.close()
+--[[
 
 	Helpers.OpenFile('/Programs/Shell.program/')
 	Helpers.OpenFile('/System/Programs/Files.program/')
@@ -80,6 +82,7 @@ function Initialise()
 	Helpers.OpenFile('/Programs/Sketch.program/')
 	Helpers.OpenFile('/Programs/Games/Maze3D.program/')
 	Helpers.OpenFile('/Programs/Games/Lasers.program/')
+]]--
 
 	CheckAutoUpdate()
 

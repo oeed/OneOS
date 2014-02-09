@@ -925,6 +925,7 @@ function HandleKey(...)
 					ButtonDialogueWindow:Initialise("Delete '"..Helpers.TruncateString(Helpers.RemoveExtension(file.name), 16).."'?", "Are you sure you want to delete '"..file.name.."'?", 'Yes', 'Cancel', function(success)
 						if success then
 							OneOS.FS.delete(file.path)
+							Update()
 						end
 					end):Show()
 					Draw()
