@@ -1,15 +1,15 @@
 tArgs = {...}
 
-OneOS.LoadAPI('/System/API/Drawing')
-OneOS.LoadAPI('/System/API/Button')
-OneOS.LoadAPI('/System/API/Helpers')
-OneOS.LoadAPI('/System/API/Menu')
-OneOS.LoadAPI('/System/API/Peripheral')
-OneOS.LoadAPI('/System/API/TextInput')
-OneOS.LoadAPI('/System/API/ListView')
-OneOS.LoadAPI('/System/API/TextDialogueWindow')
-OneOS.LoadAPI('/System/API/ButtonDialogueWindow')
-OneOS.LoadAPI('/System/API/OpenWithDialougeWindow')
+OneOS.LoadAPI('/System/API/Drawing.lua')
+OneOS.LoadAPI('/System/API/Button.lua')
+OneOS.LoadAPI('/System/API/Helpers.lua')
+OneOS.LoadAPI('/System/API/Menu.lua')
+OneOS.LoadAPI('/System/API/Peripheral.lua')
+OneOS.LoadAPI('/System/API/TextInput.lua')
+OneOS.LoadAPI('/System/API/ListView.lua')
+OneOS.LoadAPI('/System/API/TextDialogueWindow.lua')
+OneOS.LoadAPI('/System/API/ButtonDialogueWindow.lua')
+OneOS.LoadAPI('/System/API/OpenWithDialougeWindow.lua')
 
 local startPath = tArgs[1] or '/Desktop/'
 local dragRelPos = nil
@@ -266,83 +266,83 @@ function IconLocation(i)
 end
 
 function RefreshFiles()
+	diskOpenButton = nil
 	Current.FileList = {}
 	if Current.Path:sub(1,13) == '/Peripherals/' then
 		if peripheral.isPresent(Current.Peripheral.Side:lower()) then
+			if Current.Peripheral.Type == 'wireless_modem' then
+				Current.Peripheral.Type = 'Wireless Modem'
+			end
+			Current.Peripheral.Type = Helpers.Capitalise(Current.Peripheral.Type)
+			Current.Peripheral.Side = Helpers.Capitalise(Current.Peripheral.Side)
+
+			Current.Peripheral.Image = Drawing.LoadImage('/System/Programs/Files.program/images/'..Current.Peripheral.Type)
 			if not Current.Peripheral.Image then
-				if Current.Peripheral.Type == 'wireless_modem' then
-					Current.Peripheral.Type = 'Wireless Modem'
-				end
-				Current.Peripheral.Type = Helpers.Capitalise(Current.Peripheral.Type)
-				Current.Peripheral.Side = Helpers.Capitalise(Current.Peripheral.Side)
+				Current.Peripheral.Image = Drawing.LoadImage('/System/Programs/Files.program/images/Unknown')
+			end
 
-				Current.Peripheral.Image = Drawing.LoadImage('/System/Programs/Files.program/images/'..Current.Peripheral.Type)
-				if not Current.Peripheral.Image then
-					Current.Peripheral.Image = Drawing.LoadImage('/System/Programs/Files.program/images/Unknown')
-				end
+			Current.Peripheral.Info = {}
 
-				Current.Peripheral.Info = {}
-
-				if Current.Peripheral.Type == 'Computer' then
-					Current.Peripheral.Info = {
-						ID = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getID'))
-					}
-				elseif Current.Peripheral.Type == 'Drive' then
-					local discType = 'No Disc'
-					local discID = nil
-					local mountPath = nil
-					local discLabel = nil
-					if peripheral.call(Current.Peripheral.Side:lower(), 'isDiskPresent') then
-						if peripheral.call(Current.Peripheral.Side:lower(), 'hasData') then
-							discType = 'Data'
-							discID = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getDiskID'))
-							mountPath = '/'..peripheral.call(Current.Peripheral.Side:lower(), 'getMountPath')..'/'
-							discLabel = peripheral.call(Current.Peripheral.Side:lower(), 'getDiskLabel')
-						else
-							discType = 'Audio'
-						end
-					end
-
-					if mountPath then
-						diskOpenButton = Button:Initialise(Current.SidebarWidth+10, 9, nil, nil, colours.lightGrey, nil, nil, nil, nil, function()GoToPath(mountPath)end, 'View Files')
+			if Current.Peripheral.Type == 'Computer' then
+				Current.Peripheral.Info = {
+					ID = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getID'))
+				}
+			elseif Current.Peripheral.Type == 'Drive' then
+				local discType = 'No Disc'
+				local discID = nil
+				local mountPath = nil
+				local discLabel = nil
+				if peripheral.call(Current.Peripheral.Side:lower(), 'isDiskPresent') then
+					if peripheral.call(Current.Peripheral.Side:lower(), 'hasData') then
+						discType = 'Data'
+						discID = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getDiskID'))
+						mountPath = '/'..peripheral.call(Current.Peripheral.Side:lower(), 'getMountPath')..'/'
+						discLabel = peripheral.call(Current.Peripheral.Side:lower(), 'getDiskLabel')
 					else
-						diskOpenButton = nil
+						discType = 'Audio'
 					end
-
-					Current.Peripheral.Info = {
-						['Disc Type'] = discType,
-						['Disc Label'] = discLabel,
-						['Song Title'] = peripheral.call(Current.Peripheral.Side:lower(), 'getAudioTitle'),
-						['Disc ID'] = discID,
-						['Mount Path'] = mountPath
-					}
-				elseif Current.Peripheral.Type == 'Printer' then
-					local pageSize = 'No Loaded Page'
-					local _, err = pcall(function() return tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getPgaeSize')) end)
-					if not err then
-						pageSize = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getPageSize'))
-					end
-					Current.Peripheral.Info = {
-						['Paper Level'] = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getPaperLevel')),
-						['Paper Size'] = pageSize,
-						['Ink Level'] = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getInkLevel'))
-					}
-				elseif Current.Peripheral.Type == 'Modem' then
-					Current.Peripheral.Info = {
-						['Connected Peripherals'] = tostring(#peripheral.call(Current.Peripheral.Side:lower(), 'getNamesRemote'))
-					}
-				elseif Current.Peripheral.Type == 'Monitor' then
-					local w, h = peripheral.call(Current.Peripheral.Side:lower(), 'getSize')
-					local screenType = 'Black and White'
-					if peripheral.call(Current.Peripheral.Side:lower(), 'isColour') then
-						screenType = 'Colour'
-					end
-					Current.Peripheral.Info = {
-						['Type'] = screenType,
-						['Width'] = tostring(w),
-						['Height'] = tostring(h),
-					}
 				end
+				if mountPath then
+					diskOpenButton = Button:Initialise(Current.SidebarWidth+10, 9, nil, nil, colours.lightGrey, nil, nil, nil, nil, function()GoToPath(mountPath)end, 'View Files')
+				elseif discType == 'Audio' then
+					diskOpenButton = Button:Initialise(Current.SidebarWidth+10, 9, nil, nil, colours.lightGrey, nil, nil, nil, nil, function()disk.playAudio(Current.Peripheral.Side:lower()) end, 'Play')
+				else
+					diskOpenButton = nil
+				end
+
+				Current.Peripheral.Info = {
+					['Disc Type'] = discType,
+					['Disc Label'] = discLabel,
+					['Song Title'] = peripheral.call(Current.Peripheral.Side:lower(), 'getAudioTitle'),
+					['Disc ID'] = discID,
+					['Mount Path'] = mountPath
+				}
+			elseif Current.Peripheral.Type == 'Printer' then
+				local pageSize = 'No Loaded Page'
+				local _, err = pcall(function() return tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getPgaeSize')) end)
+				if not err then
+					pageSize = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getPageSize'))
+				end
+				Current.Peripheral.Info = {
+					['Paper Level'] = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getPaperLevel')),
+					['Paper Size'] = pageSize,
+					['Ink Level'] = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getInkLevel'))
+				}
+			elseif Current.Peripheral.Type == 'Modem' then
+				Current.Peripheral.Info = {
+					['Connected Peripherals'] = tostring(#peripheral.call(Current.Peripheral.Side:lower(), 'getNamesRemote'))
+				}
+			elseif Current.Peripheral.Type == 'Monitor' then
+				local w, h = peripheral.call(Current.Peripheral.Side:lower(), 'getSize')
+				local screenType = 'Black and White'
+				if peripheral.call(Current.Peripheral.Side:lower(), 'isColour') then
+					screenType = 'Colour'
+				end
+				Current.Peripheral.Info = {
+					['Type'] = screenType,
+					['Width'] = tostring(w),
+					['Height'] = tostring(h),
+				}
 			end
 			return
 		else
@@ -570,6 +570,18 @@ function FilesClick(event, x, y, side)
 						end
 					},
 					{
+						Title = 'New File...',
+						Click = function()
+							TextDialogueWindow:Initialise("Create a File", function(success, value)
+								if success then
+									local h = OneOS.FS.open(Current.Path..'/'..value, 'w')
+									h.close()
+									RefreshFiles()
+								end
+							end):Show()
+						end
+					},
+					{
 						Separator = true
 					},
 					{
@@ -595,8 +607,8 @@ function FilesClick(event, x, y, side)
 					},
 				}
 				if not Current.Clipboard.Content then
+					table.remove(items, 4)
 					table.remove(items, 3)
-					table.remove(items, 2)
 				end
 				Menu:Initialise(x + Current.SidebarWidth + 1, y + 4, nil, nil, nil, items):Show()
 				Draw()
@@ -686,6 +698,12 @@ function RightClickFile(file, absX, absY)
 			end
 		},
 		{
+			Title = 'Make Desktop Shortcut',
+			Click = function()
+				Helpers.MakeShortcut(file.path)
+			end
+		},
+		{
 			Separator = true
 		},
 		{
@@ -715,9 +733,15 @@ function RightClickFile(file, absX, absY)
 			end
 		},
 		{
-			Title = 'Make Desktop Shortcut',
+			Title = 'New File...',
 			Click = function()
-				Helpers.MakeShortcut(file.path)
+				TextDialogueWindow:Initialise("Create a Folder", function(success, value)
+					if success then
+						local h = OneOS.FS.open(Current.Path..'/'..value, 'w')
+						h.close()
+						RefreshFiles()
+					end
+				end):Show()
 			end
 		}
 	}

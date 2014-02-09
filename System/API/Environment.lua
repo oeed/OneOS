@@ -120,7 +120,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 				end
 			end,
 			LoadAPI = function(_sPath)
-				local sName = fs.getName( _sPath)
+				local sName = Helpers.RemoveExtension(fs.getName( _sPath))
 				if tAPIsLoading[sName] == true then
 					env.printError( "API "..sName.." is already being loaded" )
 					return false

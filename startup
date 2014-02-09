@@ -1,3 +1,5 @@
+local isDebug = true
+
 oldTerm = term
 
 --[[
@@ -10,9 +12,47 @@ term.clear()
 
 local tAPIsLoading = {}
 
+local Extension = function(path, addDot)
+	if not path then
+		return nil
+	elseif not string.find(fs.getName(path), '%.') then
+		if not addDot then
+			return fs.getName(path)
+		else
+			return ''
+		end
+	else
+		local _path = path
+		if path:sub(#path) == '/' then
+			_path = path:sub(1,#path-1)
+		end
+		local extension = _path:gmatch('\.[0-9a-z]+$')()
+		if extension then
+			extension = extension:sub(2)
+		else
+			--extension = nil
+			return ''
+		end
+		if addDot then
+			extension = '.'..extension
+		end
+		return extension:lower()
+	end
+end
+
+local RemoveExtension = function(path)
+	if path:sub(1,1) == '.' then
+		return path
+	end
+	local extension = Extension(path)
+	if extension == path then
+		return fs.getName(path)
+	end
+	return string.gsub(path, extension, ''):sub(1, -2)
+end
 
 function LoadAPI(_sPath)
-	local sName = fs.getName( _sPath )
+	local sName = RemoveExtension(fs.getName( _sPath ))
 	if tAPIsLoading[sName] == true then
 		printError( "API "..sName.." is already being loaded" )
 		return false
@@ -153,14 +193,14 @@ elseif LoadingScreen() then
 		fs.delete('/.update/')
 	end
 
-	os.run(getfenv(), '/System/main')
+	os.run(getfenv(), '/System/main.lua')
 	--os.run(getfenv(), '/System/update')
 	
 
 	local ok = {pcall(Initialise)}
 
 	if not ok[1] then
-		xpcall(function()loadfile('/System/main')end, function(err)
+		xpcall(function()loadfile('/System/main.lua')end, function(err)
 			table.insert(ok, err)
 		end)
 		term.setBackgroundColor(colours.grey)
@@ -210,14 +250,15 @@ elseif LoadingScreen() then
 				local h = fs.open('.version', 'r')
 				version = h.readAll()
 				h.close()
-
-				local _ = http.post('http://olivercooper.me/errorSubmit.php', 
-                                "product="..textutils.urlEncode(tostring('OneOS')).."&"..
-                                "version="..textutils.urlEncode(tostring(version)).."&"..
-                                "error="..textutils.urlEncode(ok[1]).."&"..
-                                "detail="..textutils.urlEncode(textutils.serialize(detail)));
-				if _ then
-					success = true
+				if not isDebug then
+					local _ = http.post('http://olivercooper.me/errorSubmit.php', 
+	                                "product="..textutils.urlEncode(tostring('OneOS')).."&"..
+	                                "version="..textutils.urlEncode(tostring(version)).."&"..
+	                                "error="..textutils.urlEncode(ok[1]).."&"..
+	                                "detail="..textutils.urlEncode(textutils.serialize(detail)));
+					if _ then
+						success = true
+					end
 				end
 			end)
 			local message = 'Error report failed!'

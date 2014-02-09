@@ -207,6 +207,21 @@ function Click(event, side, x, y)
 						end
 					},
 					{
+						Title = 'New File...',
+						Click = function()
+						TextDialogueWindow:Initialise("Create a File", function(success, value)
+							if success then
+								local h = fs.open('Desktop/'..value, 'w')
+								h.close()
+								RefreshFiles()
+							end
+						end):Show()
+						end
+					},
+					{
+						Separator = true
+					},
+					{
 						Title = 'Clean Up',
 						Click = function()
 							Clean()
@@ -234,6 +249,21 @@ function Click(event, side, x, y)
 						end
 					end):Show()
 					end
+				},
+				{
+					Title = 'New File...',
+					Click = function()
+					TextDialogueWindow:Initialise("Create a File", function(success, value)
+						if success then
+							local h = fs.open('Desktop/'..value, 'w')
+							h.close()
+							RefreshFiles()
+						end
+					end):Show()
+					end
+				},
+				{
+					Separator = true
 				},
 				{
 					Title = 'Clean Up',

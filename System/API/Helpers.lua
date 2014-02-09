@@ -143,9 +143,12 @@ IconForFile = function(path)
 	local extension = Helpers.Extension(path)
 	if extension and extension == 'shortcut' then
 		h = fs.open(path, 'r')
-		local shortcutPointer = h.readLine()
-		h.close()
-		return Helpers.IconForFile(shortcutPointer)
+		if h then
+			local shortcutPointer = h.readLine()
+			h.close()
+			return Helpers.IconForFile(shortcutPointer)
+		end
+		return ReadIcon('System/Images/Icons/unknown')
 	elseif extension and extension == 'program' then
 		if fs.isDir(path) and fs.exists(path..'/startup') and fs.exists(path..'/icon') then
 			return ReadIcon(path..'/icon')

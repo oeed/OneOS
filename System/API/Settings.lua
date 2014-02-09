@@ -35,6 +35,7 @@
 
 		local file = fs.open('/System/.OneOS.settings','r')
 		local values = textutils.unserialize(file.readAll())
+		
 		for k, v in pairs(self.Defaults) do
 			if values[k] == nil then
 				values[k] = v.Default
@@ -46,7 +47,9 @@
 
 	function UpdateInterfaceForKey(key, value)
 		if key == 'DesktopColour' then
-			Desktop.LoadSettings()
+			if Desktop then
+				Desktop.LoadSettings()
+			end
 		elseif key == 'ComputerName' then
 			os.setComputerLabel(value)
 		end

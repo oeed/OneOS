@@ -1,11 +1,11 @@
 tArgs = {...}
 
-OneOS.LoadAPI('/System/API/Drawing', true)
-OneOS.LoadAPI('/System/API/Button', true)
-OneOS.LoadAPI('/System/API/Helpers', true)
-OneOS.LoadAPI('/System/API/Peripheral', true)
-OneOS.LoadAPI('/System/API/Wireless', true)
-OneOS.LoadAPI('/System/API/ButtonDialogueWindow', true)
+OneOS.LoadAPI('/System/API/Drawing.lua', true)
+OneOS.LoadAPI('/System/API/Button.lua', true)
+OneOS.LoadAPI('/System/API/Helpers.lua', true)
+OneOS.LoadAPI('/System/API/Peripheral.lua', true)
+OneOS.LoadAPI('/System/API/Wireless.lua', true)
+OneOS.LoadAPI('/System/API/ButtonDialogueWindow.lua', true)
 
 
 Current = {

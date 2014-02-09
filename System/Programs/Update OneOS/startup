@@ -1,8 +1,8 @@
 tArgs = {...}
 
-OneOS.LoadAPI('/System/API/Drawing')
-OneOS.LoadAPI('/System/API/ProgressBar')
-OneOS.LoadAPI('/System/API/Helpers')
+OneOS.LoadAPI('/System/API/Drawing.lua')
+OneOS.LoadAPI('/System/API/ProgressBar.lua')
+OneOS.LoadAPI('/System/API/Helpers.lua')
 
 local canClose = false
 
@@ -37,7 +37,7 @@ function Initialise()
 
 	updaterEnvironment = {}
 	setmetatable( updaterEnvironment, { __index = getfenv() } )
-	local fnAPI, err = OneOS.LoadFile('/System/update')
+	local fnAPI, err = OneOS.LoadFile('/System/update.lua')
 	if fnAPI then
 		setfenv( fnAPI, updaterEnvironment)
 		local ok, err = pcall(fnAPI, UpdaterRefresh)

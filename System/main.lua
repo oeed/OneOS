@@ -33,14 +33,29 @@ InterfaceElements = {
 	
 }
 
+local isFirstSetup = false
+
+
 function ShowDesktop()
-	Desktop.LoadSettings()
-	Desktop.RefreshFiles()
-	Desktop.SaveSettings()
+	if not fs.exists('/System/.OneOS.settings') then
+		RegisterElement(Overlay)
+		Overlay:Initialise()
+		isFirstSetup = true
+		local prog = Program:Initialise(shell, '/System/Programs/Setup.program/startup', 'OneOS Setup', {})
+		prog.AppRedirect.Y = 1
+		Drawing.Clear(colours.white)
+		Desktop = nil
+	else
+		Desktop.LoadSettings()
+		Desktop.RefreshFiles()
+		Desktop.SaveSettings()
+
+		RegisterElement(Overlay)
+		Overlay:Initialise()
+	end
 	
-	RegisterElement(Overlay)
-	Overlay:Initialise()
 end
+
 
 function Initialise()
 	EventRegister('mouse_click', TryClick)
@@ -51,7 +66,6 @@ function Initialise()
 	EventRegister('timer', Update)
 	EventRegister('http_success', AutoUpdateRespose)
 	EventRegister('http_failure', AutoUpdateFail)
-
 	ShowDesktop()
 	Draw()
 	clockTimer = os.startTimer(0.8333333)
@@ -60,9 +74,12 @@ function Initialise()
 	OneOSVersion = h.readAll()
 	h.close()
 
-	--Helpers.OpenFile('/Programs/Shell.program/')
-	--Helpers.OpenFile('/System/Programs/Files.program/')
-	--Helpers.OpenFile('/Programs/LuaIDE.program/')
+	Helpers.OpenFile('/Programs/Shell.program/')
+	Helpers.OpenFile('/System/Programs/Files.program/')
+	Helpers.OpenFile('/Programs/LuaIDE.program/')
+	Helpers.OpenFile('/Programs/Sketch.program/')
+	Helpers.OpenFile('/Programs/Games/Maze3D.program/')
+	Helpers.OpenFile('/Programs/Games/Lasers.program/')
 
 	CheckAutoUpdate()
 
@@ -180,10 +197,10 @@ function Update(event, timer)
 	elseif timer == clockTimer then
 		clockTimer = os.startTimer(0.8333333)
 		Draw()
-	elseif timer == desktopRefreshTimer then
+	elseif Desktop and timer == desktopRefreshTimer then
 		Desktop:RefreshFiles()
 		desktopRefreshTimer = os.startTimer(3)
-	elseif timer == Desktop.desktopDragOverTimer then
+	elseif Desktop and timer == Desktop.desktopDragOverTimer then
 		Desktop.DragOverUpdate()
 	else
 		Animation.HandleTimer(timer)
@@ -196,6 +213,7 @@ function Update(event, timer)
 		end
 	end
 end
+
 
 
 function Draw()
@@ -212,10 +230,11 @@ function Draw()
 		Desktop:Draw()
 		term.setCursorBlink(false)
 	end
-
-	for i, elem in ipairs(InterfaceElements) do
-		if elem.Draw then
-			elem:Draw()
+	if not isFirstSetup then
+		for i, elem in ipairs(InterfaceElements) do
+			if elem.Draw then
+				elem:Draw()
+			end
 		end
 	end
 
@@ -232,6 +251,7 @@ function Draw()
 		updateTimer = os.startTimer(0.05)
 	end
 end
+
 
 MainDraw = Draw
 

@@ -4,8 +4,8 @@ if not tArgs[1] or not OneOS.FS.exists(tArgs[1]) then
 	OneOS.Close()
 end
 
-OneOS.LoadAPI('/System/API/Helpers')
-OneOS.LoadAPI('/System/API/Drawing')
+OneOS.LoadAPI('/System/API/Helpers.lua')
+OneOS.LoadAPI('/System/API/Drawing.lua')
 
 Drawing.Clear(colours.white)
 Drawing.DrawCharactersCenter(nil, nil, nil, nil, 'Extracting Package...', colours.black, colours.white)

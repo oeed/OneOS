@@ -1,14 +1,8 @@
 tArgs = {...}
 
-OneOS.LoadAPI('/System/API/Drawing')
-OneOS.LoadAPI('/System/API/Button')
-OneOS.LoadAPI('/System/API/Helpers')
---[[
-os.loadAPI('/System/API/Menu')
-os.loadAPI('/System/API/Peripheral')
-os.loadAPI('/System/API/TextDialogueWindow')
-os.loadAPI('/System/API/ButtonDialogueWindow')
-]]--
+OneOS.LoadAPI('/System/API/Drawing.lua')
+OneOS.LoadAPI('/System/API/Button.lua')
+OneOS.LoadAPI('/System/API/Helpers.lua')
 
 Current = {
 	Clicks = {},
@@ -38,7 +32,7 @@ function Initialise()
 	totalSize = FolderSize('/')
 	logo = Drawing.LoadImage('/System/Images/Logo')
 	maxSpace = OneOS.FS.getFreeSpace('/') + totalSize
-	thanksLines = Helpers.WrapText('Thanks to GravityScore (LuaIDE), NitrogenFingers(GoldRunner, image stuff), Symmetryc & superaxander (GitHub issues), Jesusthekiller (Maze3D), Vilsol (Huge help with App Store) and beta testers!', Drawing.Screen.Width-2)
+	thanksLines = Helpers.WrapText('Thanks to GravityScore (LuaIDE), NitrogenFingers(GoldRunner, image stuff), Symmetryc & superaxander (GitHub issues), Jesusthekiller (Maze3D), Hellkid98 (YCCCUP), Vilsol (help with App Store) and testers!', Drawing.Screen.Width-2)
 	Update()
 	EventHandler()
 end
