@@ -61,7 +61,7 @@ function Draw()
 	for i, line in ipairs(thanksLines) do
 		Drawing.DrawCharacters(2, 6+i, line, colours.grey, colours.white)
 	end
-
+	
 
 	Drawing.DrawImage(2, 2, logo, 6, 4)
 

@@ -107,6 +107,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 			FS = fs,
 			OSRun = os.run,
 			Shell = shell,
+			ProgramLocation = program.Path,
 			CanClose = function()end,
 			Close = function()
 				program:Close(true)
@@ -344,7 +345,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 			rm = "delete",
 			preview = "edit"
 		}
-		local tProgramStack = {appPath}
+		local tProgramStack = {fs.getName(appPath)}
 
 		-- Colours
 		local promptColour, textColour, bgColour

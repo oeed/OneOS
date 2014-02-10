@@ -206,8 +206,9 @@ elseif LoadingScreen() then
 		term.setBackgroundColor(colours.grey)
 		term.setTextColor(colours.white)
 		term.clear()
+		local w,h term.getSize()
 		if fs.exists('System/Images/crash') then
-			paintutils.drawImage(paintutils.loadImage('System/Images/crash'), (Drawing.Screen.Width-7)/2 + 1, 3)
+			paintutils.drawImage(paintutils.loadImage('System/Images/crash'), (w-7)/2 + 1, 3)
 		else
 			table.insert(ok, 'Crash image nonexistent!')
 		end

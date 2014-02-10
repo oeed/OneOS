@@ -674,7 +674,7 @@ languages.lua.getCompilerErrors = function(code)
 end
 
 languages.lua.run = function(path, ar)
-	local fn, err = loadfile(path)
+	local fn, err = OneOS.LoadFile(path)
 	setfenv(fn, getfenv())
 	if not err then
 		_, err = pcall(function() fn(unpack(ar)) end)
@@ -750,7 +750,7 @@ end
 
 languages.brainfuck.run = function(path)
 	-- Read from file
-	local f = io.open(path, "r")
+	local f = OneOS.IO.open(path, "r")
 	local content = f:read("*a")
 	f:close()
 
