@@ -66,7 +66,7 @@
 	local count = 1
 
 	ClearLine = function(self, y, backgroundColour)
-		if y > self.Size[2] or x < 1 or y < 1 then
+		if y > self.Size[2] or y < 1 then
 			return
 		end
 
@@ -76,7 +76,9 @@
 			_oldterm.clearLine()
 		end
 		self.Buffer[y] = self.Buffer[y] or {}
-		self.Buffer[y][x] = {' ', self.TextColour, backgroundColour}
+		for x = 1, self.Size[1] do
+			self.Buffer[y][x] = {' ', self.TextColour, backgroundColour}
+		end
 	end
 
 	WriteToBuffer = function(self, character, textColour, backgroundColour)
