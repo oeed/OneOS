@@ -164,7 +164,8 @@ function InsertMenu(title, items, x)
 		if toggle then
 			menu = Menu:Initialise(0-menuX, 2, nil, nil, self, items, true, function()
 				if Current.Program then
-					Current.Program.AppRedirect:Draw()
+					MainDraw()
+					--Current.Program.AppRedirect:Draw()
 				end
 			end):Show()
 		else

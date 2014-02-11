@@ -11,7 +11,7 @@ HandleTimer = function(timer)
 				if animation.step == animation.maxstep + 1 then
 					Current.CanDraw = true
 					animation.done()
-					MainDraw()
+					--MainDraw()
 				else
 					animation.timer = os.startTimer(animation.interval)
 				end

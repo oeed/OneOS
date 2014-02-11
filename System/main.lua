@@ -74,10 +74,11 @@ function Initialise()
 	local h = fs.open('.version', 'r')
 	OneOSVersion = h.readAll()
 	h.close()
---[[
 
-	Helpers.OpenFile('/Programs/Shell.program/')
-	Helpers.OpenFile('/System/Programs/Files.program/')
+
+--	Helpers.OpenFile('/Programs/Shell.program/')
+	--Helpers.OpenFile('/System/Programs/Files.program/')
+--[[
 	Helpers.OpenFile('/Programs/LuaIDE.program/')
 	Helpers.OpenFile('/Programs/Sketch.program/')
 	Helpers.OpenFile('/Programs/Games/Maze3D.program/')
@@ -169,14 +170,12 @@ function LaunchProgram(path, args, title)
 			Current.Menu:Close()
 		end
 		Program:Initialise(shell, path, title, args)
-		Overlay.UpdateButtons()
-		Draw()
 	end)
 
 end
 
 function SwitchToProgram(newProgram, currentIndex, newIndex)
-	if Current.Program then
+	if Current.Program and newProgram ~= Current.Program then
 		local direction = 1
 		if newIndex < currentIndex then
 			direction = -1
@@ -187,7 +186,7 @@ function SwitchToProgram(newProgram, currentIndex, newIndex)
 			Current.Program = newProgram
 			Overlay.UpdateButtons()
 			Current.Program.AppRedirect:Draw()
-			Draw()
+			Drawing.DrawBuffer()
 		end)
 	end
 end
@@ -195,11 +194,13 @@ end
 function Update(event, timer)
 	if timer == updateTimer then
 		if needsDisplay then
-			Draw()
+			--Draw()
 		end
 	elseif timer == clockTimer then
 		clockTimer = os.startTimer(0.8333333)
-		Draw()
+		Overlay:Draw()
+		Drawing.DrawBuffer()
+		--Draw()
 	elseif Desktop and timer == desktopRefreshTimer then
 		Desktop:RefreshFiles()
 		desktopRefreshTimer = os.startTimer(3)
@@ -251,7 +252,7 @@ function Draw()
 	drawing = false
 	needsDisplay = false
 	if not Current.Program then
-		updateTimer = os.startTimer(0.05)
+		--updateTimer = os.startTimer(0.05)
 	end
 end
 

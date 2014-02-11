@@ -61,8 +61,6 @@
 
 		table.insert(Current.Programs, new)
 		Current.Program = new
-		Overlay.UpdateButtons()
-		MainDraw()
 
 		if executable then
 			setfenv(executable, new.Environment)

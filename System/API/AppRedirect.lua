@@ -26,8 +26,9 @@
 		new.Program = program
 		return new
 	end
-
+	
 	Draw = function(self)
+		local start = os.clock()
 		local pos = GetAbsolutePosition(self)
 		for y, row in ipairs(self.Buffer) do
 			for x, pixel in pairs(row) do
@@ -61,21 +62,39 @@
 		end
 	end
 
-	local _w, _h = term.getSize()
+	local _oldterm = term.native
+	local count = 1
+
+	ClearLine = function(self, y, backgroundColour)
+		if y > self.Size[2] or x < 1 or y < 1 then
+			return
+		end
+
+		if not Current.Window and not Current.Menu and Current.Program == self.Program then
+			_oldterm.setBackgroundColour(backgroundColour)
+			_oldterm.setCursorPos(1, y+1)
+			_oldterm.clearLine()
+		end
+		self.Buffer[y] = self.Buffer[y] or {}
+		self.Buffer[y][x] = {' ', self.TextColour, backgroundColour}
+	end
 
 	WriteToBuffer = function(self, character, textColour, backgroundColour)
-		local pos = GetAbsolutePosition(self)
 		local x = math.floor(self.CursorPos[1])
 		local y = math.floor(self.CursorPos[2])
 		if x > self.Size[1] or y > self.Size[2] or x < 1 or y < 1 then
 			return
 		end
-
+		
+		if not Current.Window and not Current.Menu and Current.Program == self.Program and (not self.Buffer[y] or (self.Buffer[y][x][1] ~= character or self.Buffer[y][x][2] ~= textColour or self.Buffer[y][x][3] ~= backgroundColour)) then
+			--Drawing.WriteToBuffer(pos.X+x-1, pos.Y+y-1, character, textColour, backgroundColour)
+			_oldterm.setCursorPos(x, y+1)
+			_oldterm.setTextColour(textColour)
+			_oldterm.setBackgroundColour(backgroundColour)
+			_oldterm.write(character)
+		end
 		self.Buffer[y] = self.Buffer[y] or {}
 		self.Buffer[y][x] = {character, textColour, backgroundColour}
-		if not Current.Window and not Current.Menu and Current.Program == self.Program then
-			Drawing.WriteToBuffer(pos.X+x-1, pos.Y+y-1, character, textColour, backgroundColour)
-		end
 	end
 	
 	-- 'term' methods
@@ -98,22 +117,15 @@
 
 		_term.clear = function()
 			local cursorPosX, cursorPosY = self.CursorPos[1], self.CursorPos[2]
-			for x = 1, self.Size[1] do
-				self.CursorPos[1] = x
-				for y = 1, self.Size[2] do
-					self.CursorPos[2] = y
-					self:WriteToBuffer(' ', self.TextColour, self.BackgroundColour)
-				end
+			for y = 1, self.Size[2] do
+				self:ClearLine(y, self.BackgroundColour)
 			end
 			self.CursorPos = {cursorPosX, cursorPosY}
 		end	
 
 		_term.clearLine = function()
 			local cursorPosX, cursorPosY = self.CursorPos[1], self.CursorPos[2]
-			for x = 1, self.Size[1] do
-				self.CursorPos[1] = x
-				self:WriteToBuffer(' ', self.TextColour, self.BackgroundColour)
-			end
+			self:ClearLine(cursorPosY, self.BackgroundColour)
 			self.CursorPos = {cursorPosX, cursorPosY}
 		end	
 
