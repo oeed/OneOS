@@ -110,6 +110,17 @@ function LoadingScreen()
 
 		os.pullEvent('mouse_click')
 	end
+
+	term.setBackgroundColour(colours.black)	
+	term.clear()
+	sleep(0.1)
+	term.setBackgroundColour(colours.grey)
+	term.clear()
+	sleep(0.1)
+	term.setBackgroundColour(colours.lightGrey)
+	term.clear()
+	sleep(0.1)
+
 	local screenWidth, screenHeight = term.getSize()
 	term.setBackgroundColour(colours.white)	
 	term.clear()

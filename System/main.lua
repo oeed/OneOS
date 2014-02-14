@@ -84,7 +84,7 @@ function Initialise()
 	Helpers.OpenFile('/Programs/Games/Maze3D.program/')
 	Helpers.OpenFile('/Programs/Games/Lasers.program/')
 ]]--
-
+	
 	CheckAutoUpdate()
 
 	EventHandler()
@@ -401,6 +401,47 @@ function Sleep()
 end
 ]]--
 
+function AnimateShutdown()
+	if not Settings:GetValues()['UseAnimations'] then
+		return
+	end
+
+	Drawing.Clear(colours.white)
+	Drawing.DrawBuffer()
+	sleep(0)
+	local x = 0
+	local y = 0
+	local w = 0
+	local h = 0
+	for i = 1, 8 do
+		local percent = (i * 0.05)
+		Drawing.Clear(colours.black)
+		x = Drawing.Screen.Width * (i * 0.01)
+		y = math.floor(Drawing.Screen.Height * (i * 0.05)) + 3
+		w = Drawing.Screen.Width - (2 * x) + 1
+		h = Drawing.Screen.Height - (2 * y) + 1
+
+		if h < 1 then
+			h = 1
+		end
+
+		Drawing.DrawBlankArea(x + 1, y, w, h, colours.white)
+		Drawing.DrawBuffer()
+		sleep(0)
+	end
+
+	Drawing.DrawBlankArea(x + 1, y, w, h, colours.lightGrey)
+	Drawing.DrawBuffer()
+	sleep(0)
+
+	Drawing.DrawBlankArea(x + 1, y, w, h, colours.grey)
+	Drawing.DrawBuffer()
+	sleep(0)
+
+	term.setBackgroundColour(colours.black)
+	term.clear()
+end
+
 function Shutdown(restart)
 	local success = true
 	for i, program in ipairs(Current.Programs) do
@@ -410,8 +451,13 @@ function Shutdown(restart)
 	end
 
 	if success and not restart then
+		--FadeToBlack()
+		AnimateShutdown()
 		os.shutdown()
 	elseif success then
+		--FadeToBlack()
+		AnimateShutdown()
+		sleep(0.2)
 		os.reboot()
 	else
 		Current.Program = nil
