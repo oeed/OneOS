@@ -74,16 +74,6 @@ function Initialise()
 	local h = fs.open('.version', 'r')
 	OneOSVersion = h.readAll()
 	h.close()
-
-
---	Helpers.OpenFile('/Programs/Shell.program/')
-	--Helpers.OpenFile('/System/Programs/Files.program/')
---[[
-	Helpers.OpenFile('/Programs/LuaIDE.program/')
-	Helpers.OpenFile('/Programs/Sketch.program/')
-	Helpers.OpenFile('/Programs/Games/Maze3D.program/')
-	Helpers.OpenFile('/Programs/Games/Lasers.program/')
-]]--
 	
 	CheckAutoUpdate()
 
@@ -326,7 +316,7 @@ function HandleKey(...)
 	
 	--REMOVE THIS AT RELEASE!
 	if keychar == '\\' then
-		os.reboot()
+		--os.reboot()
 	end
 
 	if Current.Input then

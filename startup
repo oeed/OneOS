@@ -1,4 +1,4 @@
-local isDebug = true
+local isDebug = false
 
 oldTerm = term
 
@@ -217,7 +217,7 @@ elseif LoadingScreen() then
 		term.setBackgroundColor(colours.grey)
 		term.setTextColor(colours.white)
 		term.clear()
-		local w,h term.getSize()
+		local w,h = term.getSize()
 		if fs.exists('System/Images/crash') then
 			paintutils.drawImage(paintutils.loadImage('System/Images/crash'), (w-7)/2 + 1, 3)
 		else
@@ -260,8 +260,12 @@ elseif LoadingScreen() then
 				local version = '?'
 
 				local h = fs.open('.version', 'r')
-				version = h.readAll()
-				h.close()
+				if h then
+					version = h.readAll()
+					h.close()
+				else
+					version = '?'
+				end
 				if not isDebug then
 					local _ = http.post('http://olivercooper.me/errorSubmit.php', 
 	                                "product="..textutils.urlEncode(tostring('OneOS')).."&"..
