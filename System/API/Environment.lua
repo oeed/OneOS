@@ -97,7 +97,6 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 			ToolBarTextColour = colours.black,
 			OpenFile = Helpers.OpenFile,
 			Helpers = Helpers,
-			Desktop = Desktop,
 			Settings = Settings,
 			Version = OneOSVersion,
 			Restart = Restart,

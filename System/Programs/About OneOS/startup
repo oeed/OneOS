@@ -32,7 +32,7 @@ function Initialise()
 	totalSize = FolderSize('/')
 	logo = Drawing.LoadImage('/System/Images/Logo')
 	maxSpace = OneOS.FS.getFreeSpace('/') + totalSize
-	thanksLines = Helpers.WrapText('Thanks to GravityScore (LuaIDE), NitrogenFingers(GoldRunner, image stuff), Symmetryc & superaxander (GitHub issues), Jesusthekiller (Maze3D), Hellkid98 (YCCCUP), Vilsol (help with App Store) and testers!', Drawing.Screen.Width-2)
+	thanksLines = Helpers.WrapText('Thanks to GravityScore (LuaIDE), NitrogenFingers(GoldRunner, image stuff), Symmetryc & superaxander (GitHub issues), Jesusthekiller (Maze3D), Symmetryc (YCCCUP), Vilsol (help with App Store) and testers!', Drawing.Screen.Width-2)
 	Update()
 	EventHandler()
 end

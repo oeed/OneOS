@@ -132,7 +132,7 @@ function UpdateButtons()
 							return
 						end
 						if x == 2 then
-							Current.Program:Close(side == 2)
+							program:Close(side == 2)
 						end
 						self.Toggle = false
 					end)
