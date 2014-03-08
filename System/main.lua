@@ -86,7 +86,7 @@ function Initialise()
 	desktopRefreshTimer = os.startTimer(5)
 	local h = fs.open('/System/.version', 'r')
 	if not h then
-		error('Please do not tamper with the .version file and set isDebug at the top of startup to true!')
+		os.reboot()
 	end
 	OneOSVersion = h.readAll()
 	h.close()
