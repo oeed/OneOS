@@ -16,6 +16,7 @@
 			Default = true,
 		}	
 	}
+--[[
 
 	function WriteDefaults(self)
 		local file = fs.open('/System/.OneOS.settings', 'w')
@@ -28,9 +29,14 @@
 		file.close()
 	end
 
+]]--
 	function GetValues(self)
 		if not fs.exists('/System/.OneOS.settings') then
-			self:WriteDefaults()
+			local defaults = {}
+			for k, v in pairs(self.Defaults) do
+				defaults[k] = v.Default
+			end
+			return defaults
 		end
 
 		local file = fs.open('/System/.OneOS.settings','r')

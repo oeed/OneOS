@@ -85,7 +85,7 @@ function Initialise()
 			for i, c in ipairs(_colours) do
 				local txt = ''
 				if c == colours.white then
-					txt = '###'
+					txt = '##'
 				end
 				settings[k].Controls[i] = Button:Initialise(x, startY, 2, 1, c, colours.lightGrey, nil, nil, nil, function(self, x, y)
 					OneOS.Settings:SetValue(k, c)

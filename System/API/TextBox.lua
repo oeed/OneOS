@@ -7,8 +7,15 @@
 	TextColour = colours.black
 	Parent = nil
 	TextInput = nil
+	Visible = true
 
 	Draw = function(self)
+		if not self.Visible then
+			if Current.Input == self.TextInput then
+				Current.Input = nil
+			end
+			return
+		end
 		local pos = GetAbsolutePosition(self)
 		Drawing.DrawBlankArea(pos.X, pos.Y, self.Width, self.Height, self.BackgroundColour)
 		local text = self.TextInput.Value
@@ -51,6 +58,9 @@
 	end
 
 	Click = function(self, side, x, y)
+		if not self.Visible then
+			return false
+		end
 		if Current.Input ~= self.TextInput then
 			Current.Input = self.TextInput
 		end
