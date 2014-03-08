@@ -74,6 +74,7 @@ function Initialise()
 	EventRegister('mouse_drag', TryClick)
 	EventRegister('monitor_touch', TryClick)
 	EventRegister('oneos_draw', Draw)
+	EventRegister('oneos_shutdown', function(ev, restart)Shutdown(true, restart)end)
 	EventRegister('key', HandleKey)
 	EventRegister('char', HandleKey)
 	EventRegister('timer', Update)
@@ -442,16 +443,16 @@ function AnimateShutdown()
 	term.clear()
 end
 
-function Shutdown(restart, force)
+function Shutdown(force, restart)
 	local success = true
 	if not force then
+		os.queueEvent('oneos_shutdown', restart)
 		for i, program in ipairs(Current.Programs) do
 			if not program:Close() then
 				success = false
 			end
 		end
 	end
-
 	if success and not restart then
 		if force then
 			os.shutdown()
@@ -488,7 +489,7 @@ function Shutdown(restart, force)
 end
 
 function Restart(force)
-	Shutdown(true, force)
+	Shutdown(force, true)
 end
 
 function EventRegister(event, func)

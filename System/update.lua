@@ -122,15 +122,15 @@ function downloadBlob(v)
 		return
 	end
 	if v.type == 'tree' then
-		print('Making folder: '..'/.update/'..Settings.InstallPath..v.path, 'Making folder: '..'/.update/'..Settings.InstallPath..v.path)
-		fs.makeDir('/.update/'..Settings.InstallPath..v.path)
+		print('Making folder: '..'/'..Settings.InstallPath..v.path, 'Making folder: '..'/'..Settings.InstallPath..v.path)
+		fs.makeDir('/'..Settings.InstallPath..v.path)
 	else
 		print('(' .. Settings.DownloadedBytes .. 'B/' .. Settings.TotalBytes .. 'B) Downloading file: '..Settings.InstallPath..v.path, Settings.InstallPath..v.path, 'Downloading files...')
 		local f = http.get(('https://raw.github.com/'..Settings.GitHubUsername..'/'..Settings.GitHubRepoName..'/'..latestReleaseTag..Settings.InstallPath..v.path):gsub(' ','%%20'))
 		if not f then
 			error('Downloading failed, try again. '..('https://raw.github.com/'..Settings.GitHubUsername..'/'..Settings.GitHubRepoName..'/'..latestReleaseTag..Settings.InstallPath..v.path):gsub(' ','%%20'))
 		end
-		local h = fs.open('/.update/'..Settings.InstallPath..v.path, 'w')
+		local h = fs.open('/'..Settings.InstallPath..v.path, 'w')
 		h.write(f.readAll())
 		h.close()
 
@@ -143,7 +143,7 @@ function downloadBlob(v)
 end
 
 local downloads = {}
-fs.makeDir('/.update/')
+fs.makeDir('/')
 for i, v in ipairs(tree) do
 	--parallel.waitForAny(function() sleep(0) end, function()downloadBlob(v)end)
 	--downloadBlob(v)
@@ -154,6 +154,6 @@ end
 Settings.UpdateFunction()
 parallel.waitForAll(unpack(downloads))
 
-local h = fs.open('/.update/.version', 'w')
+local h = fs.open('/System/.version', 'w')
 h.write(latestReleaseTag)
 h.close()
