@@ -1,4 +1,4 @@
-local isDebug = true
+local isDebug = false
 
 oldTerm = term
 
