@@ -19,7 +19,7 @@ local function _run( _sCommand, ... )
 	local sPath = OneOS.Shell.resolveProgram(_sCommand)
 	if sPath ~= nil then
 		tProgramStack[#tProgramStack + 1] = sPath
-   		local result = OneOS.OSRun( {fs = OneOS.FS, shell = OneOS.Shell, io = OneOS.IO, loadfile = OneOS.LoadFile, os = os, sleep = os.sleep}, sPath, ... )
+   		local result = OneOS.OSRun( {fs = OneOS.FS, shell = shell, io = OneOS.IO, loadfile = OneOS.LoadFile, os = os, sleep = os.sleep}, sPath, ... )
 		tProgramStack[#tProgramStack] = nil
 		return result
    	else
@@ -44,6 +44,8 @@ end
 while true do
 	term.setTextColour(highlightTextColour)
 	term.setBackgroundColour(backgroundColour)
+	local _, cursorPosY = term.getCursorPos()
+	term.setCursorPos(1, cursorPosY)
 	term.write(shell.dir().."> ")
 	term.setTextColour(mainTextColour)
 	local cursorPosX, cursorPosY = term.getCursorPos()
@@ -58,7 +60,11 @@ while true do
 
 		if not args[1] or args[1] == '' then
 		else
-			local path = OneOS.Shell.resolveProgram(args[1])
+			local path = OneOS.Shell.resolveProgram(shell.dir()..'/'..args[1])
+			if path == nil then
+				path = OneOS.Shell.resolveProgram(args[1])
+			end
+
 			if path ~= nil then
 				args[1] = path
 				if path:sub(1,3) == 'rom' then

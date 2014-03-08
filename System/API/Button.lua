@@ -11,8 +11,12 @@
 	_Click = nil
 	Toggle = nil
 	Momentary = false
+	Visible = true
 
 	Draw = function(self)
+		if not self.Visible then
+			return
+		end
 		local bg = self.BackgroundColour
 		if type(bg) == 'function' then
 			bg = bg()
@@ -65,6 +69,7 @@
 		new.ActiveTextColour = activeTextColour or self.ActiveTextColour
 		new.Parent = parent
 		new._Click = click
+		new.Visible = true
 		return new
 	end
 
@@ -74,7 +79,7 @@
 	end
 
 	Click = function(self, side, x, y)
-		if self._Click then
+		if self.Visible and self._Click then
 			if self:_Click(side, x, y, not self.Toggle) ~= false and self.Toggle ~= nil then
 				self.Toggle = not self.Toggle
 			end

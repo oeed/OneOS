@@ -1912,7 +1912,6 @@ NewDocumentWindow = {
 		self.PathTextBox:Draw()
 		self.WidthTextBox:Draw()
 		self.HeightTextBox:Draw()
-		self.WhatFormatButton:Draw()
 		self.WhiteButton:Draw()
 		self.BlackButton:Draw()
 		self.TransparentButton:Draw()
@@ -1962,7 +1961,6 @@ NewDocumentWindow = {
 			end
 		end, 'Ok', colours.black)
 		new.CancelButton = Button:Initialise(new.Width - 13, new.Height - 1, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)returnFunc(new, false)end, 'Cancel', colours.black)
-		new.WhatFormatButton = Button:Initialise(2, new.Height - 1, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)end, 'Which type?', colours.black)
 
 		new.SKCHButton = Button:Initialise(7, 5, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
 			new.NFTButton.Toggle = false
@@ -2055,7 +2053,7 @@ NewDocumentWindow = {
 	end,
 
 	Click = function(self, side, x, y)
-		local items = {self.OkButton, self.CancelButton, self.SKCHButton, self.NFTButton, self.NFPButton, self.PathTextBox, self.WidthTextBox, self.HeightTextBox, self.WhatFormatButton, self.WhiteButton, self.BlackButton, self.TransparentButton}
+		local items = {self.OkButton, self.CancelButton, self.SKCHButton, self.NFTButton, self.NFPButton, self.PathTextBox, self.WidthTextBox, self.HeightTextBox, self.WhiteButton, self.BlackButton, self.TransparentButton}
 		for i, v in ipairs(items) do
 			if CheckClick(v, x, y) then
 				v:Click(side, x, y)
@@ -2984,7 +2982,7 @@ function MakeNewLayer()
 		if Current.Artboard.Format == '.nft' then
 			format = 'NFT'
 		end
-		ButtonDialougeWindow:Initialise(format..' do not support layers!', 'The format you are using, '..format..', does not support multiple layers. Use SKCH to have more than one layer.', 'Ok', nil, function(window)
+		ButtonDialougeWindow:Initialise(format..' does not support layers!', 'The format you are using, '..format..', does not support multiple layers. Use SKCH to have more than one layer.', 'Ok', nil, function(window)
 			window:Close()
 		end):Show()
 	end
@@ -3084,7 +3082,7 @@ function RenameLayer()
 		if Current.Artboard.Format == '.nft' then
 			format = 'NFT'
 		end
-		ButtonDialougeWindow:Initialise(format..' do not support layers!', 'The format you are using, '..format..', does not support renaming layers. Use SKCH to rename layers.', 'Ok', nil, function(window)
+		ButtonDialougeWindow:Initialise(format..' does not support layers!', 'The format you are using, '..format..', does not support renaming layers. Use SKCH to rename layers.', 'Ok', nil, function(window)
 			window:Close()
 		end):Show()
 	end
@@ -3112,7 +3110,7 @@ function DeleteLayer()
 		if Current.Artboard.Format == '.nft' then
 			format = 'NFT'
 		end
-		ButtonDialougeWindow:Initialise(format..' do not support layers!', 'The format you are using, '..format..', does not support deleting layers. Use SKCH to deleting layers.', 'Ok', nil, function(window)
+		ButtonDialougeWindow:Initialise(format..' does not support layers!', 'The format you are using, '..format..', does not support deleting layers. Use SKCH to deleting layers.', 'Ok', nil, function(window)
 			window:Close()
 		end):Show()
 	end

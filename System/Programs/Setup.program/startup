@@ -25,15 +25,36 @@ InterfaceElements = {
 	
 }
 
-local maxPage = 4
+CustomSettings = {
+	ComputerName = {
+			Type = 'Text',
+			Label = 'Computer Name',
+			Value = 'OneOS Computer'
+		},
+		DesktopColour = {
+			Type = 'Colour',
+			Label = 'Desktop Colour',
+			Value = colours.cyan
+		},
+		UseAnimations = {
+			Type = 'Bool',
+			Label = 'Use Animations',
+			Value = true,
+		}	
+	}
+
+local maxPage = 5
 local pageNumber = 1
 local lines = {
-	'Welcome to OneOS!\nBefore you get started follow these short steps to customise OneOS to your liking.'
+	'Welcome to OneOS!\nBefore you get started follow these short steps to customise OneOS to your liking.',
+	'Enter the name of this computer.',
+	'Pick a desktop background colour.',
+	'Do you want to use animations? Not recommended for use on servers or slow computers.',
+	'All done! OneOS is now all setup and ready for you to use. Click \'Restart\' to get going!'
 }
 local backButton, forwardButton = nil
 
 function GoToPage(n)
-	print('goto')
 	pageNumber = n
 	if pageNumber == 1 then
 		backButton.Visible = false
@@ -42,10 +63,28 @@ function GoToPage(n)
 	end
 
 	if pageNumber == maxPage then
-		backButton.Visible = false
+		forwardButton.Text = 'Restart'
 	else
-		backButton.Visible = true
+		forwardButton.Text = 'Next'
 	end
+
+	if n == 6 then
+		if not OneOS.FS.exists('/System/.version') and OneOS.FS.exists('.version') then
+			OneOS.FS.copy('.version', '/System/.version')
+			OneOS.FS.delete('.version')
+		end
+
+		local h = OneOS.FS.open('/System/.OneOS.settings', 'w')
+		local defaults = {}
+		for k, v in pairs(CustomSettings) do
+			defaults[k] = v.Value
+		end
+		h.write(textutils.serialize(defaults))
+		h.close()
+
+		OneOS.Restart(true)
+	end
+
 	Draw()
 end
 
@@ -64,7 +103,6 @@ function Initialise()
 
 	backButton = Button:Initialise(3, Drawing.Screen.Height, nil, 1, colours.lightGrey, nil, nil, nil, nil, function(self, x, y, toggle) GoToPage(pageNumber - 1) end, 'Back'):Register()
 	forwardButton = Button:Initialise(Drawing.Screen.Width - 7, Drawing.Screen.Height, nil, 1, colours.lightGrey, nil, nil, nil, nil, function(self, x, y, toggle) GoToPage(pageNumber + 1) end, 'Next'):Register()
-	--, forwardButton
 
 	GoToPage(1)
 

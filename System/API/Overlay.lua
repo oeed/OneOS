@@ -188,6 +188,10 @@ function InsertButton(title, active, backgroundColour, activeBackgroundColour, t
 end
 
 function Draw()
+	if isFirstSetup then
+		return
+	end
+	
 	if Current.Program then
 		toolBarColour = Current.Program.Environment.OneOS.ToolBarColour
 		toolBarTextColour = Current.Program.Environment.OneOS.ToolBarTextColour

@@ -33,29 +33,41 @@ InterfaceElements = {
 	
 }
 
-local isFirstSetup = false
+isFirstSetup = false
 
 
 function ShowDesktop()
-	if not fs.exists('/System/.OneOS.settings') then
-		RegisterElement(Overlay)
-		Overlay:Initialise()
-		isFirstSetup = true
-		local prog = Program:Initialise(shell, '/System/Programs/Setup.program/startup', 'OneOS Setup', {})
-		prog.AppRedirect.Y = 1
-		Drawing.Clear(colours.white)
-		Desktop = nil
-	else
-		Desktop.LoadSettings()
-		Desktop.RefreshFiles()
-		Desktop.SaveSettings()
+	Desktop.LoadSettings()
+	Desktop.RefreshFiles()
+	Desktop.SaveSettings()
 
-		RegisterElement(Overlay)
-		Overlay:Initialise()
-	end
+	RegisterElement(Overlay)
+	Overlay:Initialise()
 	
 end
 
+function FirstSetup()
+	EventRegister('mouse_click', TryClick)
+	EventRegister('mouse_drag', TryClick)
+	EventRegister('monitor_touch', TryClick)
+	EventRegister('oneos_draw', Draw)
+	EventRegister('key', HandleKey)
+	EventRegister('char', HandleKey)
+	EventRegister('timer', Update)
+	--updateTimer = os.startTimer(0.5)
+
+	
+	isFirstSetup = true
+	Overlay:Initialise()
+	RegisterElement(Overlay)
+	local prog = Program:Initialise(shell, '/System/Programs/Setup.program/startup', 'OneOS Setup', {}, 1)
+	Drawing.Clear(colours.white)
+	Draw()
+	Desktop = nil
+
+	
+	EventHandler()
+end
 
 function Initialise()
 	EventRegister('mouse_click', TryClick)
@@ -71,7 +83,10 @@ function Initialise()
 	Draw()
 	clockTimer = os.startTimer(0.8333333)
 	desktopRefreshTimer = os.startTimer(5)
-	local h = fs.open('.version', 'r')
+	local h = fs.open('/System/.version', 'r')
+	if not h then
+		error('Please do not tamper with the .version file and set isDebug at the top of startup to true!')
+	end
 	OneOSVersion = h.readAll()
 	h.close()
 	
@@ -81,10 +96,15 @@ function Initialise()
 end
 
 local checkAutoUpdateArg = nil
+local checkingAutoUpdateWindow = nil
 
 function CheckAutoUpdate(arg)
 	checkAutoUpdateArg = arg
 	if http then
+		if checkAutoUpdateArg then
+			checkingAutoUpdateWindow = ButtonDialogueWindow:Initialise("Update OneOS", "Checking for updates, this may take a moment.", 'Ok', nil, function(success)end)
+			checkingAutoUpdateWindow:Show()
+		end
 		http.request('https://api.github.com/repos/oeed/OneOS/releases#')
 	elseif arg then
 		ButtonDialogueWindow:Initialise("HTTP Not Enabled!", "Turn on the HTTP API to update.", 'Ok', nil, function(success)end):Show()
@@ -120,6 +140,9 @@ function AutoUpdateFail(event, url, data)
 		return false
 	end
 	if checkAutoUpdateArg then
+		if checkingAutoUpdateWindow then
+			checkingAutoUpdateWindow:Close()
+		end
 		ButtonDialogueWindow:Initialise("Update Check Failed", "Check your connection and try again.", 'Ok', nil, function(success)end):Show()
 	end
 end
@@ -136,6 +159,9 @@ function AutoUpdateRespose(event, url, data)
 	os.unloadAPI('JSON')
 	if not releases or not releases[1] or not releases[1].tag_name then
 		if checkAutoUpdateArg then
+			if checkingAutoUpdateWindow then
+				checkingAutoUpdateWindow:Close()
+			end
 			ButtonDialogueWindow:Initialise("Update Check Failed", "Check your connection and try again.", 'Ok', nil, function(success)end):Show()
 		end
 		return
@@ -145,12 +171,21 @@ function AutoUpdateRespose(event, url, data)
 	if OneOSVersion == latestReleaseTag then
 		--using latest version
 		if checkAutoUpdateArg then
+			if checkingAutoUpdateWindow then
+				checkingAutoUpdateWindow:Close()
+			end
 			ButtonDialogueWindow:Initialise("Up to date!", "OneOS is up to date!", 'Ok', nil, function(success)end):Show()
 		end
 		return
 	elseif SematicVersionIsNewer(GetSematicVersion(latestReleaseTag), GetSematicVersion(OneOSVersion)) then
-		--using old version
-		LaunchProgram('/System/Programs/Update OneOS/startup', {}, 'Update OneOS')
+		if checkingAutoUpdateWindow then
+			checkingAutoUpdateWindow:Close()
+		end
+		ButtonDialogueWindow:Initialise("Update OneOS", "There is a new version of OneOS available, do you want to update?", 'Yes', 'No', function(success)
+			if success then
+				LaunchProgram('/System/Programs/Update OneOS/startup', {}, 'Update OneOS')
+			end
+		end):Show()
 	end
 end
 
@@ -183,14 +218,12 @@ end
 
 function Update(event, timer)
 	if timer == updateTimer then
-		if needsDisplay then
-			--Draw()
-		end
+		updateTimer = os.startTimer(0.5)
+		Current.Program.AppRedirect:Draw()
+		Drawing.DrawBuffer()
 	elseif timer == clockTimer then
 		clockTimer = os.startTimer(0.8333333)
-		Overlay:Draw()
-		Drawing.DrawBuffer()
-		--Draw()
+		Draw()
 	elseif Desktop and timer == desktopRefreshTimer then
 		Desktop:RefreshFiles()
 		desktopRefreshTimer = os.startTimer(3)
@@ -211,6 +244,11 @@ end
 
 
 function Draw()
+	if isFirstSetup then
+		Current.Program.AppRedirect:Draw()
+		Drawing.DrawBuffer()
+	end
+
 	if not Current.CanDraw then
 		return
 	end
@@ -224,11 +262,10 @@ function Draw()
 		Desktop:Draw()
 		term.setCursorBlink(false)
 	end
-	if not isFirstSetup then
-		for i, elem in ipairs(InterfaceElements) do
-			if elem.Draw then
-				elem:Draw()
-			end
+
+	for i, elem in ipairs(InterfaceElements) do
+		if elem.Draw then
+			elem:Draw()
 		end
 	end
 
@@ -241,9 +278,6 @@ function Draw()
 	term.setTextColour(Current.CursorColour)
 	drawing = false
 	needsDisplay = false
-	if not Current.Program then
-		--updateTimer = os.startTimer(0.05)
-	end
 end
 
 
@@ -367,30 +401,6 @@ function NeedsDisplay()
 	needsDisplay = true
 end
 
---I'll try to impliment this sometime later. The main issue is that it doesn't resume the program, especially if it relies on sleep()
---[[
-function Sleep()
-	Drawing.Clear(colours.black)
-	Drawing.DrawCharactersCenter(1, -1, nil, nil, 'Your computer is sleeping to reduce server load.', colours.white, colours.black)
-	Drawing.DrawCharactersCenter(1, 1, nil, nil, 'Click anywhere to wake it up.', colours.white, colours.black)
-	Drawing.DrawBuffer()
-	print('-')
-	print(#Current.Program.EventQueue)
-	print('----')
-	os.pullEvent('mouse_click')
-
-		--ProgramEventHandle()
-
---	for i, v in ipairs(Current.Programs) do
---		v:Resume()
---	end
-
-	Draw()
-	updateTimer = os.startTimer(0.05)
-	clockTimer = os.startTimer(0.8333333)
-end
-]]--
-
 function AnimateShutdown()
 	if not Settings:GetValues()['UseAnimations'] then
 		return
@@ -432,20 +442,28 @@ function AnimateShutdown()
 	term.clear()
 end
 
-function Shutdown(restart)
+function Shutdown(restart, force)
 	local success = true
-	for i, program in ipairs(Current.Programs) do
-		if not program:Close() then
-			success = false
+	if not force then
+		for i, program in ipairs(Current.Programs) do
+			if not program:Close() then
+				success = false
+			end
 		end
 	end
 
 	if success and not restart then
-		--FadeToBlack()
+		if force then
+			os.shutdown()
+		end
+
 		AnimateShutdown()
 		os.shutdown()
 	elseif success then
-		--FadeToBlack()
+		if force then
+			os.reboot()
+		end
+
 		AnimateShutdown()
 		sleep(0.2)
 		os.reboot()
@@ -469,8 +487,8 @@ function Shutdown(restart)
 	end
 end
 
-function Restart()
-	Shutdown(true)
+function Restart(force)
+	Shutdown(true, force)
 end
 
 function EventRegister(event, func)

@@ -36,6 +36,12 @@ function RefreshFiles()
 	files = {}
 	local layout = {}
 	local count = 0
+	if not fs.exists('Desktop/') then
+		fs.makeDir('Desktop/')
+	elseif not fs.isDir('Desktop/') then
+		fs.delete('Destop/')
+		fs.makeDir('Desktop/')
+	end
 	for i, file in ipairs(fs.list('Desktop/')) do
 		if string.sub( file, 1, 1 ) ~= '.' and settings.layout[file] then
 			count = count + 1

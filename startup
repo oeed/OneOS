@@ -1,4 +1,4 @@
-local isDebug = false
+local isDebug = true
 
 oldTerm = term
 
@@ -179,36 +179,47 @@ elseif LoadingScreen() then
 	if fs.exists('/.update/') and fs.isDir('/.update/') then
 		if not fs.exists('/.update/.version') then
 			fs.delete('/.update/')
-		end
+		else
 
-		function installFolder(path)
-			for i, v in ipairs(fs.list('/.update/'..path)) do
-				Drawing.DrawArea(1, math.floor(Drawing.Screen.Height / 2), Drawing.Screen.Width, 1, ' ', colours.lightGrey, colours.white)
-				Drawing.DrawCharactersCenter(nil, 0, nil, nil, path .. v, colours.lightGrey, colours.white)
-				Drawing.DrawBuffer()
-				if fs.isDir('/.update/'..path .. v) then
-					fs.makeDir('/'..path .. v)
-					installFolder(path .. v .. '/')
-				else
-					fs.delete('/'..path .. v)
-					fs.move('/.update/'..path .. v, '/'..path .. v)
+			function installFolder(path)
+				for i, v in ipairs(fs.list('/.update/'..path)) do
+					Drawing.DrawArea(1, math.floor(Drawing.Screen.Height / 2), Drawing.Screen.Width, 1, ' ', colours.lightGrey, colours.white)
+					Drawing.DrawCharactersCenter(nil, 0, nil, nil, path .. v, colours.lightGrey, colours.white)
+					Drawing.DrawBuffer()
+					if fs.isDir('/.update/'..path .. v) then
+						fs.makeDir('/'..path .. v)
+						installFolder(path .. v .. '/')
+					else
+						fs.delete('/'..path .. v)
+						fs.move('/.update/'..path .. v, '/'..path .. v)
+					end
+					sleep(0)
 				end
-				sleep(0)
 			end
+			Drawing.Clear(colours.white)
+			Drawing.DrawCharactersCenter(nil, -3, nil, nil, 'Installing Update', colours.blue, colours.white)
+			Drawing.DrawCharactersCenter(nil, -2, nil, nil, 'This may take a moment.', colours.grey, colours.white)
+			Drawing.DrawBuffer()
+			installFolder('')
+			fs.delete('/.update/')
 		end
-		Drawing.Clear(colours.white)
-		Drawing.DrawCharactersCenter(nil, -3, nil, nil, 'Installing Update', colours.blue, colours.white)
-		Drawing.DrawCharactersCenter(nil, -2, nil, nil, 'This may take a moment.', colours.grey, colours.white)
-		Drawing.DrawBuffer()
-		installFolder('')
-		fs.delete('/.update/')
 	end
 
 	os.run(getfenv(), '/System/main.lua')
-	--os.run(getfenv(), '/System/update')
-	
 
-	local ok = {pcall(Initialise)}
+	local ok = nil
+	if not fs.exists('/System/.version') or not fs.exists('/System/.OneOS.settings') then
+		if fs.exists('/System/.OneOS.settings') then
+			fs.delete('/System/.OneOS.settings')
+		end
+		ok = {pcall(FirstSetup)}
+	else
+		ok = {pcall(Initialise)}
+	end
+
+
+
+
 
 	if not ok[1] then
 		xpcall(function()loadfile('/System/main.lua')end, function(err)
@@ -259,7 +270,7 @@ elseif LoadingScreen() then
 				end
 				local version = '?'
 
-				local h = fs.open('.version', 'r')
+				local h = fs.open('/System/.version', 'r')
 				if h then
 					version = h.readAll()
 					h.close()

@@ -4,13 +4,14 @@
 	AppRedirect = nil
 	Running = true
 	local _args = {}
-	Initialise = function(self, shell, path, title, args)
+	Initialise = function(self, shell, path, title, args, appRedirY)
 		local new = {}    -- the new instance
 		setmetatable( new, {__index = self} )
 		_args = args
 		new.Title = title or path
 		new.Path = path
-		new.AppRedirect = AppRedirect:Initialise(1, 2, Drawing.Screen.Width, Drawing.Screen.Height-1, new)
+		appRedirY = appRedirY or 2
+		new.AppRedirect = AppRedirect:Initialise(1, appRedirY, Drawing.Screen.Width, Drawing.Screen.Height-1, new)
 		new.Environment = Environment:Initialise(new, shell, path)
 		new.Running = true
 		
@@ -204,7 +205,9 @@
 				end
 			end
 
-			Desktop:RefreshFiles()
+			if Desktop then
+				Desktop:RefreshFiles()
+			end
 			Overlay.UpdateButtons()
 			if Current.Program then
 				Drawing.Clear(colours.black)
@@ -212,7 +215,9 @@
 				sleep(0)
 				os.queueEvent('oneos_draw')
 			else
-				Desktop:Draw()
+				if Desktop then
+					Desktop:Draw()
+				end
 			end
 			return true
 		else

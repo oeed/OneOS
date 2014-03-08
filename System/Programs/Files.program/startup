@@ -295,7 +295,12 @@ function RefreshFiles()
 				if peripheral.call(Current.Peripheral.Side:lower(), 'isDiskPresent') then
 					if peripheral.call(Current.Peripheral.Side:lower(), 'hasData') then
 						discType = 'Data'
-						discID = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getDiskID'))
+						discID = peripheral.call(Current.Peripheral.Side:lower(), 'getDiskID')
+						if discID then
+							discID = tostring(discID)
+						else
+							discID = 'None'
+						end
 						mountPath = '/'..peripheral.call(Current.Peripheral.Side:lower(), 'getMountPath')..'/'
 						discLabel = peripheral.call(Current.Peripheral.Side:lower(), 'getDiskLabel')
 					else

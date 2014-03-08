@@ -361,9 +361,11 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 
 		local function _run( _sCommand, ... )
 			local sPath = nativeShell.resolveProgram(_sCommand)
-			if _sCommand:sub(1,3) ~= 'rom' then
+			if sPath:sub(1,3) ~= 'rom' then
+				print('not rom')
 				sPath = nativeShell.resolveProgram(Helpers.RemoveFileName(appPath) .. '/' ..  _sCommand )
 			end
+
 			if sPath ~= nil then
 				tProgramStack[#tProgramStack + 1] = sPath
 		   		local result = osrun( env, sPath, ... )
