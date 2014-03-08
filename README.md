@@ -1,3 +1,5 @@
+If you are going to modify any part of OneOS you MUST set isDebug to true in the startup folder. Otherwise I'll be bombarded with error reports that have nothing to do with me.
+
 Forums Post: http://www.computercraft.info/forums2/index.php?s=6cde19f0e95d5793f759f7ab9687abe4&app=forums&module=post&section=post&do=edit_post&f=32&t=17286&p=166445&st=0&_from=quickedit
 
 Late last year I looked at PearOS and a few other ComputerCraft OSs and tried to find the best parts and problems with each. I found that in the case of PearOS and a few others you couldn't do anything. PearOS was nice and shiny, but it was completely useless. Others such as CraftBang were much loved by the community, however, I felt that CraftBang was a bit hard to use and a bit too plain. So, I set off to try to combine all the best parts of other OSs and a few things of my own in to one. I've tried to include everything into OneOS and what I couldn't/haven't can be found on the App Store (more on that later). In essence, it is an 'All in one OS' (are you picking up the meaning of the name yet :P)
