@@ -62,6 +62,26 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 			tColourLookup[ string.byte( "0123456789abcdef",n,n ) ] = 2^(n-1)
 		end
 
+		env.paintutils.loadImage = function( sPath )
+			local relPath = Helpers.RemoveFileName(path) .. sPath
+			local tImage = {}
+			if fs.exists( relPath ) then
+				local file = io.open(relPath, "r" )
+				local sLine = file:read()
+				while sLine do
+					local tLine = {}
+					for x=1,sLine:len() do
+						tLine[x] = tColourLookup[ string.byte(sLine,x,x) ] or 0
+					end
+					table.insert( tImage, tLine )
+					sLine = file:read()
+				end
+				file:close()
+				return tImage
+			end
+			return nil
+		end
+
 		env.shell = {}
 		local shellEnv = {}
 		setmetatable( shellEnv, { __index = env } )
@@ -361,8 +381,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 
 		local function _run( _sCommand, ... )
 			local sPath = nativeShell.resolveProgram(_sCommand)
-			if sPath:sub(1,3) ~= 'rom' then
-				print('not rom')
+			if sPath == nil or sPath:sub(1,3) ~= 'rom' then
 				sPath = nativeShell.resolveProgram(Helpers.RemoveFileName(appPath) .. '/' ..  _sCommand )
 			end
 

@@ -331,7 +331,7 @@ function TryClick(event, side, x, y)
 		end
 		if Current.Program and y >= 2 then
 			Current.Program:Click(event, side, x, y-1)
-		elseif y >= 2 then
+		elseif y >= 2 and Desktop then
 			Desktop.Click(event, side, x, y)
 		end
 
