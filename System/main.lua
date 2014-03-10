@@ -64,7 +64,6 @@ function FirstSetup()
 	Drawing.Clear(colours.white)
 	Draw()
 	Desktop = nil
-
 	
 	EventHandler()
 end
@@ -92,6 +91,8 @@ function Initialise()
 	h.close()
 	
 	CheckAutoUpdate()
+
+	Helpers.OpenFile('Programs/Ink.program')
 
 	EventHandler()
 end
@@ -351,7 +352,7 @@ function HandleKey(...)
 	
 	--REMOVE THIS AT RELEASE!
 	if keychar == '\\' then
-		--os.reboot()
+		os.reboot()
 	end
 
 	if Current.Input then
