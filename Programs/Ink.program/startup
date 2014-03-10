@@ -263,6 +263,8 @@ Drawing = {
 Current = {
 	Document = nil,
 	TextInput = nil,
+	CursorPos = {1,1},
+	CursorColour = colours.black,
 }
 
 Events = {}
@@ -363,6 +365,7 @@ TextInput = {
 
 	Key = function(self, key)
 		if key == keys.enter then
+			self.Value = string.sub(self.Value, 1, self.CursorPos ) .. '\n' .. string.sub( self.Value, self.CursorPos + 1 )
 			self.Change(key)		
 		elseif key == keys.left then
 			-- Left
@@ -648,27 +651,47 @@ Document = {
         for word, space in text:gmatch('(%S+)(%s*)') do
                 local temp = lines[#lines] .. word .. space:gsub('\n','')
                 if #temp > limit then
-                        table.insert(lines, '')
+                    table.insert(lines, '')
                 end
                 if space:find('\n') then
-                        lines[#lines] = lines[#lines] .. word
-                        
-                        space = space:gsub('\n', function()
-                                table.insert(lines, '')
-                                return ''
-                        end)
+                    lines[#lines] = lines[#lines] .. word
+                    
+                    space = space:gsub('\n', function()
+                            table.insert(lines, '')
+                            return ''
+                    end)
                 else
-                        lines[#lines] = lines[#lines] .. word .. space
+                    lines[#lines] = lines[#lines] .. word .. space
+                end
+                if #lines[#lines]>limit then
+                	local _line = lines[#lines]
+                	lines[#lines] = _line:sub(1,limit)
+                	lines[#lines + 1] = _line:sub(limit+1)
                 end
         end
         return lines
 	end,
 
-	Draw = function(self)
-		self:CalculatePages()
+	CalculateCursorPos = function(self)
+		local passedCharacters = 0
+		Current.CursorPos = nil
 		for i, page in ipairs(self.Pages) do
 			page:Draw((i-1)*self.PageSize.Height + 1)
+			if not Current.CursorPos then
+				for i, line in ipairs(page.Lines) do
+					if passedCharacters + #line.Text >= self.TextInput.CursorPos then
+						Current.CursorPos = {self.X + page.MarginX + (self.TextInput.CursorPos - passedCharacters), 4 + i}
+						break
+					end
+					passedCharacters = passedCharacters + #line.Text + 1
+				end
+			end
 		end
+	end,
+
+	Draw = function(self)
+		self:CalculatePages()
+		self:CalculateCursorPos()
 	end,
 
 	CalculatePages = function(self)
@@ -820,7 +843,9 @@ function Draw()
 	end
 
 	Drawing.DrawBuffer()
-	if Current.Input then
+	term.setCursorPos(2,2)
+	print(Current.TextInput.CursorPos)
+	if Current.TextInput and Current.CursorPos then
 		term.setCursorPos(Current.CursorPos[1], Current.CursorPos[2])
 		term.setCursorBlink(true)
 		term.setTextColour(Current.CursorColour)
