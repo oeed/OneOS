@@ -55,16 +55,12 @@ OpenFile = function(path, args)
 			LaunchProgram('/Programs/Sketch.program/startup', {path}, 'Sketch')
 		elseif extension == 'pkg' then
 			LaunchProgram('/System/Programs/Unpackager.program/startup', {path}, 'Unpackager')
+		elseif extension == 'txt' or extension == 'text' or extension == 'ink' then
+			LaunchProgram('/Programs/Ink.program/startup', {path}, 'Ink')
 		else
 			LaunchProgram('/Programs/LuaIDE.program/startup', {path}, 'LuaIDE')
 		end
 	end
-end
-
-Beep = function()
-	redstone.setOutput('bottom', true)
-	--sleep(0.05)
-	--redstone.setOutput('bottom', false)
 end
 
 ListPrograms = function()

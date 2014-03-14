@@ -1,0 +1,144 @@
+
+	name = "System Preferences"
+	menus = {}
+	windows = {}
+	version = "0.9"
+	showHidden = false
+	id = 0	
+	
+	init = function()
+    		menus = {}
+    		systemPreferences()
+	end
+	
+	about = function()
+		local licenceLabel = OSLabel:new(6, 10, "(c) 2013")
+		local secondLicenceLabel = OSLabel:new(1,11, "Oliver'oeed'Cooper")
+		licenceLabel.TextColour = colors.lightGray
+		secondLicenceLabel.TextColour = colors.lightGray
+	
+		local aboutWindow = OSWindow:new("", {
+		OSImageView:new(7, 1, path.."/icon_l"),
+		OSLabel:new(1, 6, "System Preferences"),
+		licenceLabel,
+		secondLicenceLabel
+		}, 20,12, environment)
+		
+		windows['about'] = aboutWindow
+	end
+
+	systemPreferences = function()
+		
+		local settingsListView = OSListView:new(1, 2, 17, 14, {
+			OSListItem:new("General", function()switchCategory('General')end),
+			OSListItem:new("Startup", function()switchCategory('Startup')end),
+			OSListItem:new("Appearance", function()switchCategory('Appearance')end),
+			OSListItem:new("Sound", function()switchCategory('Sound')end),
+			OSListItem:new("Date and Time", function()switchCategory('Date and Time')end),
+			OSListItem:new("File Extentions", function()switchCategory('File Extentions')end),
+			OSListItem:new("Software Update", function()switchCategory('Software Update')end),
+		})
+				
+		categoryLabel = OSLabel:new(20,2 ,"General")
+		settingsContainer = OSContainer:new(19,5, 27, 11, {})
+		switchCategory('Appearance')--start category
+		local systemPreferencesWindow = OSWindow:new(name, {
+			settingsListView,
+			OSVSplitter:new(18, 1, 14, false),
+			OSHSplitter:new(19, 3, 27, true),
+			categoryLabel,
+			settingsContainer
+			
+		}, 45,14, environment)
+		
+		environment.windows['systemPreferences'] = systemPreferencesWindow
+	end
+	
+	setDesktopBackground = function(colour)
+		OSChangeSetting('desktop_bg', colour, true)
+	end
+	
+	switchCategory = function(category)
+		categoryLabel.title = category
+		if category == 'Appearance' then
+			
+			startX = 2
+			startY = 3
+			
+			local orange = OSButton:new(startX, startY," ", function(self) setDesktopBackground(colours.orange) end)
+			orange.BackgroundColour = colours.orange
+			orange.SelectedBackgroundColour = colours.orange
+			
+			local magenta = OSButton:new(startX + 4, startY," ", function()setDesktopBackground(colours.magenta) end)
+			magenta.BackgroundColour = colours.magenta
+			magenta.SelectedBackgroundColour = colours.magenta
+			
+			local lightBlue = OSButton:new(startX + 8, startY," ", function() setDesktopBackground(colours.lightBlue) end)
+			lightBlue.BackgroundColour = colours.lightBlue
+			lightBlue.SelectedBackgroundColour = colours.lightBlue
+			
+			local yellow = OSButton:new(startX + 12, startY," ", function() setDesktopBackground(colours.yellow) end)
+			yellow.BackgroundColour = colours.yellow
+			yellow.SelectedBackgroundColour = colours.yellow
+			
+			local lime = OSButton:new(startX + 16, startY," ", function() setDesktopBackground(colours.lime) end)
+			lime.BackgroundColour = colours.lime
+			lime.SelectedBackgroundColour = colours.lime
+			
+			local pink = OSButton:new(startX + 20, startY," ", function() setDesktopBackground(colours.pink) end)
+			pink.BackgroundColour = colours.pink
+			pink.SelectedBackgroundColour = colours.pink
+			
+			local grey = OSButton:new(startX, startY + 2," ", function() setDesktopBackground(colours.grey) end)
+			grey.BackgroundColour = colours.grey
+			grey.SelectedBackgroundColour = colours.grey
+			
+			local cyan = OSButton:new(startX + 4, startY + 2," ", function() setDesktopBackground(colours.cyan) end)
+			cyan.BackgroundColour = colours.cyan
+			cyan.SelectedBackgroundColour = colours.cyan
+			
+			local purple = OSButton:new(startX + 8, startY + 2," ", function() setDesktopBackground(colours.purple) end)
+			purple.BackgroundColour = colours.purple
+			purple.SelectedBackgroundColour = colours.purple
+			
+			local blue = OSButton:new(startX + 12, startY + 2," ", function() setDesktopBackground(colours.blue) end)
+			blue.BackgroundColour = colours.blue
+			blue.SelectedBackgroundColour = colours.blue
+			
+			local brown = OSButton:new(startX + 16, startY + 2," ", function() setDesktopBackground(colours.brown) end)
+			brown.BackgroundColour = colours.brown
+			brown.SelectedBackgroundColour = colours.brown
+			
+			local red = OSButton:new(startX + 20, startY + 2," ", function() setDesktopBackground(colours.red) end)
+			red.BackgroundColour = colours.red
+			red.SelectedBackgroundColour = colours.red
+			
+			
+			settingsContainer.entities = {
+				OSLabel:new(2, 1, "Desktop Background"),
+				orange,
+				magenta,
+				lightBlue,
+				backButton,
+				yellow,
+				lime,
+				pink,
+				grey,
+				cyan,
+				purple,
+				blue,
+				brown,
+				green,
+				red
+			}
+			else settingsContainer.entities = {
+				OSLabel:new(3, 4, "This Will Be Added Soon"),
+			}
+		end
+	end
+
+	function windowDidClose(self)
+		print("quit")
+		environment:quit()
+	end
+		

@@ -1,0 +1,136 @@
+--OSDrawing--
+
+
+	MainLoop = {
+
+	DrawEntity = function(entity)
+		entity:Draw()
+		OSDrawing.releaseOffset() --just incase there is an offset
+
+	end,
+
+	DrawApplicationWindows = function(application)
+		local containsCurrent = false
+		for _,window in pairs(application.windows) do
+			if window == OSCurrentWindow then
+				containsCurrent = true
+			else
+				window:Draw()
+				OSDrawing.releaseOffset() --just incase there is an offset
+			end
+		end
+
+		if containsCurrent then
+			OSCurrentWindow:Draw()
+		end
+	end,
+
+
+	Draw = function (self)
+		--draw the desktop
+		desktop:Draw()
+
+		--draw all windows
+
+		--TODO: figure out how to correctly order the windows
+		--[[
+		for _,application in pairs(OSInterfaceApplications.list) do
+		OSDrawing.MainLoop.DrawApplicationWindows(application)
+		end
+		]]--
+
+		local currentApplication = OSInterfaceApplications.current()
+		for _,key in ipairs(OSInterfaceApplications.order) do
+			local application = OSInterfaceApplications.list[key]
+			--don't render the current applications windows, we do that later
+			if application.id ~= currentApplication.id then
+				OSDrawing.MainLoop.DrawApplicationWindows(application)
+			end
+		end
+
+		-- draw the current application
+		OSDrawing.MainLoop.DrawApplicationWindows(currentApplication)
+
+		--draw other entities
+
+		OSDrawing.releaseOffset() --just incase there is an offset (which shouldn't be there!!)
+
+		for _,entity in ipairs(OSInterfaceEntities.list) do
+			OSDrawing.MainLoop.DrawEntity(entity)
+			if OSServices.shouldBreakDrawLoop then
+				break
+			end
+		end
+		OSDrawing.releaseOffset() --just incase there is an offset (which shouldn't be there!!)
+	end
+	}
+
+	Offset = {
+	x = 0,
+	y = 0
+	}
+
+	addOffset = function (_x, _y)
+		OSDrawing.Offset.x = OSDrawing.Offset.x + _x - 1 --1 is subtracted as we want the units to be from 1, not 0
+		OSDrawing.Offset.y = OSDrawing.Offset.y + _y - 1
+	end
+
+	setOffset = function (_x, _y)
+		OSDrawing.Offset.x = _x - 1
+		OSDrawing.Offset.y = _y - 1
+	end
+
+	releaseOffset = function ()
+		OSDrawing.Offset.x = 0
+		OSDrawing.Offset.y = 0
+	end,
+
+	DrawCharacters = function (x, y, characters, textColour,bgColour)
+		term.setTextColour(textColour)
+		term.setBackgroundColour(bgColour)
+		term.setCursorPos(x + OSDrawing.Offset.x, y + OSDrawing.Offset.y)
+		term.write(characters)
+	end
+
+	DrawBlankArea = function (x, y, w, h, color)
+		OSDrawing.DrawArea (x, y, w, h, " ", color, 1)
+	end
+
+	DrawArea = function (x, y, w, h, character, bgColour, textColour)
+		--with must be greater than 1, other wise we get a stack overflow
+
+		if w < 0 then
+			w = w * -1
+		elseif w == 0 then
+			w = 1
+		end
+
+
+		term.setBackgroundColour(bgColour)
+		term.setTextColour(textColour)
+		for ix = 1, w do
+			local currX = x + ix
+			for iy = 1, h do
+				local currY = y + iy 
+				term.setCursorPos(currX + OSDrawing.Offset.x - 1, currY + OSDrawing.Offset.y - 1)
+				term.write(character)
+			end
+		end
+	end,
+
+	DrawShadow = function (x, y, w, h) --the x, y etc are of the entity that shadow is being made from
+		--draw the vertical shadow
+		term.setBackgroundColour(colours.black)
+		for iy = 1, h do
+			term.setCursorPos(x + w + OSDrawing.Offset.x,  iy + y + OSDrawing.Offset.y)
+			term.write(" ")		
+		end
+		for ix = 1, w - 1 do
+			term.setCursorPos(ix + x + OSDrawing.Offset.x,  y + h + OSDrawing.Offset.y)
+			term.write(" ")		
+		end
+	end
+
+	DrawImage = function(x,y,image)
+		paintutils.drawImage(image, x + OSDrawing.Offset.x, y + OSDrawing.Offset.y)
+	end

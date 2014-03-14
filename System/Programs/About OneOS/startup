@@ -25,13 +25,17 @@ function Initialise()
 	EventRegister('char', HandleKey)
 	EventRegister('timer', Update)
 
+	if fs.getFreeSpace and fs.getSize then
+		systemSize = FolderSize('/System/') + OneOS.FS.getSize('startup')
+		desktopSize = FolderSize('/Desktop/')
+		programsSize = FolderSize('/Programs/')
+		totalSize = FolderSize('/')
+		maxSpace = OneOS.FS.getFreeSpace('/') + totalSize
+	else
+		maxSpace = -1
+	end
 
-	systemSize = FolderSize('/System/') + OneOS.FS.getSize('startup')
-	desktopSize = FolderSize('/Desktop/')
-	programsSize = FolderSize('/Programs/')
-	totalSize = FolderSize('/')
 	logo = Drawing.LoadImage('/System/Images/Logo')
-	maxSpace = OneOS.FS.getFreeSpace('/') + totalSize
 	thanksLines = Helpers.WrapText('Thanks to GravityScore (LuaIDE), NitrogenFingers(GoldRunner, image stuff), Symmetryc & superaxander (GitHub issues), Jesusthekiller (Maze3D), Symmetryc (YCCCUP), Vilsol (help with App Store) and testers!', Drawing.Screen.Width-2)
 	Update()
 	EventHandler()
@@ -64,37 +68,37 @@ function Draw()
 	
 
 	Drawing.DrawImage(2, 2, logo, 6, 4)
+	if maxSpace ~= -1 then
+		local spacebarX = 2
+		local spacebarY = Drawing.Screen.Height-3
+		Drawing.DrawBlankArea(1, spacebarY-3, Drawing.Screen.Width, 7, colours.white)
+		local spacebarWidth = Drawing.Screen.Width-2
+		Drawing.DrawCharacters(spacebarX, spacebarY - 2, 'Storage Usage', colours.grey, colours.white)
+		Drawing.DrawCharacters(spacebarX+15, spacebarY - 2, FormatBytes(totalSize)..' Used, '..FormatBytes(maxSpace - totalSize)..' Available', colours.lightGrey, colours.white)
+		Drawing.DrawBlankArea(spacebarX, spacebarY, spacebarWidth, 1, colours.lightGrey)
+		local otherWidth = math.ceil((totalSize/maxSpace)*spacebarWidth)
+		Drawing.DrawBlankArea(spacebarX, spacebarY, otherWidth, 1, colours.yellow)
 
-	local spacebarX = 2
-	local spacebarY = Drawing.Screen.Height-3
-	Drawing.DrawBlankArea(1, spacebarY-3, Drawing.Screen.Width, 7, colours.white)
-	local spacebarWidth = Drawing.Screen.Width-2
-	Drawing.DrawCharacters(spacebarX, spacebarY - 2, 'Storage Usage', colours.grey, colours.white)
-	Drawing.DrawCharacters(spacebarX+15, spacebarY - 2, FormatBytes(totalSize)..' Used, '..FormatBytes(maxSpace - totalSize)..' Available', colours.lightGrey, colours.white)
-	Drawing.DrawBlankArea(spacebarX, spacebarY, spacebarWidth, 1, colours.lightGrey)
-	local otherWidth = math.ceil((totalSize/maxSpace)*spacebarWidth)
-	Drawing.DrawBlankArea(spacebarX, spacebarY, otherWidth, 1, colours.yellow)
+		local systemWidth = math.ceil((systemSize/maxSpace)*spacebarWidth)
+		Drawing.DrawBlankArea(spacebarX, spacebarY, systemWidth, 1, colours.red)
+		spacebarX = spacebarX + systemWidth
+		local programsWidth = math.ceil((programsSize/maxSpace)*spacebarWidth)
+		Drawing.DrawBlankArea(spacebarX, spacebarY, programsWidth, 1, colours.blue)
+		spacebarX = spacebarX + programsWidth
+		local desktopWidth = math.ceil((desktopSize/maxSpace)*spacebarWidth)
+		Drawing.DrawBlankArea(spacebarX, spacebarY, desktopWidth, 1, colours.green)
 
-	local systemWidth = math.ceil((systemSize/maxSpace)*spacebarWidth)
-	Drawing.DrawBlankArea(spacebarX, spacebarY, systemWidth, 1, colours.red)
-	spacebarX = spacebarX + systemWidth
-	local programsWidth = math.ceil((programsSize/maxSpace)*spacebarWidth)
-	Drawing.DrawBlankArea(spacebarX, spacebarY, programsWidth, 1, colours.blue)
-	spacebarX = spacebarX + programsWidth
-	local desktopWidth = math.ceil((desktopSize/maxSpace)*spacebarWidth)
-	Drawing.DrawBlankArea(spacebarX, spacebarY, desktopWidth, 1, colours.green)
-
-	Drawing.WriteStringToBuffer(2, spacebarY+2, ' ', colours.black, colours.red)
-	Drawing.DrawCharacters(4, spacebarY + 2, 'System', colours.grey, colours.white)
-	Drawing.WriteStringToBuffer(12, spacebarY+2, ' ', colours.black, colours.blue)
-	Drawing.DrawCharacters(14, spacebarY + 2, 'Programs', colours.grey, colours.white)
-	Drawing.WriteStringToBuffer(24, spacebarY+2, ' ', colours.black, colours.green)
-	Drawing.DrawCharacters(26, spacebarY + 2, 'Desktop', colours.grey, colours.white)
-	Drawing.WriteStringToBuffer(35, spacebarY+2, ' ', colours.black, colours.yellow)
-	Drawing.DrawCharacters(37, spacebarY + 2, 'Other', colours.grey, colours.white)
-	Drawing.WriteStringToBuffer(44, spacebarY+2, ' ', colours.black, colours.lightGrey)
-	Drawing.DrawCharacters(46, spacebarY + 2, 'Free', colours.grey, colours.white)
-
+		Drawing.WriteStringToBuffer(2, spacebarY+2, ' ', colours.black, colours.red)
+		Drawing.DrawCharacters(4, spacebarY + 2, 'System', colours.grey, colours.white)
+		Drawing.WriteStringToBuffer(12, spacebarY+2, ' ', colours.black, colours.blue)
+		Drawing.DrawCharacters(14, spacebarY + 2, 'Programs', colours.grey, colours.white)
+		Drawing.WriteStringToBuffer(24, spacebarY+2, ' ', colours.black, colours.green)
+		Drawing.DrawCharacters(26, spacebarY + 2, 'Desktop', colours.grey, colours.white)
+		Drawing.WriteStringToBuffer(35, spacebarY+2, ' ', colours.black, colours.yellow)
+		Drawing.DrawCharacters(37, spacebarY + 2, 'Other', colours.grey, colours.white)
+		Drawing.WriteStringToBuffer(44, spacebarY+2, ' ', colours.black, colours.lightGrey)
+		Drawing.DrawCharacters(46, spacebarY + 2, 'Free', colours.grey, colours.white)
+	end
 	Drawing.DrawBuffer()
 end
 

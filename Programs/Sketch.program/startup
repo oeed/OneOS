@@ -2826,33 +2826,6 @@ function NewDocument(path, width, height, format, backgroundColour)
 	Current.Modified = false
 	Draw()
 end
-local function Extension(path, addDot)
-	if not path then
-		return nil
-	elseif not string.find(fs.getName(path), '%.') then
-		if not addDot then
-			return fs.getName(path)
-		else
-			return ''
-		end
-	else
-		local _path = path
-		if path:sub(#path) == '/' then
-			_path = path:sub(1,#path-1)
-		end
-		local extension = _path:gmatch('\.[0-9a-z]+$')()
-		if extension then
-			extension = extension:sub(2)
-		else
-			--extension = nil
-			return ''
-		end
-		if addDot then
-			extension = '.'..extension
-		end
-		return extension:lower()
-	end
-end
 
 function DisplayToolSizeWindow()
 	if not CheckOpenArtboard() then
@@ -3156,7 +3129,7 @@ function Draw()
 	end
 
 	Drawing.DrawBuffer()
-	if Current.Input then
+	if Current.Input and not Current.Menu then
 		term.setCursorPos(Current.CursorPos[1], Current.CursorPos[2])
 		term.setCursorBlink(true)
 		term.setTextColour(Current.CursorColour)

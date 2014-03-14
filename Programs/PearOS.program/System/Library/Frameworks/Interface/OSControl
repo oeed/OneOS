@@ -1,0 +1,13 @@
+--OSControl--
+
+	__index = OSEntity
+
+	action = nil
+
+	enabled = true
+
+	isSelected = false
+
+	canScroll = false
+
+	tag = 0

@@ -170,7 +170,15 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 				tAPIsLoading[sName] = nil
 				return true
 			end,
-			LoadFile = loadfile,
+			LoadFile = function( _sFile)
+				local file = fs.open( _sFile, "r")
+				if file then
+					local func, err = loadstring( file.readAll(), fs.getName( _sFile) )
+					file.close()
+					return func, err
+				end
+				return nil, "File not found"
+			end,
 			LoadString = loadstring,
 			IO = io
 		}

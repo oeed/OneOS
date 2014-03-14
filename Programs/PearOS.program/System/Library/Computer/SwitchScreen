@@ -1,0 +1,42 @@
+sides = {
+"front",
+"back",
+"left",
+"right",
+"top",
+"bottom"
+}
+
+function PrintCentered(text, y)
+    local w, h = term.getSize()
+    x = math.max(math.ceil((w / 2) - (#text / 2)), 0)
+    if not y then y = math.max(math.ceil((h / 2)), 0) end --set y to center if not assigned
+    term.setCursorPos(x, y)
+    print(text)
+end
+
+
+--add a message saying that the display has been moved to monitor
+term.setBackgroundColor(colors.lightBlue)
+term.setTextColor(colors.white)
+term.clear()
+
+PrintCentered("Switching display...")
+sleep(2)
+
+if not usingMonitor then
+	--use the monitor
+	for _,side in pairs(sides) do
+		if peripheral.isPresent(side) and peripheral.getType(side) == "monitor" then
+			displayMovedMessage()
+			term.redirect(peripheral.wrap(side))
+			usingMonitor = true
+		end
+	end
+else	
+	--clear the monitor
+	term.setBackgroundColor(colors.black)
+	term.clear()
+	term.restore()
+	usingMonitor = false
+end

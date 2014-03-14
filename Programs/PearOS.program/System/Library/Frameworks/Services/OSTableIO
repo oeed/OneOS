@@ -1,0 +1,12 @@
+   function save(  tbl,filename )
+      local file = fs.open(filename, "w")
+      file.write(textutils.serialize(tbl))
+      file.close()
+   end
+   
+   function load( filename )
+      local file = fs.open(filename, "r")
+      local tbl = textutils.unserialize(file.readAll())
+      file.close()
+      return tbl
+   end

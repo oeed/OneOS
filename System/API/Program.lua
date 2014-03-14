@@ -18,17 +18,27 @@
 		local executable = function()
 			local _, err = pcall(function()
 				--os.run(new.Environment, path, unpack(args))
-
-				local fnFile, err = OneOS.LoadFile( path)
+				local fnFile, err2 = nil
+				local h = OneOS.FS.open( path, "r")
+				if h then
+					fnFile, err2 = loadstring( h.readAll(), OneOS.FS.getName(path) )
+					if err2 then
+						err2 = err2:gsub("^.-: %[string \"","")
+						err2 = err2:gsub('"%]',"")
+					end
+					h.close()
+				end
 		        local tEnv = new.Environment
 				setmetatable( tEnv, { __index = _G } )
 				setfenv( fnFile, tEnv )
 
-				if not fnFile or err then
+				if (not fnFile) or err2 then
 					term.setTextColour(colours.red)
 					term.setBackgroundColour(colours.black)
-					print(err)
-					if err == 'File not found' then
+					if err2 then
+						print(err2)
+					end
+					if err2 == 'File not found' then
 						term.clear()
 						term.setTextColour(colours.white)
 						term.setCursorPos(1,2)
@@ -41,14 +51,15 @@
 					return false
 				end
 
-				local ok, err = pcall( function()
+				local ok, err3 = pcall( function()
 		        	fnFile( unpack( args ) )
 		        end )
 		        if not ok then
-		        	if err and err ~= "" then
+		        	if err3 and err3 ~= "" then
 						term.setTextColour(colours.red)
 						term.setBackgroundColour(colours.black)
-						print(err)
+						term.setCursorPos(1,1)
+						print(err3)
 			        end
 		        end
 			end)
@@ -56,6 +67,7 @@
         	if not _ and err and err ~= "" then
 				term.setTextColour(colours.red)
 				term.setBackgroundColour(colours.black)
+				term.setCursorPos(1,1)
 				print(err)
 			end
 		end

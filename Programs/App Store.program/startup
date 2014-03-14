@@ -1095,7 +1095,11 @@ function DrawScrollBar(x, current, max)
   Drawing.DrawBlankArea(x, 4+current, 1, barHeight, colours.lightGrey)
 end
 
+local toolbarVisible = false
 function DrawToolbar()
+  if not toolbarVisible then
+    return
+  end
   Drawing.DrawBlankArea(1, 1, Drawing.Screen.Width, 1, colours.white)
   local items = {
     {
@@ -1136,25 +1140,19 @@ function DrawToolbar()
     end)
     itemX = itemX + #(v.title .. border)
   end
-  Drawing.DrawCharacters(Drawing.Screen.Width, 1, "X", colours.white, colours.red)
-
-  RegisterClick(Drawing.Screen.Width, 1, 1, 1, function()
-    if OneOS then
-      OneOS.Close()
-    end
-    isRunning = false
-    term.setBackgroundColour(colours.black)
-    term.setTextColour(colours.white)
-    term.clear()
-    term.setCursorPos(1,1)
-    print = _print
-    print('Thanks for using the App Store!')
-    print('(c) oeed 2013 - 2014')
-  end)
-
-  RegisterClick(Drawing.Screen.Width-1, 1, 2, 1, function()
-    isMenuVisible = not isMenuVisible
-  end)
+  if not OneOS then
+    Drawing.DrawCharacters(Drawing.Screen.Width, 1, "X", colours.white, colours.red)
+    RegisterClick(Drawing.Screen.Width, 1, 1, 1, function()
+      isRunning = false
+      term.setBackgroundColour(colours.black)
+      term.setTextColour(colours.white)
+      term.clear()
+      term.setCursorPos(1,1)
+      print = _print
+      print('Thanks for using the App Store!')
+      print('(c) oeed 2013 - 2014')
+    end)
+  end
 end
 
 function getMaxScroll()
@@ -1321,6 +1319,7 @@ function Initialise()
   else
     Load('Connecting', api.testConnection)
     ChangePage('Top Charts')
+    toolbarVisible = true
     Draw()
     EventHandler()
   end

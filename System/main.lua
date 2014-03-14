@@ -92,8 +92,8 @@ function Initialise()
 	
 	CheckAutoUpdate()
 
-	Helpers.OpenFile('Programs/Ink.program')
-
+	--Helpers.OpenFile('Programs/Ink.program',{'/Desktop/Documents/Welcome!.txt'})
+	Helpers.OpenFile('Programs/Shell.program')
 	EventHandler()
 end
 
@@ -276,6 +276,10 @@ function Draw()
 	end
 
 	Drawing.DrawBuffer()
+	if Current.Menu then
+		term.setCursorBlink(false)
+	end
+
 	term.setCursorPos(Current.CursorPos[1], Current.CursorPos[2])
 	term.setTextColour(Current.CursorColour)
 	drawing = false
