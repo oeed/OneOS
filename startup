@@ -1,4 +1,4 @@
-local isDebug = false
+local isDebug = true
 
 oldTerm = term
 
@@ -225,6 +225,30 @@ elseif LoadingScreen() then
 		xpcall(function()loadfile('/System/main.lua')end, function(err)
 			table.insert(ok, err)
 		end)
+		--if the crash is a too long without yeilding error then there's nothing we can really do, restart
+		if ok[2]:sub(-25) == 'Too long without yielding' then
+			term.setBackgroundColor(colours.grey)
+			term.setTextColor(colours.white)
+			term.clear()
+			local w,h = term.getSize()
+			if fs.exists('System/Images/crash') then
+				paintutils.drawImage(paintutils.loadImage('System/Images/crash'), (w-7)/2 + 1, 3)
+			end
+			term.setBackgroundColor(colours.grey)
+			term.setTextColor(colours.white)
+
+			PrintCentered('OneOS has been forced to reboot', 8)	
+
+			PrintCentered('You likely let your (real) computer go to sleep', 10)
+			PrintCentered('or there was some huge amount of lag.', 11)
+			PrintCentered('Unfortunately, there\'s no way to recover from this.', 13)
+
+			PrintCentered('Click anywhere to reboot.', 15)
+
+			os.pullEvent('mouse_click')
+			os.reboot()
+		end
+
 		term.setBackgroundColor(colours.grey)
 		term.setTextColor(colours.white)
 		term.clear()

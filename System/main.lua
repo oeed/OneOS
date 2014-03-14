@@ -55,7 +55,6 @@ function FirstSetup()
 	EventRegister('char', HandleKey)
 	EventRegister('timer', Update)
 	--updateTimer = os.startTimer(0.5)
-
 	
 	isFirstSetup = true
 	Overlay:Initialise()
