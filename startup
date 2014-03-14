@@ -93,7 +93,7 @@ function PrintCentered(text, y)
 end
 
 function LoadingScreen()
-	if fs.getFreeSpace('/') < 51200 then
+	if fs.getFreeSpace and fs.getFreeSpace('/') < 51200 then
 		term.setBackgroundColor(colours.grey)
 		term.setTextColor(colours.white)
 		term.clear()

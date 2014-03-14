@@ -1,7 +1,22 @@
+	local getNames = peripheral.getNames or function()
+		local tResults = {}
+		for n,sSide in ipairs( rs.getSides() ) do
+			if peripheral.isPresent( sSide ) then
+				table.insert( tResults, sSide )
+				if peripheral.getType( sSide ) == "modem" and not peripheral.call( sSide, "isWireless" ) then
+					local tRemote = peripheral.call( sSide, "getNamesRemote" )
+					for n,sName in ipairs( tRemote ) do
+						table.insert( tResults, sName )
+					end
+				end
+			end
+		end
+		return tResults
+	end
 
 	GetPeripherals = function()
 		local peripherals = {}
-		for i, side in ipairs(peripheral.getNames()) do
+		for i, side in ipairs(getNames()) do
 			local name = peripheral.getType(side):gsub("^%l", string.upper)
 			local code = string.upper(side:sub(1,1))
 			if side:find('_') then

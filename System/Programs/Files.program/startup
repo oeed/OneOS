@@ -284,9 +284,14 @@ function RefreshFiles()
 			Current.Peripheral.Info = {}
 
 			if Current.Peripheral.Type == 'Computer' then
-				Current.Peripheral.Info = {
-					ID = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getID'))
-				}
+				local id = peripheral.call(Current.Peripheral.Side:lower(),'getID')
+				if id then
+					Current.Peripheral.Info = {
+						ID = tostring(id)
+					}
+				else
+					Current.Peripheral.Info = {}
+				end
 			elseif Current.Peripheral.Type == 'Drive' then
 				local discType = 'No Disc'
 				local discID = nil
