@@ -14,27 +14,27 @@
 	}
 
 	local function isOpen(channel)
-		return Peripheral.Call('wireless_modem', 'isOpen', channel)
+		return Peripheral.CallType('wireless_modem', 'isOpen', channel)
 	end
 
 	local function open(channel)
 		if not isOpen(channel) then
-			Peripheral.Call('wireless_modem', 'open', channel)
+			Peripheral.CallType('wireless_modem', 'open', channel)
 		end
 	end
 
 	Open = open
 
 	local function close(channel)
-		Peripheral.Call('wireless_modem', 'close', channel)
+		Peripheral.CallType('wireless_modem', 'close', channel)
 	end
 
 	local function closeAll()
-		Peripheral.Call('wireless_modem', 'closeAll')
+		Peripheral.CallType('wireless_modem', 'closeAll')
 	end
 
 	local function transmit(channel, replyChannel, message)
-		Peripheral.Call('wireless_modem', 'transmit', channel, replyChannel, textutils.serialize(message))
+		Peripheral.CallType('wireless_modem', 'transmit', channel, replyChannel, textutils.serialize(message))
 	end
 
 	function Present()

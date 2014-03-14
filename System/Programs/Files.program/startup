@@ -506,7 +506,15 @@ function OpenFile(file, ignoreProgram)
 		end
 	else
 		if Current.SelectedFile == file.name then
-			OneOS.OpenFile(file.path)
+			if Helpers.IconForFile(file.path) == Helpers.ReadIcon('System/Images/Icons/unknown') then
+				OpenWithDialougeWindow:Initialise("Select Program", "Choose a program to open the file with.", "Ok", "Cancel", function(success, value)
+					if success and #value ~= 0 then
+						OneOS.Run(value, file.path)
+					end
+				end):Show()
+			else
+				OneOS.OpenFile(file.path)
+			end
 			Current.SelectedFile = nil
 		else
 			Current.SelectedFile = file.name
@@ -526,22 +534,23 @@ function FilesClick(event, x, y, side)
 	elseif event == 'mouse_click' and x == Drawing.Screen.Width - Current.SidebarWidth and Current.MaxFileScroll ~= 0 then
 		Current.ScrollBarDragStartY = y
 	elseif Settings.ListMode then
-		if Current.FileList[y] then
+		if Current.FileList[y+Current.FileScroll] then
 			if side == 1 then
-				if Current.SelectedFile == Current.FileList[y].name and lastClick and (os.clock() - lastClick) < 0.5 then
-					OpenFile(Current.FileList[y])
+				if Current.SelectedFile == Current.FileList[y+Current.FileScroll].name and lastClick and (os.clock() - lastClick) < 0.5 then
+					OpenFile(Current.FileList[y+Current.FileScroll])
 				else
-					Current.SelectedFile = Current.FileList[y].name
+					Current.SelectedFile = Current.FileList[y+Current.FileScroll].name
 				end
 
 				lastClick = os.clock()
 				Draw()
 			elseif side == 2 then
-				RightClickFile(Current.FileList[y], x + Current.SidebarWidth, y + 3)
+				RightClickFile(Current.FileList[y+Current.FileScroll], x + Current.SidebarWidth, y + 3)
 			end
 		end
 	else
 		local found = false
+		y = y + Current.FileScroll * 5
 		for i, file in ipairs(Current.FileList) do
 			
 			if event == 'mouse_click' and FileHitTest(i, file, x, y) then

@@ -1,1 +1,4 @@
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris vulputate commodo sapien, eget pulvinar dui facilisis a. Morbi adipiscing erat ac leo accumsan consectetur. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; In nec risus non eros sollicitudin aliquet in lacinia tellus.
+Welcome to OneOS!
+
+If you have any issues, feel free to contact
+oeed on the forums or create an issue on GitHub.

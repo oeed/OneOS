@@ -1,9 +1,27 @@
-	local getNames = peripheral.getNames or function()
+	GetPeripheral = function(_type)
+		for i, p in ipairs(GetPeripherals()) do
+			if p.Type == _type then
+				return p
+			end
+		end
+	end
+
+	Call = function(type, ...)
+		local tArgs = {...}
+		local p = GetPeripheral(type)
+		peripheral.call(p.Side, unpack(tArgs))
+	end
+
+		local getNames = peripheral.getNames or function()
 		local tResults = {}
 		for n,sSide in ipairs( rs.getSides() ) do
 			if peripheral.isPresent( sSide ) then
 				table.insert( tResults, sSide )
-				if peripheral.getType( sSide ) == "modem" and not peripheral.call( sSide, "isWireless" ) then
+				local isWireless = false
+				if not pcall(function()isWireless = peripheral.call(sSide, 'isWireless') end) then
+					isWireless = true
+				end     
+				if peripheral.getType( sSide ) == "modem" and not isWireless then
 					local tRemote = peripheral.call( sSide, "getNamesRemote" )
 					for n,sName in ipairs( tRemote ) do
 						table.insert( tResults, sName )
@@ -14,7 +32,7 @@
 		return tResults
 	end
 
-	GetPeripherals = function()
+	GetPeripherals = function(filterType)
 		local peripherals = {}
 		for i, side in ipairs(getNames()) do
 			local name = peripheral.getType(side):gsub("^%l", string.upper)
@@ -34,14 +52,17 @@
 				local _type = peripheral.getType(side)
 				local isWireless = false
 				if _type == 'modem' then
-					isWireless = peripheral.call(side, 'isWireless')
+					if not pcall(function()isWireless = peripheral.call(sSide, 'isWireless') end) then
+						isWireless = true
+					end     
 					if isWireless then
 						_type = 'wireless_modem'
 						name = 'W '..name
 					end
 				end
-				
-				table.insert(peripherals, {Name = name:sub(1,8) .. ' '..code, Side = side, Type = _type, Wireless = isWireless})
+				if not filterType or _type == filterType then
+					table.insert(peripherals, {Name = name:sub(1,8) .. ' '..code, Fullname = name .. ' ('..Helpers.Capitalise(side)..')', Side = side, Type = _type, Wireless = isWireless})
+				end
 			end
 		end
 		return peripherals
@@ -55,8 +76,17 @@
 		end
 	end
 
-	Call = function(type, ...)
+	PresentNamed = function(name)
+		return peripheral.isPresent(name)
+	end
+
+	CallType = function(type, ...)
 		local tArgs = {...}
 		local p = GetPeripheral(type)
-		peripheral.call(p.Side, unpack(tArgs))
+		return peripheral.call(p.Side, unpack(tArgs))
+	end
+
+	CallNamed = function(name, ...)
+		local tArgs = {...}
+		return peripheral.call(name, unpack(tArgs))
 	end

@@ -1,4 +1,0 @@
-Welcome to OneOS!
-
-If you have any issues, feel free to contact
-oeed on the forums or create an issue on GitHub.

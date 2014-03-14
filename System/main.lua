@@ -89,6 +89,8 @@ function Initialise()
 	OneOSVersion = h.readAll()
 	h.close()
 	
+	Helpers.OpenFile('Programs/Ink.program', {'/Desktop/Documents/Welcome!.txt'})
+
 	CheckAutoUpdate()
 	EventHandler()
 end
@@ -351,7 +353,7 @@ function HandleKey(...)
 	local keychar = args[2]
 	
 	--REMOVE THIS AT RELEASE!
-	if keychar == '\\' then
+	if keychar == '\\' and isDebug then
 		os.reboot()
 	end
 
