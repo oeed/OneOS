@@ -177,9 +177,11 @@
 			if amount == nil then
 				error("Expected number", 2)
 			end
+			local lines = {}
 			if amount > 0 then
 				for _ = 1, amount do
 					table.remove(self.Buffer, 1)
+					table.insert(lines, #self.Buffer+1)
 				end
 			elseif amount < 0 then
 				for _ = 1, amount do
@@ -189,9 +191,13 @@
 						table.insert(row, {' ', self.TextColour, self.BackgroundColour})
 					end
 					table.insert(self.Buffer, 1, row)
+					table.insert(lines, _)
 				end
 			end
 			self:ResizeBuffer()
+			for i, v in ipairs(lines) do
+				self:ClearLine(v, self.BackgroundColour)
+			end
 			self:Draw()
 		end
 

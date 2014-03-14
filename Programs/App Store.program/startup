@@ -378,8 +378,6 @@ local currentPage = ''
 local listItems = {}
 
 local isRunning = true
-local currentScroll = 0
-local maxScroll = 0
 local pageHeight = 0
 
 local searchBox = nil
@@ -392,7 +390,8 @@ Values = {
 Current = {
   CursorBlink = false,
   CursorPos = {},
-  CursorColour = colours.black
+  CursorColour = colours.black,
+  ScrollBar = nil
 }
 
 local function split(str, sep)
@@ -875,6 +874,86 @@ ListItem = {
   end,
 }
 
+ScrollBar = {
+  X = 1,
+  Y = 1,
+  Width = 1,
+  Height = 1,
+  BackgroundColour = colours.grey,
+  BarColour = colours.lightBlue,
+  Parent = nil,
+  Change = nil,
+  Scroll = 0,
+  MaxScroll = 0,
+  ClickPoint = nil,
+
+  AbsolutePosition = function(self)
+    return self.Parent:AbsolutePosition()
+  end,
+
+  Draw = function(self)
+    local barHeight = math.floor(self.Height/self.MaxScroll)*10
+    if barHeight < 3 then
+      barHeight = 3
+    end
+    local percentage = (self.Scroll/self.MaxScroll)
+
+    Drawing.DrawBlankArea(self.X, self.Y, self.Width, self.Height, self.BackgroundColour)
+    Drawing.DrawBlankArea(self.X, self.Y + math.floor(self.Height*percentage - barHeight*percentage), self.Width, barHeight, self.BarColour)
+    RegisterClick(self.X, self.Y, self.Width, self.Height, function(_, event, side, x, y, drag)
+      self:Click(side, x, y, drag)
+    end)
+  end,
+
+  Initialise = function(self, x, y, height, maxScroll, backgroundColour, barColour, parent, change)
+    local new = {}    -- the new instance
+    setmetatable( new, {__index = self} )
+    new.Width = 1
+    new.Height = height
+    new.Y = y
+    new.X = x
+    new.BackgroundColour = backgroundColour or colours.grey
+    new.BarColour = barColour or colours.lightBlue
+    new.Parent = parent
+    new.Change = change or function()end
+    new.MaxScroll = maxScroll
+    new.Scroll = 0
+    return new
+  end,
+
+  DoScroll = function(self, amount)
+    amount = math.ceil(amount)
+    if self.Scroll < 0 or self.Scroll > self.MaxScroll then
+      return false
+    end
+    self.Scroll = self.Scroll + amount
+    if self.Scroll < 0 then
+      self.Scroll = 0
+    elseif self.Scroll > self.MaxScroll then
+      self.Scroll = self.MaxScroll
+    end
+    self.Change()
+    return true
+  end,
+
+  Click = function(self, side, x, y, drag)
+    local percentage = (self.Scroll/self.MaxScroll)
+    local barHeight = (self.Height - self.MaxScroll)
+    if barHeight < 3 then
+      barHeight = 3
+    end
+    local relScroll = (self.MaxScroll*(y + barHeight*percentage)/self.Height)
+    if not drag then
+      self.ClickPoint = self.Scroll - relScroll + 1
+    end
+
+    if self.Scroll-1 ~= relScroll then
+      self:DoScroll(relScroll-self.Scroll-1 + self.ClickPoint)
+    end
+    return true
+  end
+}
+
 Clicks = {
   
 }
@@ -952,7 +1031,7 @@ function ChangePage(title, arg)
 
   currentPage = title
 
-  maxScroll = getMaxScroll()
+  Current.ScrollBar.MaxScroll = getMaxScroll()
 end
 
 function LoadAboutApp(id)
@@ -1004,7 +1083,7 @@ end
 function ClearCurrentPage()
   --listItems = {}
   for i,v in ipairs(listItems) do listItems[i]=nil end
-  currentScroll = 0
+  Current.ScrollBar.Scroll = 0
   searchBox = nil
   featuredBannerTimer = nil
 
@@ -1036,8 +1115,6 @@ function Draw()
   DrawList()
   DrawToolbar()
 
-  --DrawScrollbar()
-
   Drawing.DrawBuffer()
 
   if Current.CursorPos and Current.CursorPos[1] and Current.CursorPos[2] then
@@ -1048,52 +1125,17 @@ function Draw()
 end
 
 function DrawList()
-  Drawing.SetOffset(0, -currentScroll + 2)
+  Drawing.SetOffset(0, -Current.ScrollBar.Scroll + 2)
     for i, v in ipairs(listItems) do
       v:Draw()
     end
   Drawing.ClearOffset()
   
   if getMaxScroll() ~= 0 then
-    DrawScrollBar(Drawing.Screen.Width, currentScroll, getMaxScroll())
+    Current.ScrollBar:Draw()
   end
 end
 
---[[
-function DrawScrollbar()
-
-  local scrollBarHeight = Drawing.Screen.Height - 1
-  local scrollBarPosition = 0
-
-  if pageHeight > 0 and maxScroll > 0 then
-    scrollBarHeight = (Drawing.Screen.Height / pageHeight) * (Drawing.Screen.Height - 1)
-    scrollBarPosition = (currentScroll / pageHeight) * (Drawing.Screen.Height - 1)
-  end
-
-  Drawing.DrawBlankArea(Drawing.Screen.Width, scrollBarPosition + 2, 1, scrollBarHeight, colours.blue)
-
-
-  Drawing.DrawCharacters(Drawing.Screen.Width, scrollBarPosition + 2, "-", colours.black,colours.white)
-
-  Drawing.DrawCharacters(Drawing.Screen.Width-1, 2, "+", colours.black,colours.white)
-
-  --Drawing.DrawBuffer()
-
-  Drawing.DrawBlankArea(51, 2, 1, 18, colours.green)
-
-
-end
-]]--
-
-function DrawScrollBar(x, current, max)
-  local fullHeight = Drawing.Screen.Height - 3
-  local barHeight = (fullHeight - max)
-  if barHeight < 5 then
-    barHeight = 5
-  end
-  Drawing.DrawBlankArea(x, 4, 1, fullHeight, colours.grey)
-  Drawing.DrawBlankArea(x, 4+current, 1, barHeight, colours.lightGrey)
-end
 
 local toolbarVisible = false
 function DrawToolbar()
@@ -1172,22 +1214,12 @@ function getMaxScroll()
   return s
 end
 
-function setScroll(iScroll)
-  maxScroll = getMaxScroll()
-  currentScroll = iScroll
-  if currentScroll < 0 then
-    currentScroll = 0
-  elseif currentScroll > maxScroll then
-    currentScroll = maxScroll
-  end
-end
-
 function EventHandler()
   while isRunning do
     local event, arg, x, y = os.pullEvent()
 
     if event == "mouse_scroll" then
-      setScroll(currentScroll + (arg * 3))
+      Current.ScrollBar:DoScroll(arg * 3)
       Draw()
     elseif event == "timer" then
       if arg == featuredBannerTimer and currentPage == 'Featured' then
@@ -1204,11 +1236,11 @@ function EventHandler()
       end
     elseif event == "key" then
       if arg == keys.down then
-        setScroll(currentScroll + 3)
+        Current.ScrollBar:DoScroll(3)
         Draw()
 
       elseif arg == keys.up then
-        setScroll(currentScroll - 3)
+        Current.ScrollBar:DoScroll(-3)
         Draw()
       end
 
@@ -1224,7 +1256,7 @@ function EventHandler()
         Draw()
       end
 
-    elseif event == "mouse_click" then
+    elseif event == "mouse_click" or event == "mouse_drag" then
       local clicked = false
       for i = 1, #Clicks do
         local v = Clicks[(#Clicks - i) + 1]
@@ -1232,7 +1264,7 @@ function EventHandler()
           clicked = true
 
           local iMV = isMenuVisible
-          v:Action()
+          v:Action(event, arg, x, y, event == "mouse_drag")
 
           if iMV == isMenuVisible then
             isMenuVisible = false
@@ -1318,6 +1350,7 @@ function Initialise()
     end
   else
     Load('Connecting', api.testConnection)
+    Current.ScrollBar = ScrollBar:Initialise(Drawing.Screen.Width, 2, Drawing.Screen.Height-1, 0, colours.white, colours.blue, nil, function()end)
     ChangePage('Top Charts')
     toolbarVisible = true
     Draw()

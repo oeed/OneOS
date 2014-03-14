@@ -62,6 +62,31 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 			tColourLookup[ string.byte( "0123456789abcdef",n,n ) ] = 2^(n-1)
 		end
 
+		env.textutils.slowWrite = function( sText, nRate )
+			nRate = nRate or 20
+			if nRate < 0 then
+				error( "rate must be positive" )
+			end
+			local nSleep = 1 / nRate
+				
+			sText = tostring( sText )
+			local x,y = term.getCursorPos(x,y)
+			local len = string.len( sText )
+			
+			for n=1,len do
+				term.setCursorPos( x, y )
+				env.os.sleep( nSleep )
+				local nLines = write( string.sub( sText, 1, n ) )
+				local newX, newY = term.getCursorPos()
+				y = newY - nLines
+			end
+		end
+
+		env.textutils.slowPrint = function( sText, nRate )
+			env.textutils.slowWrite( sText, nRate)
+			print()
+		end
+
 		env.paintutils.loadImage = function( sPath )
 			local relPath = Helpers.RemoveFileName(path) .. sPath
 			local tImage = {}
@@ -347,7 +372,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 				print()
 				term.setTextColour(colours.red)
 				print('The program has shutdown.')
-				program:Kill()				
+				program:Close()
 			end,
 
 			reboot = function()

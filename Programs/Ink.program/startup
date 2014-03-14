@@ -907,13 +907,14 @@ ScrollBar = {
 
 	Draw = function(self)
 		local pos = GetAbsolutePosition(self)
-		local barHeight = (self.Height - self.MaxScroll)
-		if barHeight < 3 then
-			barHeight = 3
-		end
-		local percentage = (self.Scroll/self.MaxScroll)
-		Drawing.DrawBlankArea(pos.X, pos.Y, self.Width, self.Height, self.BackgroundColour)
-		Drawing.DrawBlankArea(pos.X, pos.Y + self.Height*percentage - barHeight*percentage, self.Width, barHeight, self.BarColour)
+	    local barHeight = round(self.Height/self.MaxScroll)*10
+	    if barHeight < 3 then
+	      barHeight = 3
+	    end
+	    local percentage = (self.Scroll/self.MaxScroll)
+
+	    Drawing.DrawBlankArea(pos.X, pos.Y, self.Width, self.Height, self.BackgroundColour)
+	    Drawing.DrawBlankArea(pos.X, pos.Y + round(self.Height*percentage - barHeight*percentage), self.Width, barHeight, self.BarColour)
 	end,
 
 	Initialise = function(self, x, y, height, maxScroll, backgroundColour, barColour, parent, change)
@@ -924,7 +925,7 @@ ScrollBar = {
 		new.Y = y
 		new.X = x
 		new.BackgroundColour = backgroundColour or colours.grey
-		new.BarColour = textColour or colours.lightBlue
+		new.BarColour = barColour or colours.lightBlue
 		new.Parent = parent
 		new.Change = change or function()end
 		new.MaxScroll = maxScroll

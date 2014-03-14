@@ -525,10 +525,11 @@ function FilesClick(event, x, y, side)
 			if side == 1 then
 				if Current.SelectedFile == Current.FileList[y].name and lastClick and (os.clock() - lastClick) < 0.5 then
 					OpenFile(Current.FileList[y])
+				else
+					Current.SelectedFile = Current.FileList[y].name
 				end
 
 				lastClick = os.clock()
-				Current.SelectedFile = Current.FileList[y].name
 				Draw()
 			elseif side == 2 then
 				RightClickFile(Current.FileList[y], x + Current.SidebarWidth, y + 3)

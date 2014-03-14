@@ -93,7 +93,7 @@ function Initialise()
 	CheckAutoUpdate()
 
 	--Helpers.OpenFile('Programs/Ink.program',{'/Desktop/Documents/Welcome!.txt'})
-	Helpers.OpenFile('Programs/Shell.program')
+	Helpers.OpenFile('Programs/App Store.program')
 	EventHandler()
 end
 
