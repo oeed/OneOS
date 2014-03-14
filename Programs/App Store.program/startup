@@ -602,7 +602,7 @@ SearchPage = {
     Drawing.DrawBlankArea(self.X + self.Width - 5, self.Y, 6, self.Height, colours.blue)
     Drawing.DrawCharacters(self.X + self.Width - 3, self.Y + 1, "GO", colours.white, colours.blue)
 
-    RegisterClick(self.X + self.Width - 5, self.Y, 6, self.Height, function() 
+    RegisterClick(self.X + self.Width - 5, self.Y + 2, 6, self.Height, function() 
       ChangePage('Search Results', self.Text)
     end)
 

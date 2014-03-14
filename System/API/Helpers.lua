@@ -55,8 +55,8 @@ OpenFile = function(path, args)
 			LaunchProgram('/Programs/Sketch.program/startup', {path}, 'Sketch')
 		elseif extension == 'pkg' then
 			LaunchProgram('/System/Programs/Unpackager.program/startup', {path}, 'Unpackager')
-		elseif extension == 'txt' or extension == 'text' or extension == 'ink' then
-			LaunchProgram('/Programs/Ink.program/startup', {path}, 'Ink')
+--		elseif extension == 'txt' or extension == 'text' or extension == 'ink' then
+--			LaunchProgram('/Programs/Ink.program/startup', {path}, 'Ink')
 		else
 			LaunchProgram('/Programs/LuaIDE.program/startup', {path}, 'LuaIDE')
 		end
