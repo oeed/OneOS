@@ -1,4 +1,1 @@
-Welcome to OneOS!
-
-If you have any issues, feel free to contact
-oeed on the forums or create an issue on GitHub.
+Normal textLorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse quis dignissim arcu. Ut velit augue, luctus a bibendum eu, viverra nec elit. Interdum et malesuada fames ac ante ipsum primis in faucibus. Nullam mollis ac nulla at luctus. Nulla accumsan augue velit, in porta sem commodo at. Nunc molestie elementum vehicula. Integer sed leo malesuada, accumsan augue nec, ultricies dui.

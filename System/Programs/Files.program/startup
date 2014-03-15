@@ -2,7 +2,7 @@ tArgs = {...}
 
 OneOS.LoadAPI('/System/API/Drawing.lua')
 OneOS.LoadAPI('/System/API/Button.lua')
-OneOS.LoadAPI('/System/API/Helpers.lua')
+--OneOS.LoadAPI('/System/API/Helpers.lua')
 OneOS.LoadAPI('/System/API/Menu.lua')
 OneOS.LoadAPI('/System/API/Peripheral.lua')
 OneOS.LoadAPI('/System/API/TextInput.lua')
@@ -10,6 +10,8 @@ OneOS.LoadAPI('/System/API/ListView.lua')
 OneOS.LoadAPI('/System/API/TextDialogueWindow.lua')
 OneOS.LoadAPI('/System/API/ButtonDialogueWindow.lua')
 OneOS.LoadAPI('/System/API/OpenWithDialougeWindow.lua')
+
+Helpers = OneOS.Helpers
 
 local startPath = tArgs[1] or '/Desktop/'
 local dragRelPos = nil

@@ -89,7 +89,7 @@ function Initialise()
 	OneOSVersion = h.readAll()
 	h.close()
 	
-	--Helpers.OpenFile('Programs/Ink.program', {'/Desktop/Documents/Welcome!.txt'})
+	Helpers.OpenFile('Programs/Ink.program', {'/Desktop/Documents/Welcome!.txt'})
 
 	CheckAutoUpdate()
 	EventHandler()
@@ -194,9 +194,9 @@ function LaunchProgram(path, args, title)
 		if Current.Menu then
 			Current.Menu:Close()
 		end
+		Current.Program = nil
 		Program:Initialise(shell, path, title, args)
 	end)
-
 end
 
 function SwitchToProgram(newProgram, currentIndex, newIndex)
@@ -244,6 +244,7 @@ end
 
 
 function Draw()
+	term.restore()
 	if isFirstSetup then
 		Current.Program.AppRedirect:Draw()
 		Drawing.DrawBuffer()

@@ -209,9 +209,11 @@
 					table.remove(Current.Programs, i)
 
 					if Current.Programs[i] then
-						Current.Program = Current.Programs[i]
+						--Current.Program = Current.Programs[i]
+						Animation.SwipeProgram(self, Current.Programs[i], 1)
 					elseif Current.Programs[i-1] then
-						Current.Program = Current.Programs[i-1]
+						--Current.Program = Current.Programs[i-1]
+						Animation.SwipeProgram(self, Current.Programs[i-1], -1)
 					end
 					break
 				end
@@ -224,7 +226,6 @@
 			if Current.Program then
 				Drawing.Clear(colours.black)
 				Drawing.DrawBuffer()
-				sleep(0)
 				os.queueEvent('oneos_draw')
 			else
 				if Desktop then
