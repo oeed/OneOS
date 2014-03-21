@@ -89,7 +89,7 @@ function Initialise()
 	OneOSVersion = h.readAll()
 	h.close()
 	
-	Helpers.OpenFile('Programs/Ink.program', {'/Desktop/Documents/Welcome!.txt'})
+	Helpers.OpenFile('Programs/Ink.program', {'/Desktop/Documents/Test.txt'})
 
 	CheckAutoUpdate()
 	EventHandler()

@@ -289,6 +289,19 @@ function FindColours(str)
 	return count
 end
 
+ColourFromCharacter = function(character)
+	local n = character:byte() - 14
+	if n > 16 then
+		return nil
+	else
+		return 2^n
+	end
+end
+
+CharacterFromColour = function(colour)
+	return string.char(math.floor(math.log(colour)/math.log(2))+14)
+end
+
 Events = {}
 
 Button = {
@@ -447,12 +460,15 @@ TextInput = {
 		end
 
 		local selection = OrderSelection()
+
 		if self.IsDocument and selection then
 			self.Value = string.sub(self.Value, 1, selection[1]-1) .. str .. string.sub( self.Value, selection[2]+2)
 			self.CursorPos = selection[1]
 			Current.Selection = nil
 		else
-			self.Value = string.sub(self.Value, 1, self.CursorPos ) .. str .. string.sub( self.Value, self.CursorPos + 1 )
+			local _, newLineAdjust = string.gsub(self.Value:sub(1, self.CursorPos), '\n','')
+
+			self.Value = string.sub(self.Value, 1, self.CursorPos + newLineAdjust) .. str .. string.sub( self.Value, self.CursorPos + 1  + newLineAdjust)
 			self.CursorPos = self.CursorPos + 1
 		end
 		
@@ -462,9 +478,10 @@ TextInput = {
 	Extract = function(self, remove)
 		local selection = OrderSelection()
 		if self.IsDocument and selection then
-			local str = string.sub(self.Value, selection[1], selection[2]+1)
+			local _, newLineAdjust = string.gsub(self.Value:sub(selection[1], selection[2]), '\n','')
+			local str = string.sub(self.Value, selection[1], selection[2]+1+newLineAdjust)
 			if remove then
-				self.Value = string.sub(self.Value, 1, selection[1]-1) .. string.sub( self.Value, selection[2]+2)
+				self.Value = string.sub(self.Value, 1, selection[1]-1) .. string.sub( self.Value, selection[2]+2+newLineAdjust)
 				self.CursorPos = selection[1] - 1
 				Current.Selection = nil
 			end
@@ -480,14 +497,6 @@ TextInput = {
 	end,
 
 	Key = function(self, key)
-		local function newLineCount(str)
-			local count = 0
-			for i in string.find(str, "\n") do
-			   count = count + 1
-			end
-			return count
-		end
-
 		if key == keys.enter then
 			if self.IsDocument then
 				self.Value = string.sub(self.Value, 1, self.CursorPos ) .. '\n' .. string.sub( self.Value, self.CursorPos + 1 )
@@ -497,14 +506,16 @@ TextInput = {
 		elseif key == keys.left then
 			-- Left
 			if self.CursorPos > 0 then
-				self.CursorPos = self.CursorPos - 1
+				local colShift = FindColours(string.sub( self.Value, self.CursorPos, self.CursorPos))
+				self.CursorPos = self.CursorPos - 1 - colShift
 				self.Change(key)
 			end
 			
 		elseif key == keys.right then
 			-- Right				
 			if self.CursorPos < string.len(self.Value) then
-				self.CursorPos = self.CursorPos + 1
+				local colShift = FindColours(string.sub( self.Value, self.CursorPos+1, self.CursorPos+1))
+				self.CursorPos = self.CursorPos + 1 + colShift
 				self.Change(key)
 			end
 		
@@ -515,7 +526,9 @@ TextInput = {
 				self.Change(key)
 			elseif self.CursorPos > 0 then
 				local colShift = FindColours(string.sub( self.Value, self.CursorPos, self.CursorPos))
-				self.Value = string.sub( self.Value, 1, self.CursorPos - 1 - colShift) .. string.sub( self.Value, self.CursorPos + 1 - colShift)
+				local _, newLineAdjust = string.gsub(self.Value:sub(1, self.CursorPos), '\n','')
+
+				self.Value = string.sub( self.Value, 1, self.CursorPos - 1 - colShift + newLineAdjust) .. string.sub( self.Value, self.CursorPos + 1 - colShift + newLineAdjust)
 				self.CursorPos = self.CursorPos - 1 - colShift
 				self.Change(key)
 			end
@@ -636,6 +649,8 @@ Menu = {
 			return 'F'
 		elseif key == keys.m then
 			return 'M'
+		elseif key == keys.q then
+			return 'Q'
 		else
 			return '?'		
 		end
@@ -791,7 +806,7 @@ Document = {
 	PageSize = {Width = 25, Height = 21},
 	TextInput = nil,
 	Pages = {},
-	Format = TextFormatInkText,
+	Format = TextFormatPlainText,
 	Title = '',
 	Path = nil,
 	ScrollBar = nil,
@@ -842,10 +857,10 @@ Document = {
 			page:Draw()
 			if not Current.CursorPos then
 				for i, line in ipairs(page.Lines) do
-					local relCursor = self.TextInput.CursorPos - FindColours(self.TextInput.Value:sub(1,self.TextInput.CursorPos))
+					local relCursor = self.TextInput.CursorPos - FindColours(self.TextInput.Value:sub(1,self.TextInput.CursorPos-1))
 					if passedCharacters + #StripColours(line.Text:gsub('\n','')) >= relCursor then
 						Current.CursorPos = {self.X + page.MarginX + (relCursor - passedCharacters), page.Y + 1 + i}
-						self.CursorPos = {Page = p, Line = i, Collum = relCursor - passedCharacters}
+						self.CursorPos = {Page = p, Line = i, Collum = relCursor - passedCharacters - FindColours(self.TextInput.Value:sub(1,self.TextInput.CursorPos-1))}
 						break
 					end
 					passedCharacters = passedCharacters + #StripColours(line.Text:gsub('\n',''))
@@ -891,7 +906,23 @@ Document = {
 
 	SetSelectionColour = function(self, colour)
 		local selection = OrderSelection()
-		--local text = self.TextInput:Extract(true)
+		local text = self.TextInput:Extract(true)
+		local colChar = CharacterFromColour(colour)
+		local precedingColour = ''
+		if FindColours(self.TextInput.Value:sub(self.TextInput.CursorPos+1, self.TextInput.CursorPos+1)) == 0 then
+			for i = 1, self.TextInput.CursorPos do
+				local c = self.TextInput.Value:sub(self.TextInput.CursorPos - i,self.TextInput.CursorPos - i)
+				if FindColours(c) == 1 then
+					precedingColour = c
+					break
+				end
+			end
+			if precedingColour == '' then
+				precedingColour = CharacterFromColour(colours.black)
+			end
+		end
+
+		self.TextInput:Insert(colChar..StripColours(text)..precedingColour)
 		--text = text:gsub('['..string.char(14)..'-'..string.char(29)..']','')
 	end,
 
@@ -1008,6 +1039,7 @@ TextLine = {
 	end
 }
 
+local clickPos = 1
 Page = {
 	X = 1,
 	Y = 1,
@@ -1023,15 +1055,6 @@ Page = {
 
 	AbsolutePosition = function(self)
 		return self.Parent:AbsolutePosition()
-	end,
-
-	ColourFromCharacter = function(self, character)
-		local n = character:byte() - 14
-		if n > 16 then
-			return nil
-		else
-			return 2^n
-		end
 	end,
 
 	Draw = function(self)
@@ -1050,7 +1073,7 @@ Page = {
 			for i, line in ipairs(self.Lines) do
 				local _c = 1
 				for c = 1, #line.Text do
-					local col = self:ColourFromCharacter(line.Text:sub(c,c))
+					local col = ColourFromCharacter(line.Text:sub(c,c))
 					if col then
 						textColour = col
 					else
@@ -1066,13 +1089,13 @@ Page = {
 			for i, line in ipairs(self.Lines) do
 				local _c = 1
 				for c = 1, #line.Text do
-					local col = self:ColourFromCharacter(line.Text:sub(c,c))
+					local col = ColourFromCharacter(line.Text:sub(c,c))
 					if col then
 						textColour = col
 					else
 						local tc = textColour
 						local colour = colours.white
-						if char >= selection[1] and char - 1 <= selection[2] then
+						if char >= selection[1] and char <= selection[2] then
 							colour = colours.lightBlue
 							tc = colours.white
 						end
@@ -1097,6 +1120,7 @@ Page = {
 		new.BackgroundColour = colours.white
 		new.TextColour = colours.black
 		new.Parent = parent
+		new.ClickPos = 1
 		return new
 	end,
 
@@ -1122,12 +1146,14 @@ Page = {
 		for i, v in ipairs(self.Lines) do
 			if i == row then
 				if col > #v.Text then
-					col = #v.Text
+					col = #v.Text + FindColours(v.Text)
+				else
+					col = col + FindColours(v.Text:sub(1, col))
 				end
 				cursorPos = cursorPos + col + 2 - i
 				break
 			else
-				cursorPos = cursorPos + #v.Text + 1
+				cursorPos = cursorPos + #v.Text + 2 - i + FindColours(v.Text)
 			end
 		end
 
@@ -1137,15 +1163,24 @@ Page = {
 	Click = function(self, side, x, y, drag)
 		local cursorPos = self:GetCursorPosFromPoint(x, y)
 		self.Parent.TextInput.CursorPos = cursorPos
-		if drag then
+				term.setCursorPos(1,2)
+				print(cursorPos)
+		if drag == nil then
+			Current.Selection = nil
+			clickPos = x
+		else
 			local relCursor = cursorPos-- - FindColours(self.Parent.TextInput.Value:sub(1,cursorPos)) + 1
 			if not Current.Selection then
-				Current.Selection = {relCursor, relCursor}
+				local adder = 1
+				if clickPos and clickPos < x then
+					adder = 0
+				end
+				Current.Selection = {relCursor + adder, relCursor + 1 + adder}
 			else
-				Current.Selection[2] = relCursor
+				Current.Selection[2] = relCursor + 1
 			end
-		else
-			Current.Selection = nil
+			print(Current.Selection[1])
+			print(Current.Selection[2])
 		end
 		Draw()
 		return true
@@ -1449,7 +1484,7 @@ function LoadMenuBar()
 							keys.s
 						},
 						Enabled = function()
-							return true
+							return Current.Document ~= nil
 						end
 					},
 					{
@@ -1479,7 +1514,11 @@ function LoadMenuBar()
 							if Close() then
 								OneOS.Close()
 							end
-						end
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.q
+						}
 					},
 			--[[
 					{
@@ -1787,7 +1826,8 @@ function Initialise(arg)
 	EventHandler()
 end
 
-
+local isControlPushed = false
+controlPushedTimer = nil
 closeWindowTimer = nil
 function Timer(event, timer)
 	if timer == closeWindowTimer then
@@ -1795,22 +1835,66 @@ function Timer(event, timer)
 			Current.Window:Close()
 		end
 		Draw()
+	elseif timer == controlPushedTimer then
+		isControlPushed = false
 	end
 end
 
-
+local ignoreNextChar = false
 function HandleKey(...)
 	local args = {...}
 	local event = args[1]
 	local keychar = args[2]
-	if Current.TextInput then
+																							--Mac left command character
+	if event == 'key' and keychar == keys.leftCtrl or keychar == keys.rightCtrl or keychar == 219 then
+		isControlPushed = true
+		controlPushedTimer = os.startTimer(0.5)
+	elseif isControlPushed then
+		if event == 'key' then
+			if CheckKeyboardShortcut(keychar) then
+				isControlPushed = false
+				ignoreNextChar = true
+			end
+		end
+	elseif ignoreNextChar then
+		ignoreNextChar = false
+	elseif Current.TextInput then
 		if event == 'char' then
 			Current.TextInput:Char(keychar)
 		elseif event == 'key' then
 			Current.TextInput:Key(keychar)
 		end
-	elseif event == 'key' then
-		--CheckKeyboardShortcut(keychar)
+	end
+end
+
+
+function CheckKeyboardShortcut(key)
+	local shortcuts = {}
+	shortcuts[keys.n] = function() Current.Document = Document:Initialise('') end
+	shortcuts[keys.o] = function() DisplayOpenDocumentWindow() end
+--	shortcuts[keys.q] = function() DisplayOpenDocumentWindow() end
+	if Current.Document ~= nil then
+		shortcuts[keys.s] = function() SaveDocument() end
+		shortcuts[keys.p] = function() PrintDocument() end
+		if Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
+			shortcuts[keys.x] = function() Clipboard.Cut(Current.Document.TextInput:Extract(true), 'text') end
+			shortcuts[keys.c] = function() Clipboard.Copy(Current.Document.TextInput:Extract(), 'text') end
+		end
+		if (not Clipboard.isEmpty()) and Clipboard.Type == 'text' then
+			shortcuts[keys.v] = function() local paste = Clipboard.Paste()
+									Current.Document.TextInput:Insert(paste)
+									Current.Document.TextInput.CursorPos = Current.Document.TextInput.CursorPos + #paste - 1
+								end
+		end
+		shortcuts[keys.a] = function() Current.Selection = {1, #Current.Document.TextInput.Value:gsub('\n','')} end
+	end
+							
+	if shortcuts[key] then
+		shortcuts[key]()
+		Draw()
+		return true
+	else
+		return false
 	end
 end
 
@@ -1966,18 +2050,16 @@ function PrintDocument()
 		OneOS.LoadAPI('/System/API/Peripheral.lua')
 		OneOS.LoadAPI('/System/API/Printer.lua')
 	end
-	--[[
-	if OneOS then
-		OneOS.LoadAPI('/System/API/Peripheral.lua')
-		OneOS.LoadAPI('/System/API/Printer.lua')
-	end
-	
-	]]--
+
 	local doPrint = function()
 		local window = PrintDocumentWindow:Initialise():Show()
 	end
-	--TODO: check if there is colour used in the document
-	if not acknowledgedColour and Document.Format == TextFormatInkText then
+
+	if Peripheral.GetPeripheral('printer') == nil then
+		ButtonDialougeWindow:Initialise('No Printer Found', 'Please place a printer next to your computer. Ensure you also insert dye (left slot) and paper (top slots)', 'Ok', nil, function(window, ok)
+			window:Close()
+		end):Show()
+	elseif not acknowledgedColour and FindColours(Current.Document.TextInput.Value) ~= 0 then
 		ButtonDialougeWindow:Initialise('Important', 'Due to the way printers work, you can\'t print in more than one colour. The dye you use will be the colour of the text.', 'Ok', nil, function(window, ok)
 			acknowledgedColour = true
 			window:Close()
@@ -1990,25 +2072,18 @@ end
 
 function SaveDocument()
 	local function save()
-		local h = fs.open(Current.Document.Path..'2', 'w')
+		local h = fs.open(Current.Document.Path, 'w')
 		if h then
 			if Current.Document.Format == TextFormatPlainText then
 				h.write(Current.Document.TextInput.Value)
 			else
-				--[[
-local lines = {}
+				local lines = {}
 				for p, page in ipairs(Current.Document.Pages) do
 					for i, line in ipairs(page.Lines) do
 						table.insert(lines, line)
 					end
 				end
 				h.write(textutils.serialize(lines))
-]]--
-				local str = 'A'
-				for i = 1, 16 do
-					str = str .. string.char(i+13)
-				end
-				h.write(str)
 			end
 		else
 			ButtonDialougeWindow:Initialise('Error', 'An error occured while saving the file, try again.', 'Ok', nil, function(window, ok)
