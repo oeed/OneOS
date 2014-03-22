@@ -62,7 +62,10 @@
 		end
 	end
 
-	local _oldterm = (term.native and term.native())
+	local _oldterm = term.native
+	if type(_oldterm) == 'function' then
+		_oldterm = _oldterm()
+	end
 	local count = 1
 
 	ClearLine = function(self, y, backgroundColour)
