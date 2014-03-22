@@ -108,8 +108,8 @@ function Initialise()
 	OneOSVersion = h.readAll()
 	h.close()
 	
-	--Helpers.OpenFile('Programs/Ink.program', {'/Desktop/Documents/Test.txt'})
-	if not pocket and Settings:GetValues()['StartupProgram'] then
+	Helpers.OpenFile('Programs/Ink.program', {'/Desktop/Documents/Test.txt'})
+	if Settings:GetValues()['StartupProgram'] then
 		Helpers.OpenFile('Programs/'..Settings:GetValues()['StartupProgram'])
 	end
 

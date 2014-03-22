@@ -857,7 +857,7 @@ Document = {
 			page:Draw()
 			if not Current.CursorPos then
 				for i, line in ipairs(page.Lines) do
-					local relCursor = self.TextInput.CursorPos - FindColours(self.TextInput.Value:sub(1,self.TextInput.CursorPos-1))
+					local relCursor = self.TextInput.CursorPos - FindColours(self.TextInput.Value:sub(1,self.TextInput.CursorPos))
 					if passedCharacters + #StripColours(line.Text:gsub('\n','')) >= relCursor then
 						Current.CursorPos = {self.X + page.MarginX + (relCursor - passedCharacters), page.Y + 1 + i}
 						self.CursorPos = {Page = p, Line = i, Collum = relCursor - passedCharacters - FindColours(self.TextInput.Value:sub(1,self.TextInput.CursorPos-1))}
@@ -1867,11 +1867,13 @@ function HandleKey(...)
 	end
 end
 
-
 function CheckKeyboardShortcut(key)
 	local shortcuts = {}
 	shortcuts[keys.n] = function() Current.Document = Document:Initialise('') end
 	shortcuts[keys.o] = function() DisplayOpenDocumentWindow() end
+	shortcuts[keys.s] = function() if Current.Document ~= nil then SaveDocument() end end
+	shortcuts[keys.left] = function() if Current.TextInput then Current.TextInput:Key(keys.home) end end
+	shortcuts[keys.right] = function() if Current.TextInput then Current.TextInput:Key(keys["end"]) end end
 --	shortcuts[keys.q] = function() DisplayOpenDocumentWindow() end
 	if Current.Document ~= nil then
 		shortcuts[keys.s] = function() SaveDocument() end

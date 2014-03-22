@@ -400,7 +400,7 @@ local function split(str, sep)
         str:gsub(pattern, function(c) fields[#fields+1] = c end)
         return fields
 end
---This is my drawing API, is is pretty much identical to what drives PearOS.
+--This is my drawing API, is is pretty much identical to what drives PearOS and OneOS
 local _w, _h = term.getSize()
 Drawing = {
   
@@ -746,7 +746,7 @@ ListItem = {
 
     end
 
-    if self.Type ~= 2 then
+    if self.Type ~= 2 and self.Rating ~= 0 then
       --draw the rating
       local starColour = colours.yellow
       local halfColour = colours.lightGrey
@@ -850,13 +850,14 @@ ListItem = {
     local new = {}    -- the new instance
     setmetatable( new, {__index = self} )
     new.Y = y
-    new.Type = Type
     new:UpdateSize()
+    new.Type = Type
     new.AppID = appid
     new.Title = title
     new.Icon = Drawing.LoadImage(icon)
     new.Icon[5] = nil
     new.Description = new:CalculateWrapping(description)
+    new:UpdateSize()
     new.Author = author
     new.Rating = rating
     new.Version = version
@@ -870,6 +871,9 @@ ListItem = {
 
     if self.Type == 1 then
       self.Height = 15
+      if #self.Description + 5 > self.Height then
+        self.Height = #self.Description + 5
+      end
     end
   end,
 }
@@ -1176,7 +1180,12 @@ function DrawToolbar()
     if i == #items then
       border = ""
     end
-    Drawing.DrawCharacters(itemX, 1, v.title .. border, colours.blue, colours.white)
+    local col = colours.blue
+    if currentPage == v.title then
+      col = colours.lightBlue
+    end
+    Drawing.DrawCharacters(itemX, 1, v.title, col, colours.white)
+    Drawing.DrawCharacters(itemX+#v.title, 1, border, colours.blue, colours.white)
     RegisterClick(itemX-1, 1, #v.title + 2, 1, function()
       ChangePage(v.title)
     end)
@@ -1351,7 +1360,7 @@ function Initialise()
   else
     Load('Connecting', api.testConnection)
     Current.ScrollBar = ScrollBar:Initialise(Drawing.Screen.Width, 2, Drawing.Screen.Height-1, 0, colours.white, colours.blue, nil, function()end)
-    ChangePage('Top Charts')
+    ChangePage('Featured')
     toolbarVisible = true
     Draw()
     EventHandler()

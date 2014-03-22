@@ -107,34 +107,6 @@
 		end
 	end
 
-	_Resume = function(self, ...)
-		if not self.Process or coroutine.status(self.Process) == "dead" then
-			return false
-		end
-
-		local event = {...}
-		term.redirect(self.AppRedirect.Term)
-		local response = {coroutine.resume(self.Process, unpack(event))}
-		if not response[1] and response[2] then
-			print()
-	    	term.setTextColour(colours.red)
-	    	print('The program has crashed.')
-	    	print(response[2])
-	    	self:Kill(1)
-		elseif coroutine.status(self.Process) == "dead" then
-	    	print()
-	    	term.setTextColour(colours.red)
-	    	print('The program has finished.')
-	    	self:Kill(0)
-	    end
-	    term.restore()
-	    Drawing.DrawBuffer()
-	    term.setCursorPos(Current.CursorPos[1], Current.CursorPos[2])
-		term.setCursorBlink(self.AppRedirect.CursorBlink)
-		term.setTextColour(Current.CursorColour)
-	    return unpack(response)
-	end
-
 	Resume = function(self, ...)
 		local event = {...}
 		local result = false
