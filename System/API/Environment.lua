@@ -113,7 +113,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 		setfenv(self.Shell, shellEnv)
 		self.Shell(env, program, shell, path, Helpers, os.run)
 		env.shell = addErrorHandler(shellEnv, 'Shell')
- 		env.OneOS = addErrorHandler(self.OneOS(env, program), 'OneOS API')
+ 		env.OneOS = addErrorHandler(self.OneOS(env, program, path), 'OneOS API')
 		env.sleep = env.os.sleep
 		return env
 	end
@@ -135,7 +135,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 		}
 	end
 
-	OneOS = function(env, program)
+	OneOS = function(env, program, path)
 		local tAPIsLoading = {}
 		return {
 			ToolBarColour = colours.white,
@@ -205,7 +205,48 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 				return nil, "File not found"
 			end,
 			LoadString = loadstring,
-			IO = io
+			IO = io,
+			DoesRunAtStartup = function()
+				if not Settings:GetValues()['StartupProgram'] then
+					return false
+				end
+				return Helpers.TidyPath('/Programs/'..Settings:GetValues()['StartupProgram']..'/startup') == Helpers.TidyPath(path)
+			end,
+			RequestRunAtStartup = function()
+				local settings = Settings:GetValues()
+				local onBlacklist = false
+				local h = fs.open('/System/.StartupBlacklist.settings', 'r')
+				if h then
+					local blacklist = textutils.unserialize(h.readAll())
+					h.close()
+					for i, v in ipairs(blacklist) do
+						if v == Helpers.TidyPath(path) then
+							onBlacklist = true
+							return
+						end
+					end
+				end
+				if not settings['StartupProgram'] or not Helpers.TidyPath('/Programs/'..settings['StartupProgram']..'/startup') == Helpers.TidyPath(path) then
+					ButtonDialogueWindow:Initialise("Run at startup?", "Would you like run "..Helpers.RemoveExtension(fs.getName(Helpers.RemoveFileName(path))).." when you turn your computer on?", 'Yes', 'No', function(success, button)
+						if success then
+							Settings:SetValue('StartupProgram', fs.getName(Helpers.RemoveFileName(path)))
+						elseif button == 3 then
+							local h = fs.open('/System/.StartupBlacklist.settings', 'r')
+							local blacklist = {}
+							if h then
+								blacklist = textutils.unserialize(h.readAll())
+								h.close()
+							end
+							table.insert(blacklist, Helpers.TidyPath(path))
+							local h = fs.open('/System/.StartupBlacklist.settings', 'w')
+							if h then
+								h.write(textutils.serialize(blacklist))
+								h.close()
+							end
+						end
+					end, "Never Ask"):Show()
+				end
+			end
 		}
 	end
 

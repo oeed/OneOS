@@ -62,7 +62,7 @@
 		end
 	end
 
-	local _oldterm = term.native
+	local _oldterm = (term.native and term.native())
 	local count = 1
 
 	ClearLine = function(self, y, backgroundColour)
@@ -100,8 +100,11 @@
 	end
 	
 	-- 'term' methods
+	-- This is based upon 1.56, programs designed for 1.6 might not work correctly
 	_term = function(self)
 		local _term = {}
+		_term.native = _term
+
 		_term.write = function(characters)
 			if type(characters) == 'number' then
 				characters = tostring(characters)

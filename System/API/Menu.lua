@@ -47,15 +47,19 @@
 		setmetatable( new, {__index = self} )
 		new.Width = Helpers.LongestString(items, 'Title') + 2
 		new.Height = #items + 1
+		new.Y = y
+		new.X = x
+		new.Parent = parent
 
+		local pos = GetAbsolutePosition(new)
 		local posY = y
-		if y + new.Height + 1 > Drawing.Screen.Height then
-			posY = Drawing.Screen.Height - new.Height - 1
+		if pos.Y + new.Height + 1 > Drawing.Screen.Height then
+			posY = y - ((new.Height +  pos.Y) - Drawing.Screen.Height)
 		end
 		new.Y = posY
 		
 		local posX = x
-		if x + new.Width > Drawing.Screen.Width then
+		if pos.X + new.Width > Drawing.Screen.Width then
 			posX = Drawing.Screen.Width - new.Width
 		end
 		new.X = posX
@@ -63,7 +67,6 @@
 		new.Items = items
 		new.BackgroundColour = backgroundColour or colours.white
 		new.TextColour = textColour or colours.black
-		new.Parent = parent
 		new.OnClose = onClose or function()end
 		return new
 	end

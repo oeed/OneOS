@@ -299,6 +299,7 @@ function RefreshFiles()
 				local discID = nil
 				local mountPath = nil
 				local discLabel = nil
+				local songName = nil
 				if peripheral.call(Current.Peripheral.Side:lower(), 'isDiskPresent') then
 					if peripheral.call(Current.Peripheral.Side:lower(), 'hasData') then
 						discType = 'Data'
@@ -312,6 +313,7 @@ function RefreshFiles()
 						discLabel = peripheral.call(Current.Peripheral.Side:lower(), 'getDiskLabel')
 					else
 						discType = 'Audio'
+						songName = peripheral.call(Current.Peripheral.Side:lower(), 'getAudioTitle')
 					end
 				end
 				if mountPath then
@@ -325,7 +327,7 @@ function RefreshFiles()
 				Current.Peripheral.Info = {
 					['Disc Type'] = discType,
 					['Disc Label'] = discLabel,
-					['Song Title'] = peripheral.call(Current.Peripheral.Side:lower(), 'getAudioTitle'),
+					['Song Title'] = songName,
 					['Disc ID'] = discID,
 					['Mount Path'] = mountPath
 				}

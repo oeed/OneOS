@@ -11,6 +11,9 @@
 		TransmitRequest = 4206,
 		TransmitRequestReply = 4207,
 		TransmitSend = 4208,
+		UltimateDoorlockPing = 4210,
+		UltimateDoorlockRequest = 4211,
+		UltimateDoorlockRequestReply = 4212,
 	}
 
 	local function isOpen(channel)

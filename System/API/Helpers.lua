@@ -153,6 +153,8 @@ IconForFile = function(path)
 		else
 			return ReadIcon('System/Images/Icons/folder')
 		end
+	elseif extension and extension == 'daemon' then
+		return ReadIcon('System/Images/Icons/daemon')
 	elseif fs.isDir(path) then
 		return ReadIcon('System/Images/Icons/folder')
 	elseif extension and fs.exists('System/Images/Icons/'..extension) then

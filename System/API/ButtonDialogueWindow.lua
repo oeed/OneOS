@@ -5,6 +5,7 @@
 	CursorPos = 1
 	CancelButton = nil
 	OkButton = nil
+	ThirdButton = nil
 	Visible = true
 	Lines = {}
 
@@ -25,9 +26,12 @@
 		if self.CancelButton then
 			self.CancelButton:Draw()
 		end
+		if self.ThirdButton then
+			self.ThirdButton:Draw()
+		end
 	end
 
-	Initialise = function(self, title, message, okText, cancelText, returnFunc)
+	Initialise = function(self, title, message, okText, cancelText, returnFunc, thirdText)
 		local new = {}    -- the new instance
 		setmetatable( new, {__index = self} )
 		new.Width = 28
@@ -39,14 +43,20 @@
 		new.Title = Helpers.TruncateString(title, 26)
 		new.Visible = true
 		new.OkButton = Button:Initialise(new.Width - #okText - 2, new.Height - 1, nil, 1, colours.lightGrey, colours.black, colours.blue, colours.white, new, function()
-			returnFunc(true)
+			returnFunc(true, 1)
 			new:Close()
 		end, okText)
 		if cancelText then
 			new.CancelButton = Button:Initialise(new.Width - #okText - 2 - 1 - #cancelText - 2, new.Height - 1, nil, 1, colours.lightGrey, colours.black, colours.blue, colours.white, new, function()
-				returnFunc(false)
+				returnFunc(false, 2)
 				new:Close()
 			end, cancelText)
+		end
+		if thirdText then
+			new.ThirdButton = Button:Initialise(2, new.Height - 1, nil, 1, colours.lightGrey, colours.black, colours.blue, colours.white, new, function()
+				returnFunc(false, 3)
+				new:Close()
+			end, thirdText)			
 		end
 		return new
 	end
@@ -89,6 +99,9 @@
 		ButtonClick(self, self.OkButton, x, y)
 		if self.CancelButton then
 			ButtonClick(self, self.CancelButton, x, y)
+		end
+		if self.ThirdButton then
+			ButtonClick(self, self.ThirdButton, x, y)
 		end
 		return true
 	end

@@ -1,1 +1,37 @@
-{["layout"]={["Files.shortcut"]={["y"]=13,["x"]=5,},["Ink.shortcut"]={["y"]=8,["x"]=27,},["Documents"]={["y"]=8,["x"]=5,},["LuaIDE.shortcut"]={["y"]=3,["x"]=16,},["Programs.shortcut"]={["y"]=8,["x"]=16,},["App Store.shortcut"]={["y"]=3,["x"]=5,},["Sketch.shortcut"]={["y"]=3,["x"]=27,},["Shell.shortcut"]={["y"]=13,["x"]=16,},},["colour"]=512,}
+{
+  layout = {
+    Files.shortcut = {
+      y = 13,
+      x = 5,
+    },
+    Ink.shortcut = {
+      y = 3,
+      x = 16,
+    },
+    Documents = {
+      y = 8,
+      x = 5,
+    },
+    LuaIDE.shortcut = {
+      y = 8,
+      x = 16,
+    },
+    Programs.shortcut = {
+      y = 13,
+      x = 16,
+    },
+    App Store.shortcut = {
+      y = 3,
+      x = 5,
+    },
+    Sketch.shortcut = {
+      y = 8,
+      x = 27,
+    },
+    Shell.shortcut = {
+      y = 3,
+      x = 27,
+    },
+  },
+  colour = 512,
+}

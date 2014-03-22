@@ -59,7 +59,7 @@ function Draw()
 
 	Drawing.DrawCharacters(10, 2, 'OneOS '..OneOS.Version, colours.grey, colours.white)
 	Drawing.DrawCharacters(10, 3, '(c) oeed 2013 - 2014', colours.lightGrey, colours.white)
-	Drawing.DrawCharacters(10, 4, 'Under CC BY-NC-ND 3.0 AU License', colours.lightGrey, colours.white)
+	Drawing.DrawCharacters(10, 4, 'Under CC BY-NC-ND 4.0 License', colours.lightGrey, colours.white)
 	Drawing.DrawCharacters(10, 5, 'Click here for more license details', colours.lightGrey, colours.white)
 
 	for i, line in ipairs(thanksLines) do

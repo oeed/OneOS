@@ -14,7 +14,12 @@
 			Type = 'Bool',
 			Label = 'Use Animations',
 			Default = true,
-		}	
+		},
+		StartupProgram = {
+			Type = 'Program',
+			Label = 'Startup Program',
+			Default = nil,
+		}
 	}
 --[[
 

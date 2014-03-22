@@ -145,7 +145,7 @@ function UpdateButtons()
 	end
 
 	if #menuPrograms ~= 0 then
-		InsertMenu("=", menuPrograms, Drawing.Screen.Width-1)
+		InsertMenu("=", menuPrograms, Drawing.Screen.Width)
 	end
 
 	Draw()

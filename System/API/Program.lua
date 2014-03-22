@@ -144,6 +144,7 @@
 				end
 
 				term.redirect(self.AppRedirect.Term)
+
 				local response = {coroutine.resume(self.Process, unpack(event))}
 				if not response[1] and response[2] then
 					print()

@@ -3,8 +3,9 @@ OneOS.LoadAPI('/System/API/Button.lua', true)
 OneOS.LoadAPI('/System/API/Helpers.lua', true)
 OneOS.LoadAPI('/System/API/TextInput.lua', true)
 OneOS.LoadAPI('/System/API/TextBox.lua', true)
+OneOS.LoadAPI('/System/API/Menu.lua', true)
 --[[
-os.loadAPI('/System/API/Menu')
+
 os.loadAPI('/System/API/Peripheral')
 os.loadAPI('/System/API/TextDialogueWindow')
 os.loadAPI('/System/API/ButtonDialogueWindow')
@@ -14,7 +15,8 @@ Current = {
 	Clicks = {},
 	Input = nil,
 	CursorPos = {},
-	CursorColour = colours.black
+	CursorColour = colours.black,
+	Menu = nil,
 }
 
 Events = {
@@ -99,6 +101,45 @@ function Initialise()
 			settings[k].Control = TextBox:Initialise(controlX, startY, 23, 1, nil, value, nil, nil, function(self, key)
 				OneOS.Settings:SetValue(k, self.TextInput.Value)
 			end)
+		elseif v.Type == 'Program' then
+			local txt = value
+			if not value then
+				txt = 'None'
+			else
+				txt = Helpers.RemoveExtension(txt)
+			end
+			settings[k].Control = Button:Initialise(controlX, startY, nil, nil, colours.grey, colours.white, nil, nil, nil, function(self, x, y)
+				local items = { 
+					{
+						Title = 'None',
+						Click = function()
+								OneOS.Settings:SetValue(k, nil)
+								self.Text = "None"
+								self.Width = #self.Text + 2
+						end
+					},
+					{
+						Separator = true
+					}
+				}
+
+				for i, _v in ipairs(OneOS.FS.list('/Programs/')) do
+					if Helpers.Extension(_v) == 'program' then
+						table.insert(items, 
+						{
+							Title = Helpers.RemoveExtension(_v),
+							Click = function()
+								OneOS.Settings:SetValue(k, _v)
+								self.Text = Helpers.RemoveExtension(_v)
+								self.Width = #self.Text + 2
+							end
+						})
+					end
+				end
+
+				Current.Menu = Menu:Initialise(x, y+1, nil, nil, self, items, true)
+				return true
+			end, txt)
 		end
 		startY = startY + 2
 	end
@@ -120,11 +161,8 @@ function Draw()
 	Drawing.DrawCharacters(11, 2, 'OneOS', colours.lightGrey, colours.grey)
 	Drawing.DrawCharacters(2, 2, 'Settings', colours.white, colours.grey)
 
-	for i, elem in ipairs(InterfaceElements) do
-		if elem.Draw then
-			elem:Draw()
-		end
-	end
+
+
 
 	local startX = 2
 	local startY = 5
@@ -139,6 +177,16 @@ function Draw()
 		end
 		startY = startY + 2
 	end
+
+	for i, elem in ipairs(InterfaceElements) do
+		if elem.Draw then
+			elem:Draw()
+		end
+	end
+	if Current.Menu then
+		Current.Menu:Draw()
+	end
+
 	Drawing.DrawBuffer()
 
 	if Current.Input then
@@ -176,17 +224,35 @@ function CheckClick(object, x, y)
 end
 
 function DoClick(event, object, side, x, y)
+	local pos = GetAbsolutePosition(object)
 	if object and CheckClick(object, x, y) then
-		return object:Click(side, x - object.X + 1, y - object.Y + 1)
+		return object:Click(side, x - pos.X + 1, y - pos.Y + 1)
 	end	
 end
 
 function TryClick(event, side, x, y)
+	local menu = Current.Menu
+
+	if Current.Menu and DoClick(event, Current.Menu, side, x, y) then
+		if menu == Current.Menu then
+			Current.Menu = nil
+		end
+		Draw()
+		return
+	end
+
 	for i, object in ipairs(Current.Clicks) do
 		if DoClick(event, object, side, x, y) then
+			if menu == Current.Menu then
+				Current.Menu = nil
+			end
 			Draw()
 			return
 		end		
+	end
+	if Current.Menu then
+		Current.Menu = nil
+		Draw()
 	end
 end
 

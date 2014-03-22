@@ -1,4 +1,8 @@
 OneOSVersion = '...'
+nativeTerm = term.native
+if type(nativeTerm) == 'function' then
+	nativeTerm = nativeTerm()
+end
 
 local x = 1
 local y = 1
@@ -22,7 +26,8 @@ Current = {
 	Input = nil,
 	IconCache = {},
 	CanDraw = true,
-	AllowAnimate = true
+	AllowAnimate = true,
+	Daemons = {}
 }
 
 Events = {
@@ -67,6 +72,7 @@ function FirstSetup()
 	EventHandler()
 end
 
+local fingerprint = ''
 function Initialise()
 	EventRegister('mouse_click', TryClick)
 	EventRegister('mouse_drag', TryClick)
@@ -78,6 +84,19 @@ function Initialise()
 	EventRegister('timer', Update)
 	EventRegister('http_success', AutoUpdateRespose)
 	EventRegister('http_failure', AutoUpdateFail)
+	EventRegister('modem_message', function(event, side, channel, replyChannel, message, distance)
+		if pocket and channel == Wireless.Channels.UltimateDoorlockPing then
+			message = textutils.unserialize(message)
+			if message then
+				message.content = textutils.unserialize(message.content)
+				if message.content then
+					Wireless.SendMessage(Wireless.Channels.UltimateDoorlockRequest, fingerprint, Wireless.Channels.UltimateDoorlockRequestReply, nil, message.senderID)
+					return true
+				end
+			end
+		end
+		return false
+	end)
 	ShowDesktop()
 	Draw()
 	clockTimer = os.startTimer(0.8333333)
@@ -89,7 +108,38 @@ function Initialise()
 	OneOSVersion = h.readAll()
 	h.close()
 	
-	Helpers.OpenFile('Programs/Ink.program', {'/Desktop/Documents/Test.txt'})
+	--Helpers.OpenFile('Programs/Ink.program', {'/Desktop/Documents/Test.txt'})
+	if not pocket and Settings:GetValues()['StartupProgram'] then
+		Helpers.OpenFile('Programs/'..Settings:GetValues()['StartupProgram'])
+	end
+
+	if pocket and Wireless.Present() then
+		Wireless.Open(Wireless.Channels.UltimateDoorlockPing)
+		Wireless.Open(Wireless.Channels.UltimateDoorlockRequest)
+		if fs.exists('/System/.fingerprint') then
+			local h = fs.open('/System/.fingerprint', 'r')
+			if h then
+				fingerprint = h.readAll()
+				h.close()
+			end
+		else
+			local function GenerateFingerprint()
+			    local str = ""
+			    for _ = 1, 256 do
+			        local char = math.random(32, 126)
+			        --if char == 96 then char = math.random(32, 95) end
+			        str = str .. string.char(char)
+			    end
+			    return str
+			end
+			fingerprint = GenerateFingerprint()
+			local h = fs.open('/System/.fingerprint', 'w')
+			if h then
+				h.write(fingerprint)
+				h.close()
+			end
+		end
+	end
 
 	CheckAutoUpdate()
 	EventHandler()
@@ -244,7 +294,11 @@ end
 
 
 function Draw()
-	term.restore()
+	if term.restore then
+		term.restore()
+	else
+		term.redirect(nativeTerm)
+	end
 	if isFirstSetup then
 		Current.Program.AppRedirect:Draw()
 		Drawing.DrawBuffer()
