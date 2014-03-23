@@ -267,8 +267,11 @@ Current = {
 	CursorPos = {1,1},
 	CursorColour = colours.black,
 	Selection = {8, 36},
-	Window = nil
+	Window = nil,
+	Modified = false,
 }
+
+local isQuitting = false
 
 function OrderSelection()
 	if Current.Selection then
@@ -935,6 +938,7 @@ Document = {
 		new.Y = 2
 		new.TextInput = TextInput:Initialise(text, function()
 			new:ScrollToCursor() 
+			Current.Modified = true
 			Draw()
 		end, false, true)
 		new.ScrollBar = ScrollBar:Initialise(Drawing.Screen.Width, new.Y, Drawing.Screen.Height-1, 0, nil, nil, nil, function()end)
@@ -1110,7 +1114,7 @@ Page = {
 	end,
 
 	Initialise = function(self, parent, lines, y)
-		local new = {}    -- the new instance
+		local new = {}    -- the new instanc
 		setmetatable( new, {__index = self} )
 		new.Height = parent.PageSize.Height + 2 * self.MarginY
 		new.Width = parent.PageSize.Width + 2 * self.MarginX
@@ -1143,16 +1147,24 @@ Page = {
 			return cursorPos
 		end
 
+		--term.setCursorPos(1,3)
+		local prevLineCount = 0
 		for i, v in ipairs(self.Lines) do
 			if i == row then
 				if col > #v.Text then
-					col = #v.Text + FindColours(v.Text)
+					col = #v.Text-- + FindColours(v.Text)
 				else
 					col = col + FindColours(v.Text:sub(1, col))
 				end
-				cursorPos = cursorPos + col + 2 - i
+				--term.setCursorPos(1,2)
+				--print(prevLineCount)
+				cursorPos = cursorPos + col + 2 - i - prevLineCount
 				break
 			else
+				prevLineCount = FindColours(v.Text)
+				if prevLineCount ~= 0 then
+					prevLineCount = prevLineCount
+				end
 				cursorPos = cursorPos + #v.Text + 2 - i + FindColours(v.Text)
 			end
 		end
@@ -1163,8 +1175,6 @@ Page = {
 	Click = function(self, side, x, y, drag)
 		local cursorPos = self:GetCursorPosFromPoint(x, y)
 		self.Parent.TextInput.CursorPos = cursorPos
-				term.setCursorPos(1,2)
-				print(cursorPos)
 		if drag == nil then
 			Current.Selection = nil
 			clickPos = x
@@ -1179,8 +1189,6 @@ Page = {
 			else
 				Current.Selection[2] = relCursor + 1
 			end
-			print(Current.Selection[1])
-			print(Current.Selection[2])
 		end
 		Draw()
 		return true
@@ -1326,11 +1334,7 @@ function LoadMenuBar()
 					{
 						Title = 'Quit',
 						Click = function()
-							--TODO: confirm quit
-							OneOS.Close()
-							if Close() then
-								OneOS.Close()
-							end
+							Close()
 						end
 					},
 			--[[
@@ -1509,9 +1513,7 @@ function LoadMenuBar()
 					{
 						Title = 'Quit',
 						Click = function()
-							--TODO: confirm quit
-							OneOS.Close()
-							if Close() then
+							if Close() and OneOS then
 								OneOS.Close()
 							end
 						end,
@@ -2087,6 +2089,7 @@ function SaveDocument()
 				end
 				h.write(textutils.serialize(lines))
 			end
+			Current.Modified = false
 		else
 			ButtonDialougeWindow:Initialise('Error', 'An error occured while saving the file, try again.', 'Ok', nil, function(window, ok)
 				window:Close()
@@ -2878,5 +2881,49 @@ TextDialougeWindow = {
 		return true
 	end
 }
+
+function DoVanillaClose()
+	term.setBackgroundColour(colours.black)
+	term.setTextColour(colours.white)
+	term.clear()
+	term.setCursorPos(1, 1)
+	PrintCentered("Thanks for using Sketch!", (Drawing.Screen.Height/2)-1)
+	term.setTextColour(colours.lightGrey)
+	PrintCentered("Photoshop Inspired Image Editor for ComputerCraft", (Drawing.Screen.Height/2))
+	term.setTextColour(colours.white)
+	PrintCentered("(c) oeed 2013 - 2014", (Drawing.Screen.Height/2)+3)
+	term.setCursorPos(1, Drawing.Screen.Height)
+	error('', 0)
+end
+
+function Close()
+	if isQuitting or not Current.Document or not Current.Modified then
+		if not OneOS then
+			DoVanillaClose()
+		end
+		return true
+	else
+		local _w = ButtonDialougeWindow:Initialise('Quit Ink?', 'You have unsaved changes, do you want to quit anyway?', 'Quit', 'Cancel', function(window, success)
+			if success then
+				if OneOS then
+					OneOS.Close(true)
+				else
+					DoVanillaClose()
+				end
+			end
+			window:Close()
+			Draw()
+		end):Show()
+		--it's hacky but it works
+		os.queueEvent('mouse_click', 1, _w.X, _w.Y)
+		return false
+	end
+end
+
+if OneOS then
+	OneOS.CanClose = function()
+		return Close()
+	end
+end
 
 Initialise()

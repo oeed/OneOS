@@ -108,7 +108,7 @@ function Initialise()
 	OneOSVersion = h.readAll()
 	h.close()
 	
-	Helpers.OpenFile('Programs/Ink.program', {'/Desktop/Documents/Test.txt'})
+	--Helpers.OpenFile('Programs/Ink.program', {'/Desktop/Documents/Welcome!.txt'})
 	if Settings:GetValues()['StartupProgram'] then
 		Helpers.OpenFile('Programs/'..Settings:GetValues()['StartupProgram'])
 	end
