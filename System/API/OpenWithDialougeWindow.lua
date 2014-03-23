@@ -43,13 +43,15 @@
 		new.Title = Helpers.TruncateString(title, 26)
 		new.Visible = true
 		new.OkButton = Button:Initialise(new.Width - #okText - 2, new.Height - 1, nil, 1, colours.lightGrey, colours.black, colours.blue, colours.white, new, function()
-			returnFunc(true, '/Programs/'..new.ListView.Items[new.ListView.Selected]..'.program')
 			new:Close()
+			MainDraw()
+			returnFunc(true, '/Programs/'..new.ListView.Items[new.ListView.Selected]..'.program')
 		end, okText)
 		if cancelText then
 			new.CancelButton = Button:Initialise(new.Width - #okText - 2 - 1 - #cancelText - 2, new.Height - 1, nil, 1, colours.lightGrey, colours.black, colours.blue, colours.white, new, function()
-				returnFunc(false)
 				new:Close()
+				MainDraw()
+				returnFunc(false)
 			end, cancelText)
 		end
 
