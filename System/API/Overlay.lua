@@ -13,8 +13,17 @@ local availableSpace = 0
 function UpdateButtons()
 	hideTime = false
 	if Current.Program then
-		toolBarColour = Current.Program.Environment.OneOS.ToolBarColour
-		toolBarTextColour = Current.Program.Environment.OneOS.ToolBarTextColour
+		if Current.Program.Environment.OneOS.ToolBarColor ~= colours.white then
+			toolBarColour = Current.Program.Environment.OneOS.ToolBarColor
+		else
+			toolBarColour = Current.Program.Environment.OneOS.ToolBarColour
+		end
+		
+		if Current.Program.Environment.OneOS.ToolBarTextColor ~= colours.black then
+			toolBarTextColour = Current.Program.Environment.OneOS.ToolBarTextColor
+		else
+			toolBarTextColour = Current.Program.Environment.OneOS.ToolBarTextColour
+		end
 	else
 		toolBarColour = colours.white
 		toolBarTextColour = colours.black
@@ -193,8 +202,17 @@ function Draw()
 	end
 	
 	if Current.Program then
-		toolBarColour = Current.Program.Environment.OneOS.ToolBarColour
-		toolBarTextColour = Current.Program.Environment.OneOS.ToolBarTextColour
+		if Current.Program.Environment.OneOS.ToolBarColor ~= colours.white then
+			toolBarColour = Current.Program.Environment.OneOS.ToolBarColor
+		else
+			toolBarColour = Current.Program.Environment.OneOS.ToolBarColour
+		end
+		
+		if Current.Program.Environment.OneOS.ToolBarTextColor ~= colours.black then
+			toolBarTextColour = Current.Program.Environment.OneOS.ToolBarTextColor
+		else
+			toolBarTextColour = Current.Program.Environment.OneOS.ToolBarTextColour
+		end
 	else
 		toolBarColour = colours.white
 		toolBarTextColour = colours.black

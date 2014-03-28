@@ -139,6 +139,8 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 		local tAPIsLoading = {}
 		return {
 			ToolBarColour = colours.white,
+			ToolBarColor = colours.white,
+			ToolBarTextColor = colours.black,
 			ToolBarTextColour = colours.black,
 			OpenFile = Helpers.OpenFile,
 			Helpers = Helpers,

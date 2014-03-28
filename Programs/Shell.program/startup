@@ -1,15 +1,6 @@
 OneOS.ToolBarColour = colours.black
 OneOS.ToolBarTextColour = colours.white
 
-local backgroundColour = colours.black
-local mainTextColour = colours.white
-local highlightTextColour = colours.yellow
-
-term.setBackgroundColour(backgroundColour)
-term.setTextColour(highlightTextColour)
-term.setCursorPos(1,2)
-print(os.version())
-
 local commandHistory = {}
 
 
@@ -19,7 +10,9 @@ local function _run( _sCommand, ... )
 	local sPath = OneOS.Shell.resolveProgram(_sCommand)
 	if sPath ~= nil then
 		tProgramStack[#tProgramStack + 1] = sPath
-   		local result = OneOS.OSRun( {fs = OneOS.FS, shell = shell, io = OneOS.IO, loadfile = OneOS.LoadFile, os = os, sleep = os.sleep}, sPath, ... )
+		local _shell = shell
+		_shell.programs = OneOS.Shell.programs
+   		local result = OneOS.OSRun( {fs = OneOS.FS, shell = _shell, io = OneOS.IO, loadfile = OneOS.LoadFile, os = os, sleep = os.sleep}, sPath, ... )
 		tProgramStack[#tProgramStack] = nil
 		return result
    	else
@@ -41,17 +34,392 @@ local function runLine( _sLine )
 	return false
 end
 
-while true do
-	term.setTextColour(highlightTextColour)
-	term.setBackgroundColour(backgroundColour)
-	local _, cursorPosY = term.getCursorPos()
-	term.setCursorPos(1, cursorPosY)
-	term.write(shell.dir().."> ")
-	term.setTextColour(mainTextColour)
-	local cursorPosX, cursorPosY = term.getCursorPos()
-	term.setCursorPos(cursorPosX, cursorPosY)
-	local command = read(nil, commandHistory)
+
+--[[
+###############################################################################################################################
+###############################################################################################################################
+###############################################################################################################################
+]]--
+
+local programArgs = {
+	['rom/programs/cd'] = {'path'},
+	['rom/programs/copy'] = {'source', 'destination'},
+	['rom/programs/delete'] = {'path'},
+	['rom/programs/edit'] = {'path'},
+	['rom/programs/eject'] = {'side'},
+	['rom/programs/gps'] = {'locate'},
+	['rom/programs/help'] = {'topic'},
+	['rom/programs/label'] = {'set', 'text'},
+	['rom/programs/mkdir'] = {'path'},
+	['rom/programs/monitor'] = {'side', 'program', 'arguments'},
+	['rom/programs/move'] = {'source', 'destination'},
+	['rom/programs/color/paint'] = {'path'},
+	['rom/programs/http/pastebin'] = {'get', 'code', 'filename'},
+	['rom/programs/redpulse'] = {'side', 'count', 'period'},
+	['rom/programs/redset'] = {'side', 'true/false'},
+	['rom/programs/redstone'] = {'side', 'true/false'},
+	['rom/programs/rename'] = {'source', 'destination'},
+	['rom/programs/type'] = {'path'},
+	['rom/programs/bg'] = {'program'},
+	['rom/programs/fg'] = {'program'},
+	['rom/programs/rednet/chat'] = {'join', 'hostname', 'username'},
+	['rom/programs/turtle/craft'] = {'amount'},
+	['rom/programs/turtle/equip'] = {'slot', 'side'},
+	['rom/programs/turtle/excavate'] = {'diameter'},
+	['rom/programs/turtle/go'] = {'direction', 'distance'},
+	['rom/programs/turtle/refuel'] = {'amount'},
+	['rom/programs/turtle/tunnel'] = {'length'},
+	['rom/programs/turtle/turn'] = {'direction', 'turns'},
+	['rom/programs/turtle/unequip'] = {'side'},
+}
+-- Colours
+local promptColour, textColour, bgColour, suggestionColour
+if term.isColour() then
+	promptColour = colours.yellow
+	textColour = colours.white
+	suggestionColour = colours.grey
+	bgColour = colours.black
+else
+	promptColour = colours.white
+	textColour = colours.white
+	suggestionColour = colours.black
+	bgColour = colours.black
+end
+term.setCursorPos(1,2)	
+term.setBackgroundColor( bgColour )
+term.setTextColour( promptColour )
+term.write( os.version())
+term.setTextColour(textColour)
+term.write(' Quick Shell')
+print()
+term.setTextColour( textColour )
+
+
+local function removeFileName(str)
+	local pos = 0
+	local current = 0
+
+	repeat
+	  current = string.find(str, "/", pos)
+	  if current ~= nil then pos = current + 1 end
+	until (current == nil)
+
+	return string.gsub (str, string.sub (str, pos), "")
+end
+
+local function match(str, arg)
+	if #str == 0 then
+		return ''
+	end
+    local items = {}
+    local function insertTable(tbl)
+    	if tbl and type(tbl) == 'table' then
+	    	for i, v in ipairs(tbl) do
+	    		local add = true
+	    		for i2, v2 in ipairs(items) do
+					if v2 == v then
+						add = false
+						break
+					end
+				end
+				if add then
+					table.insert(items, v)
+				end
+	    	end
+	    elseif tbl then
+	    	table.insert(items, tbl)
+	    end
+    end
+
+    if arg == 'program' then
+	    insertTable(OneOS.Shell.resolveProgram(str))
+	    insertTable(OneOS.Shell.aliases())
+	    insertTable(OneOS.Shell.programs())
+	elseif arg == 'side' then
+		insertTable({'left', 'right', 'top', 'bottom', 'front', 'back'})
+		insertTable(peripheral.getNames())
+	elseif arg == 'direction' then
+		insertTable({'left', 'right', 'forward', 'back', 'down', 'up'})
+	elseif arg == 'true/false' then
+		insertTable({'true', 'false'})
+	elseif arg == 'set' then
+		insertTable({'get', 'set', 'clear'})
+	elseif arg == 'locate' then
+		insertTable({'locate', 'host'})
+	elseif arg == 'set' then
+		insertTable({'get', 'set', 'clear'})
+	elseif arg == 'get' then
+		insertTable({'get', 'put', 'run'})
+	elseif arg == 'topic' then
+		insertTable(help.topics())
+		insertTable('index')
+	elseif arg == 'path' or arg == 'source' then
+		local path = removeFileName(str)
+		local p, _ = removeFileName(path)
+		if not OneOS.FS.isDir(p) then
+			return ''
+		end
+		local items = OneOS.FS.list(p)
+		for i, item in ipairs(items) do
+	    	if string.lower(OneOS.FS.getName(string.sub(OneOS.FS.getName(item), 1, string.len(OneOS.FS.getName(str))))) == string.lower(OneOS.FS.getName(str)) then
+	    		return p .. item
+	    	end
+	    end
+		return ''
+	end
+
+    for i, item in ipairs(items) do
+    	if string.lower(string.sub(item, 1, string.len(str))) == string.lower(str) then
+    		return item
+    	end
+    end
+	return ''
+end
+local function tabRead( _sReplaceChar, _tHistory )
+	term.setCursorBlink( true )
+
+    local sLine = ""
+	local nHistoryPos = nil
+	local nPos = 0
+    if _sReplaceChar then
+		_sReplaceChar = string.sub( _sReplaceChar, 1, 1 )
+	end
 	
+	local w, h = term.getSize()
+	local sx, sy = term.getCursorPos()	
+	local previousMatch = ''
+	local hasMatched = false
+	local function redraw( _sCustomReplaceChar, ignoreMatch )
+		local nScroll = 0
+		if sx + nPos >= w then
+			nScroll = (sx + nPos) - w
+		end
+			
+		term.setCursorPos( 1, sy )
+		term.clearLine()
+		term.setBackgroundColor( bgColour )
+		term.setTextColour( promptColour )
+		term.write( shell.dir() .. "> " )
+		if not hasMatched and not ignoreMatch then
+			term.setCursorPos( sx, sy )
+			term.setTextColour(suggestionColour)
+			previousMatch = match(sLine, 'program')
+			term.write(previousMatch)
+		elseif not ignoreMatch and hasMatched and nPos >= #previousMatch + 1 then
+			local args = programArgs[OneOS.Shell.resolveProgram(previousMatch)]
+			previousArgs = ''
+			if args then
+				term.setCursorPos( sx + #sLine, sy )
+				if sLine:sub(-1) ~= ' ' then
+					term.write(' ')
+					term.setCursorPos( sx + #sLine + 1, sy )
+				end
+				term.setTextColour(suggestionColour)
+				local tWords = {}
+				for _match in string.gmatch( sLine, "[^ \t]+" ) do
+					table.insert(tWords, _match)
+				end
+				table.remove(tWords,1)
+
+				for i, arg in ipairs(args) do
+					if #tWords < i then
+						term.write(arg..' ')
+					elseif i == #tWords and sLine:sub(-1) ~= ' ' then
+						term.setCursorPos( sx + #sLine - #tWords[i], sy)
+						local m = match(tWords[i], arg)
+						if #m ~= 0 then
+							term.write(m..' ')
+						else
+							term.write(tWords[i]..' ')
+						end
+					end
+				end
+			end
+		end
+		term.setTextColour(textColour)
+		term.setCursorPos( sx, sy )
+		local sReplace = _sCustomReplaceChar or _sReplaceChar
+		if sReplace then
+			term.write( string.rep( sReplace, string.len(sLine) - nScroll ) )
+		else
+			term.write( string.sub( sLine, nScroll + 1 ) )
+		end
+		term.setCursorPos( sx + nPos - nScroll, sy )
+	end
+	
+	while true do
+		local sEvent, param = os.pullEvent()
+		if sEvent == "char" then
+			sLine = string.sub( sLine, 1, nPos ) .. param .. string.sub( sLine, nPos + 1 )
+			if (hasMatched and nPos <= #previousMatch) or (not hasMatched and param == ' ') then
+				local pos, len = sLine:find("[^ \t]+")
+				if pos and len then
+					previousMatch = sLine:sub(pos, len)
+					hasMatched = true
+				end
+			end
+			term.setCursorPos(1, 2)
+			nPos = nPos + 1
+			redraw()
+			
+		elseif sEvent == "key" then
+		    if param == keys.enter then
+				-- Enter
+				redraw(nil, true)
+				break
+				
+			elseif param == keys.tab then
+				if nPos >= #previousMatch + 1 and nPos == #sLine then
+					local args = programArgs[OneOS.Shell.resolveProgram(previousMatch)]
+					local sMatch = ''
+					
+					local tWords = {}
+					for match in string.gmatch( sLine, "[^ \t]+" ) do
+						table.insert(tWords, match)
+					end
+
+					if #tWords == 0 then
+						return
+					end
+
+					sMatch = match(tWords[#tWords], args[#tWords-1])
+					if #sMatch ~= 0 then
+						sLine = ''
+						tWords[#tWords] = sMatch
+						for i, v in ipairs(tWords) do
+							sLine = sLine .. v .. ' '
+						end
+						nPos = #sLine
+						redraw()
+					else
+						sLine = sLine .. ' '
+						nPos = #sLine
+						redraw()
+					end
+				else
+					local sMatch = match(sLine, 'program')
+					if #sMatch ~= 0 then
+						nPos = #sMatch + 1
+						sLine = sMatch .. ' '
+						hasMatched = true
+						previousMatch = sMatch
+						redraw()
+					end
+				end
+			elseif param == keys.left then
+				-- Left
+				if nPos > 0 then
+					nPos = nPos - 1
+					redraw()
+				end
+				
+			elseif param == keys.right then
+				-- Right				
+				if nPos < string.len(sLine) then
+					redraw(" ")
+					nPos = nPos + 1
+					redraw()
+				end
+			
+			elseif param == keys.up or param == keys.down then
+                -- Up or down
+				if _tHistory then
+					redraw(" ")
+					if param == keys.up then
+						-- Up
+						if nHistoryPos == nil then
+							if #_tHistory > 0 then
+								nHistoryPos = #_tHistory
+							end
+						elseif nHistoryPos > 1 then
+							nHistoryPos = nHistoryPos - 1
+						end
+					else
+						-- Down
+						if nHistoryPos == #_tHistory then
+							nHistoryPos = nil
+						elseif nHistoryPos ~= nil then
+							nHistoryPos = nHistoryPos + 1
+						end						
+					end
+					if nHistoryPos then
+                    	sLine = _tHistory[nHistoryPos]
+                    	nPos = string.len( sLine ) 
+                    else
+						sLine = ""
+						nPos = 0
+					end
+					redraw()
+                end
+			elseif param == keys.backspace then
+				-- Backspace
+				if nPos == #sLine and string.sub( sLine, nPos, nPos) == ' ' then
+				--if hasMatched and nPos == #previousMatch + 1 then
+					local tWords = {}
+					for match in string.gmatch( sLine, "[^ \t]+" ) do
+						table.insert(tWords, match)
+					end
+					table.remove(tWords, #tWords)
+					sLine = ''
+					for i, v in ipairs(tWords) do
+						sLine = sLine .. v .. ' '
+					end
+					nPos = #sLine
+					if #tWords == 0 then
+						previousMatch = ''
+						hasMatched = false
+					end
+
+					redraw()
+				elseif nPos > 0 then
+					redraw(" ")
+					sLine = string.sub( sLine, 1, nPos - 1 ) .. string.sub( sLine, nPos + 1 )
+					if hasMatched and nPos <= #previousMatch then
+						local pos, len = sLine:find("[^ \t]+")
+						if pos and len then
+							previousMatch = sLine:sub(pos, len)
+						end
+					end
+					nPos = nPos - 1					
+					redraw()
+				end
+			elseif param == keys.home then
+				-- Home
+				redraw(" ")
+				nPos = 0
+				redraw()		
+			elseif param == keys.delete then
+				if nPos < string.len(sLine) then
+					redraw(" ")
+					sLine = string.sub( sLine, 1, nPos ) .. string.sub( sLine, nPos + 2 )				
+					redraw()
+				end
+			elseif param == keys["end"] then
+				-- End
+				redraw(" ")
+				nPos = string.len(sLine)
+				redraw()
+			end
+		end
+	end
+	
+	term.setCursorBlink( false )
+	term.setCursorPos( w + 1, sy )
+	print()
+	
+	return sLine
+end
+
+
+-- Read commands and execute them
+local tCommandHistory = {}
+while not bExit do
+	term.setBackgroundColor( bgColour )
+	term.setTextColour( promptColour )
+	term.write( shell.dir() .. "> " )
+	term.setTextColour( textColour )
+
+	local command = tabRead( nil, tCommandHistory )
 	if command then
 		local args = {}
 		for arg in command:gmatch('%S+') do
@@ -59,6 +427,18 @@ while true do
 		end
 
 		if not args[1] or args[1] == '' then
+		elseif args[1] == 'shutdown' then
+			term.setTextColour(promptColour)
+			print('See ya!')
+			sleep(1)
+			OneOS.Shutdown()
+		elseif args[1] == 'reboot' then
+			term.setTextColour(promptColour)
+			print('See ya!')
+			sleep(1)
+			OneOS.Reboot()
+		elseif args[1] == 'exit' then
+			OneOS.Close()
 		else
 			local path = OneOS.Shell.resolveProgram(shell.dir()..'/'..args[1])
 			if path == nil then
@@ -77,6 +457,6 @@ while true do
 			end
 		end
 
-		table.insert(commandHistory, command)
+		table.insert(tCommandHistory, command)
 	end
 end

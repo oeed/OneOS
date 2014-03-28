@@ -1,4 +1,4 @@
-isDebug = false
+isDebug = true
 
 oldTerm = term
 
@@ -161,6 +161,122 @@ function LoadingScreen()
 	return true
 end
 
+function RecieveStartupKey()
+	while true do
+	  local event, arg = os.pullEvent()
+	  if event=='onesos_bootdone' then 
+	  	return nil
+	  elseif event == "key" then
+	  	return arg 
+	  end
+	  
+	end
+end
+
+function BootMenu()
+	Drawing.Clear(colours.white)
+	Drawing.DrawCharactersCenter(nil, (-Drawing.Screen.Height/2) + 2, nil, nil, 'OneOS', colours.blue, colours.white)
+	Drawing.DrawCharactersCenter(nil, (-Drawing.Screen.Height/2) + 3, nil, nil, 'Boot Options', colours.grey, colours.white)
+	Drawing.DrawCharactersCenter(1, (Drawing.Screen.Height/2), nil, nil, 'Use arrow keys to select, enter to accept', colours.grey, colours.white)
+	local continue = false
+	local options = {
+		{'Reset Settings', function() if fs.exists('/System/.OneOS.settings') then fs.delete('/System/.OneOS.settings') end continue = true end},
+		{'Wipe Computer', function()
+			term.setCursorPos(1,1)
+			term.setBackgroundColor(colours.black)
+			term.setTextColor(colours.white)
+			term.clear()
+			local function removeFolder(path)
+				if path == '/rom' then
+					return
+				end
+				for i, v in ipairs(fs.list(path)) do
+					if fs.isDir(path..'/'..v) then
+						removeFolder(path..'/'..v)
+					else
+						fs.delete(path..'/'..v)
+						print('Removed: '..path..'/'..v)
+						sleep(0)
+					end
+				end
+				if path ~= '' then
+					fs.delete(path)
+				end
+			end
+			removeFolder('')
+			
+		end},
+		{'Use CraftOS', function()end},
+		{'Boot Normally', function() continue = true end}
+	}
+
+	local selected = 1
+	local function draw()
+		for i, v in ipairs(options) do
+			local bg = colours.white
+			local tc = colours.blue
+			if i == selected then
+				bg = colours.blue
+				tc = colours.white
+			end
+			Drawing.DrawCharactersCenter(nil, math.floor(-#options/2) + i, nil, nil, ' '..v[1]..' ', tc, bg)
+		end
+		Drawing.DrawBuffer()
+	end
+	local wait = true
+	draw()
+	while wait do
+		local event, key = os.pullEvent('key')
+		if key == keys.up then
+			selected = selected - 1
+			if selected < 1 then
+				selected = 1
+			end
+		elseif key == keys.down then
+			selected = selected + 1
+			if selected > #options then
+				selected = #options
+			end
+		elseif key == keys.enter then
+			if options[selected][1] == 'Wipe Computer' then
+				Drawing.Clear(colours.white)
+				Drawing.DrawCharactersCenter(nil, (-Drawing.Screen.Height/2) + 2, nil, nil, 'OneOS', colours.blue, colours.white)
+				Drawing.DrawCharactersCenter(nil, (-Drawing.Screen.Height/2) + 3, nil, nil, 'Boot Options', colours.grey, colours.white)
+				Drawing.DrawCharactersCenter(1, (Drawing.Screen.Height/2), nil, nil, 'Use arrow keys to select, enter to accept', colours.grey, colours.white)
+				Drawing.DrawCharactersCenter(nil, nil, nil, nil, 'Are you sure? Press Y or N', colours.red, colours.white)
+				Drawing.DrawBuffer()
+				local _ = true
+				while _ do
+					local ev, k = os.pullEvent('char')
+					if k == 'y' then
+						options[selected][2]()
+						sleep(2)
+						os.reboot()
+					elseif k == 'n' then
+						_ = false
+					end
+				end
+				Drawing.DrawCharactersCenter(nil, nil, nil, nil, '                          ', colours.red, colours.white)
+			else
+				options[selected][2]()
+				wait = false
+			end
+		end
+		draw()
+	end
+	return continue
+end
+
+function Start()
+	local key = nil
+	local success = false
+	parallel.waitForAll(function()success = LoadingScreen() os.queueEvent('onesos_bootdone') end, function() key = RecieveStartupKey() end)
+	if success and key == keys.leftAlt or key == keys.rightAlt then
+		success = BootMenu()
+	end
+	return success
+end
+
 if not term.isColour() then
 	term.setBackgroundColor(colours.black)
 	term.setTextColor(colours.white)
@@ -174,7 +290,7 @@ if not term.isColour() then
 	term.clear()
 	term.setCursorPos(1,1)
 
-elseif LoadingScreen() then
+elseif Start() then
 
 	if fs.exists('/.update/') and fs.isDir('/.update/') then
 		if not fs.exists('/.update/.version') then
@@ -216,10 +332,6 @@ elseif LoadingScreen() then
 	else
 		ok = {pcall(Initialise)}
 	end
-
-
-
-
 
 	if not ok[1] then
 		xpcall(function()loadfile('/System/main.lua')end, function(err)
@@ -324,18 +436,8 @@ elseif LoadingScreen() then
 		os.pullEvent('mouse_click')
 		os.reboot()
 	end
-	--[[end)
-	if err then
-		local w, h = term.getSize()
-		local x = w/2
-		local y = h/2
-		local warning = "A fatal error occured"
-		term.setCursorPos(x-(#warning/2), y)
-		term.clearLine()
-		term.write(warning)
-		print()
-		print()
-		term.setTextColour(colours.red)
-		print(err)
-	end]]
 end
+
+term.setBackgroundColor(colours.black)
+term.setCursorPos(1,1)
+term.clear()
