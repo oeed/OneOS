@@ -1859,7 +1859,7 @@ Tools = {
 		end,
 		Select = function(self)
 			if Current.Artboard.Format == '.nfp' then
-				ButtonDialougeWindow:Initialise('NFP does not support text!', 'The format you are using, NFP, does not support text. Use NFP or SKCH to use text.', 'Ok', nil, function(window)
+				ButtonDialougeWindow:Initialise('NFP does not support text!', 'The format you are using, NFP, does not support text. Use NFT or SKCH to use text.', 'Ok', nil, function(window)
 					window:Close()
 				end):Show()
 				return false
