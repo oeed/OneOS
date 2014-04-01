@@ -46,6 +46,13 @@
 
 		local file = fs.open('/System/.OneOS.settings','r')
 		local values = textutils.unserialize(file.readAll())
+		if not values then
+			local defaults = {}
+			for k, v in pairs(self.Defaults) do
+				defaults[k] = v.Default
+			end
+			return defaults
+		end
 		
 		for k, v in pairs(self.Defaults) do
 			if values[k] == nil then

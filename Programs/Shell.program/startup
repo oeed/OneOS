@@ -282,7 +282,9 @@ local function tabRead( _sReplaceChar, _tHistory )
 						return
 					end
 
-					sMatch = match(tWords[#tWords], args[#tWords-1])
+					if args then
+						match(tWords[#tWords], args[#tWords-1])
+					end
 					if #sMatch ~= 0 then
 						sLine = ''
 						tWords[#tWords] = sMatch

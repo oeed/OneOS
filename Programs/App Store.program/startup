@@ -1470,7 +1470,7 @@ if term.isColor and term.isColor() then
       term.setBackgroundColour(colours.lightGrey)
       print("Try repeating what you just did, if this is the second time you've seen this message go to")
       term.setTextColour(colours.black)
-      print("http://ccappstore.com/help/crash/\n")
+      print("http://ccappstore.com/help#crash/\n")
       term.setTextColour(colours.white)    
       print("The error was:")
 

@@ -1325,6 +1325,8 @@ elseif OneOS and pocket then
 	term.clear()
 	print('OneOS already acts as a door key. Simply place your PDA in the door\'s disk drive to register it.')
 	print()
+	print('To setup a door, run this program on an advanced computer (non-pocket).')
+	print()
 	print('Click anywhere to quit')
 	os.pullEvent('mouse_click')
 	Quit()

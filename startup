@@ -1,4 +1,4 @@
-isDebug = true
+isDebug = false
 
 oldTerm = term
 
@@ -89,7 +89,7 @@ function PrintCentered(text, y)
     local w, h = term.getSize()
     x = math.ceil(math.ceil((w / 2) - (#text / 2)), 0)+1
     term.setCursorPos(x, y)
-    print(text)
+    write(text)
 end
 
 function LoadingScreen()
@@ -147,12 +147,17 @@ function LoadingScreen()
 			term.setCursorPos(1, y + 11)
 			
 			term.clearLine()
-			PrintCentered('Loading API '..file, y + 11)
+			if pocket then
+				PrintCentered(file, y + 11)
+			else
+				PrintCentered('Loading API '..file, y + 11)
+			end
 			sleep(0)
 			if not LoadAPI(root .. 'System/API/' .. file) then
 				term.setTextColour(colours.red)
 				PrintCentered('Error While Loading API '..file, y + 11)
 				term.setCursorPos(1, 1)
+				sleep(3)
 				return false
 			end
 		end
@@ -171,6 +176,36 @@ function RecieveStartupKey()
 	  end
 	  
 	end
+end
+
+function PastebinPut(file)
+	if not fs.exists(file) then
+		return 'NOT EXIST'
+	end
+    -- Read in the file
+    local sName = fs.getName( file )
+    local file = fs.open( file, "r" )
+    local sText = file.readAll()
+    file.close()
+    
+    local key = "0ec2eb25b6166c0c27a394ae118ad829"
+    local response = http.post(
+        "http://pastebin.com/api/api_post.php", 
+        "api_option=paste&"..
+        "api_dev_key="..key.."&"..
+        "api_paste_format=lua&"..
+        "api_paste_name="..textutils.urlEncode(sName).."&"..
+        "api_paste_code="..textutils.urlEncode(sText)
+    )
+        
+    if response then
+        local sResponse = response.readAll()
+        response.close()
+                
+        local sCode = string.match( sResponse, "[^/]+$" )
+        return sCode
+    end
+    return 'FAILED'
 end
 
 function BootMenu()
@@ -328,9 +363,13 @@ elseif Start() then
 		if fs.exists('/System/.OneOS.settings') then
 			fs.delete('/System/.OneOS.settings')
 		end
-		ok = {pcall(FirstSetup)}
+		xpcall(FirstSetup, function(err)
+			ok = {false, err}
+		end)
 	else
-		ok = {pcall(Initialise)}
+		xpcall(Initialise, function(err)
+			ok = {false, err}
+		end)
 	end
 
 	if not ok[1] then
@@ -395,8 +434,18 @@ elseif Start() then
 		if http then
 			PrintCentered('Sending error report, please wait.', Drawing.Screen.Height-3)
 			local success = false
-			parallel.waitForAny(function()sleep(4) end, function()
-				local detail = {message='Crashed Before Main Initialise', time = os.clock(), errors = ok}
+			parallel.waitForAny(function()sleep(7) end, function()
+				local s = ok[#ok]
+				local pastebin = 'Not1.6'
+				if fs.find then
+					local f = fs.find('*/'..s:sub(1, s:find(':')-1))[1]
+					if not f then
+						pastebin = PastebinPut(s)
+					else
+						pastebin = PastebinPut(f)
+					end
+				end
+				local detail = {message='Crashed Before Main Initialise', time = os.clock(), errors = ok, pastebin = pastebin}
 				if Current and Current.Programs then
 					detail.message = 'Crashed After Main Initialise'
 					detail.programs = {}
@@ -411,13 +460,13 @@ elseif Start() then
 					version = h.readAll()
 					h.close()
 				else
-					version = '?'
+					version = 'N/E'
 				end
 				if not isDebug then
 					local _ = http.post('http://olivercooper.me/errorSubmit.php', 
 	                                "product="..textutils.urlEncode(tostring('OneOS')).."&"..
 	                                "version="..textutils.urlEncode(tostring(version)).."&"..
-	                                "error="..textutils.urlEncode(ok[1]).."&"..
+	                                "error="..textutils.urlEncode(ok[#ok]).."&"..
 	                                "detail="..textutils.urlEncode(textutils.serialize(detail)));
 					if _ then
 						success = true

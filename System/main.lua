@@ -60,7 +60,6 @@ function FirstSetup()
 	EventRegister('char', HandleKey)
 	EventRegister('timer', Update)
 	--updateTimer = os.startTimer(0.5)
-	
 	isFirstSetup = true
 	Overlay:Initialise()
 	RegisterElement(Overlay)
@@ -107,7 +106,7 @@ function Initialise()
 	end
 	OneOSVersion = h.readAll()
 	h.close()
-	
+
 	--Helpers.OpenFile('Programs/Ink.program', {'/Desktop/Documents/Welcome!.txt'})
 	if Settings:GetValues()['StartupProgram'] then
 		Helpers.OpenFile('Programs/'..Settings:GetValues()['StartupProgram'])

@@ -47,7 +47,12 @@ function doRequest(command, subcommand, values)
 		if response == "<h2>The server is too busy at the moment.</h2><p>Please reload this page few seconds later.</p>" then
 			error("Server is too busy at the moment.")
 		end
-		return textutils.unserialize(response)
+		local t = textutils.unserialize(response)
+		if t then
+			return t
+		else
+			return response
+		end
 	end
 	return nil
 end
@@ -142,7 +147,10 @@ end
 function installApplication(id, path, removeSpaces, alwaysFolder, fullPath)
 	local package = downloadApplication(id)
 	if type(package) ~= 'string' or #package == 0 then
-		error('The application did not download correctly or is empty. Try again.')
+		print(package)
+		print('*')
+		sleep(4)
+		--error('The application did not download correctly or is empty. Try again.')
 	end
 	local pack = JSON.decode(package)
 	if pack then

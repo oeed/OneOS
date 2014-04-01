@@ -154,7 +154,7 @@ function UpdateButtons()
 	end
 
 	if #menuPrograms ~= 0 then
-		InsertMenu("=", menuPrograms, Drawing.Screen.Width)
+		InsertMenu("=", menuPrograms, Drawing.Screen.Width - 1)
 	end
 
 	Draw()
@@ -168,7 +168,7 @@ function InsertMenu(title, items, x)
 	end
 
 	table.insert(Elements,
-	 Button:Initialise(x-1, 1, #title+2, 1, toolBarColour, toolBarTextColour, nil, nil, nil, function(self, side, x, y, toggle)
+	Button:Initialise(x-1, 1, #title+2, 1, toolBarColour, toolBarTextColour, nil, nil, nil, function(self, side, x, y, toggle)
 		local menu = nil
 		if toggle then
 			menu = Menu:Initialise(0-menuX, 2, nil, nil, self, items, true, function()

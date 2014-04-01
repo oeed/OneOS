@@ -71,6 +71,9 @@ LoadImage = function(path, global)
 			_io = OneOS.IO
 		end
         local file = _io.open(path, "r")
+        if not file then
+        	error('Error Occured. _io:'..tostring(_io)..' OneOS: '..tostring(OneOS)..' OneOS.IO'..tostring(OneOS.IO)..' io: '..tostring(io))
+        end
         local sLine = file:read()
         local num = 1
         while sLine do  

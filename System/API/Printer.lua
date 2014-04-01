@@ -58,11 +58,15 @@
 		end
 	end
 
+	local function StripColours(str)
+		return str:gsub('['..string.char(14)..'-'..string.char(29)..']','')
+	end
+
 	function PrintLines(self, lines, title, copies)
 		local pages = {}
 		local pageLines = {}
 		for i, line in ipairs(lines) do
-			table.insert(pageLines, TextLine:Initialise(line))
+			table.insert(pageLines, TextLine:Initialise(StripColours(line)))
 			if i % 25 == 0 then
 				table.insert(pages, pageLines)
 				pageLines = {}
@@ -87,7 +91,7 @@
 				self:newPage()
 				for i, line in ipairs(page) do
 					self:setCursorPos(1, i)
-					self:pageWrite(line.Text)
+					self:pageWrite(StripColours(line.Text))
 				end
 				if title then
 					self:setPageTitle(title)

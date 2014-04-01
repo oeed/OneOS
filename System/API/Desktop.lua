@@ -169,8 +169,10 @@ function Click(event, side, x, y)
 							else
 								TextDialogueWindow:Initialise("Rename '"..Helpers.TruncateString(name, 17).."'", function(success, value)
 									if success and #value ~= 0 then
-										fs.move('Desktop/'..name, 'Desktop/'..value)
-
+										local _, err = pcall(function()fs.move('Desktop/'..name, 'Desktop/'..value) end)
+										if err then
+											ButtonDialogueWindow:Initialise("Rename Failed!", 'Error: '..errr, 'Ok', nil, function()end):Show()
+										end
 										settings.layout[value..Helpers.Extension(name, true)] = settings.layout[name]
 										settings.layout[name] = nil
 										SaveSettings()
@@ -206,8 +208,12 @@ function Click(event, side, x, y)
 						Click = function()
 							TextDialogueWindow:Initialise("Create a Folder", function(success, value)
 								if success then
-									fs.makeDir('Desktop/'..value)
-									RefreshFiles()
+									if fs.exists('Desktop/'..value) then
+										ButtonDialogueWindow:Initialise("File/Folder Exists!", 'A file/folder with that name already exists!', 'Ok', nil, function()end):Show()
+									else
+										fs.makeDir('Desktop/'..value)
+										RefreshFiles()
+									end
 								end
 							end):Show()
 						end
@@ -217,9 +223,13 @@ function Click(event, side, x, y)
 						Click = function()
 						TextDialogueWindow:Initialise("Create a File", function(success, value)
 							if success then
-								local h = fs.open('Desktop/'..value, 'w')
-								h.close()
-								RefreshFiles()
+								if fs.exists('Desktop/'..value) then
+									ButtonDialogueWindow:Initialise("File/Folder Exists!", 'A file/folder with that name already exists!', 'Ok', nil, function()end):Show()
+								else
+									local h = fs.open('Desktop/'..value, 'w')
+									h.close()
+									RefreshFiles()
+								end
 							end
 						end):Show()
 						end
@@ -246,28 +256,36 @@ function Click(event, side, x, y)
 		if event == 'mouse_click' and side == 2 then
 			Menu:Initialise(x, y, nil, nil, self,{ 
 				{
-					Title = 'New Folder...',
-					Click = function()
-					TextDialogueWindow:Initialise("Create a Folder", function(success, value)
-						if success then
-							fs.makeDir('Desktop/'..value)
-							RefreshFiles()
+						Title = 'New Folder...',
+						Click = function()
+							TextDialogueWindow:Initialise("Create a Folder", function(success, value)
+								if success then
+									if fs.exists('Desktop/'..value) then
+										ButtonDialogueWindow:Initialise("File/Folder Exists!", 'A file/folder with that name already exists!', 'Ok', nil, function()end):Show()
+									else
+										fs.makeDir('Desktop/'..value)
+										RefreshFiles()
+									end
+								end
+							end):Show()
 						end
-					end):Show()
-					end
-				},
-				{
-					Title = 'New File...',
-					Click = function()
-					TextDialogueWindow:Initialise("Create a File", function(success, value)
-						if success then
-							local h = fs.open('Desktop/'..value, 'w')
-							h.close()
-							RefreshFiles()
+					},
+					{
+						Title = 'New File...',
+						Click = function()
+						TextDialogueWindow:Initialise("Create a File", function(success, value)
+							if success then
+								if fs.exists('Desktop/'..value) then
+									ButtonDialogueWindow:Initialise("File/Folder Exists!", 'A file/folder with that name already exists!', 'Ok', nil, function()end):Show()
+								else
+									local h = fs.open('Desktop/'..value, 'w')
+									h.close()
+									RefreshFiles()
+								end
+							end
+						end):Show()
 						end
-					end):Show()
-					end
-				},
+					},
 				{
 					Separator = true
 				},
