@@ -1,0 +1,15 @@
+
+sleep(3)
+print('*')
+for i = 1, 18 do
+  print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+end
+
+sleep(6)
+OneOS.Close()
+
+print('still here')
+for i = 1, 10 do
+print('still '..i)
+sleep(1)
+end

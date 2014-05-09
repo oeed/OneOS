@@ -12,7 +12,7 @@ local needsDisplay = true
 local drawing = false
 
 local updateTimer = nil
-local clockTimer = nil
+clockTimer = nil
 local desktopRefreshTimer = nil
 
 Current = {
@@ -42,9 +42,7 @@ isFirstSetup = false
 
 
 function ShowDesktop()
-	Desktop.LoadSettings()
 	Desktop.RefreshFiles()
-	Desktop.SaveSettings()
 
 	RegisterElement(Overlay)
 	Overlay:Initialise()
@@ -83,6 +81,7 @@ function Initialise()
 	EventRegister('timer', Update)
 	EventRegister('http_success', AutoUpdateRespose)
 	EventRegister('http_failure', AutoUpdateFail)
+	EventRegister('mouse_scroll', function(...)if Desktop then Desktop.Click(unpack({...})) end end)
 	EventRegister('modem_message', function(event, side, channel, replyChannel, message, distance)
 		if pocket and channel == Wireless.Channels.UltimateDoorlockPing then
 			message = textutils.unserialize(message)
@@ -276,8 +275,8 @@ function Update(event, timer)
 	elseif Desktop and timer == desktopRefreshTimer then
 		Desktop:RefreshFiles()
 		desktopRefreshTimer = os.startTimer(3)
-	elseif Desktop and timer == Desktop.desktopDragOverTimer then
-		Desktop.DragOverUpdate()
+	elseif Desktop and timer == Desktop.dragTimeout then
+		Desktop.DragTimeout()
 	else
 		Animation.HandleTimer(timer)
 		for i, program in ipairs(Current.Programs) do
@@ -435,11 +434,7 @@ function HandleKey(...)
 		end
 	else
 		if event == 'key' then
-			if keychar == keys.enter then
-				Desktop.OpenSelected()
-			elseif keychar == keys.delete or keychar == keys.backspace then
-				Desktop.DeleteSelected()
-			end
+			Desktop.HandleKey(keychar)
 		end
 	end
 end

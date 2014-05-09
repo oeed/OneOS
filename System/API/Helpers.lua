@@ -198,10 +198,7 @@ end
 
 MakeShortcut = function(path)
 	path = TidyPath(path)
-	local name = Helpers.RemoveExtension(path)
-	if fs.isDir(path) then
-		name = Helpers.RemoveExtension(fs.getName(path))
-	end
+	local name = Helpers.RemoveExtension(fs.getName(path))
 	local f = fs.open('Desktop/'..name..'.shortcut', 'w')
 	f.write(path)
 	f.close()

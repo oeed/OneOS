@@ -1,148 +1,155 @@
 local files = {}
-local settings = {}
+local wallpaperColour = colours.cyan
 local selectedFile = nil
 local dragRelPos = nil
 local lastClick = nil
-local dragOverItem = nil
-desktopDragOverTimer = nil
-local dragOverSource = nil
+local currentPage = 1
+local offset = 0
+local totalPages = 1
+dragTimeout = 0
+local dragLock = false
 
+local function IconLocation(i)
+	local slotHeight = 5
+	local slotWidth = 11
+	local x, y, maxX, maxY, maxPage = MaxIcons()
+	local _i = ((i-1) % maxPage) + 1
+	local rowPos = ((_i - 1) % maxX)
+	local colPos = math.ceil(_i / maxX) - 1
+	local page = math.ceil(i/maxPage)
+	x = x + (slotWidth * rowPos) + 3 + offset + Drawing.Screen.Width * (page - 1)
+	y = y + colPos * slotHeight
+	return x, y
+end
 
-local function IconLocation(i, ignoreOverlay)
+function MaxIcons()
 	local y, x = 3, 5
 	local slotHeight = 5
 	local slotWidth = 11
-	local maxRow = math.floor((Drawing.Screen.Height - 2) / slotHeight)
-	i = i - 1
-	local collumn = math.ceil((i / maxRow)+0.1) - 1
-	x = x + (slotWidth * collumn)
-	y = y + (i % maxRow) * slotHeight
-	--[[
-if #files == 1 then
-		return nil
-	end
-]]--
+	local maxX = math.floor((Drawing.Screen.Width - 2) / slotWidth)
+	local maxY = math.floor((Drawing.Screen.Height - 2) / slotHeight)
+	x = 1 + math.floor(((Drawing.Screen.Width - (maxX * slotWidth))) / 2)
+	return x, y, maxX, maxY, maxX * maxY
+end
 
-	for _i, file in ipairs(files) do
-		if not ignoreOverlay and settings.layout[file] and x == settings.layout[file].x and y == settings.layout[file].y then
-			return IconLocation(i+2)
+function GoToPage(i)
+	if i > 0 and i <= totalPages then
+		local old = currentPage
+		currentPage = i
+		Desktop.dragTimeout = nil
+		AnimatePageChange(old, currentPage)
+	end
+end
+
+function DragTimeout()
+	local relOffset = (offset + Drawing.Screen.Width * (currentPage - 1))
+	local fakeOld = currentPage + 1
+	if relOffset > 0 then
+		fakeOld = currentPage - 1
+	end
+	AnimatePageChange(fakeOld, currentPage)
+end
+
+function AnimatePageChange(from, to)
+	dragLock = true
+	dragRelPos = nil
+	local max = -1*Drawing.Screen.Width * (to - 1)
+	local direction = 1
+	if from < to then
+		direction = -1
+	end
+	if Settings:GetValues()['UseAnimations'] then
+		local relOffset = (offset + Drawing.Screen.Width * (currentPage - 1))
+		if relOffset < 0 then
+			relOffset = relOffset * -1
 		end
+		local speed = math.ceil(relOffset / Drawing.Screen.Width * 6)
+		while ((max < offset) and direction == -1) or ((max > offset) and direction == 1) do
+			offset = offset + direction * speed
+			relOffset = (offset + Drawing.Screen.Width * (to - 1))
+			if speed > relOffset and relOffset > -1*speed then
+				offset = max
+			end
+			MainDraw()
+			sleep(0.05)
+		end
+		os.queueEvent('timer', clockTimer)
 	end
-
-	return x, y
+	offset = max
+	MainDraw()
+	dragLock = false
 end
 
 function RefreshFiles()
 	files = {}
-	local layout = {}
-	local count = 0
+
 	if not fs.exists('Desktop/') then
 		fs.makeDir('Desktop/')
 	elseif not fs.isDir('Desktop/') then
 		fs.delete('Destop/')
 		fs.makeDir('Desktop/')
 	end
-	for i, file in ipairs(fs.list('Desktop/')) do
-		if string.sub( file, 1, 1 ) ~= '.' and settings.layout[file] then
-			count = count + 1
-		end
-	end
-
-	local notSet = {}
 
 	for i, file in ipairs(fs.list('Desktop/')) do
 		if string.sub( file, 1, 1 ) ~= '.' then
-			if not settings.layout[file] then
-				table.insert(notSet, file)
-			else
-				table.insert(files, file)
-				layout[file] = settings.layout[file]
-			end
+			table.insert(files, file)
 		end
 	end
+	local x, y, maxX, maxY, maxPage = MaxIcons()
+	totalPages = math.ceil(#files/maxPage)
 
-	for i, file in ipairs(notSet) do
-		local x, y = IconLocation(i)
-		table.insert(files, file)
-        count = count + 1
-        layout[file] = {x = x, y = y}
-	end
-
-	settings.layout = layout
-	settings.colour = Settings:GetValues()['DesktopColour']
-end
-
-function LoadSettings()
-	local h = fs.open('Desktop/.Desktop.settings', 'r')
-	if h then
-		settings = textutils.unserialize(h.readAll())
-		if not settings or not settings.layout then
-			settings = {layout = {}}
-		end
-	
-		h.close()
-	else
-		settings = {layout = {}}
-	end
-	settings.colour = Settings:GetValues()['DesktopColour']
-end
-
-function SaveSettings()
-	local h = fs.open('Desktop/.Desktop.settings', 'w')
-	h.write(textutils.serialize(settings))
-	h.close()
+	wallpaperColour = Settings:GetValues()['DesktopColour']
 end
 
 function Draw()
-	Drawing.Clear(settings.colour)
+	Drawing.Clear(wallpaperColour)
 
 	for i, file in ipairs(files) do
-		DrawFile(file)
+		DrawFile(file, i)
 	end
+	local indicatorWidth = (totalPages * 2) - 2
+	local indicatorPos = math.ceil((Drawing.Screen.Width/2)) - totalPages - 1
+
+	for i = 1, totalPages do
+		local col = colours.grey
+		if currentPage == i then
+			col = colours.white
+		end
+		Drawing.WriteToBuffer(indicatorPos + i * 2, Drawing.Screen.Height - 1, ' ', colours.white, col)
+	end
+
 end
 
-function FileHitTest(file, name, x, y)
-	local shortenedName = Helpers.RemoveExtension(name)
-	return (y >= file.y and y <= file.y + 2 and x >= file.x and x <= file.x + 3) or (y == file.y + 3 and x >= math.floor(file.x+2-(#shortenedName/2)) and x <= math.floor(file.x+1+(#shortenedName/2)))
-end
-
-function DragOverUpdate()
-	if dragOverItem then
-		ButtonDialogueWindow:Initialise("Move '"..Helpers.TruncateString(Helpers.RemoveExtension(dragOverSource), 16).."'?", "Are you sure you want to move '"..dragOverSource.."' to '"..dragOverItem.."'?", 'Yes', 'Cancel', function(success)
-			if success then
-				fs.move('Desktop/'..dragOverSource, 'Desktop/'..dragOverItem..'/'..dragOverSource)
-				RefreshFiles()
-			end
-		end):Show()
-	end
+function FileHitTest(file, i, x, y)
+	local shortenedName = Helpers.RemoveExtension(fs.getName(file))
+	local posX, posY = IconLocation(i)
+	return (y >= posY and y <= posY + 2 and x >= posX and x <= posX + 3) or (y == posY + 3 and x >= math.floor(posX+2-(#shortenedName/2)) and x <= math.floor(posX+(#shortenedName/2)))
 end
 
 function Click(event, side, x, y)
 	local found = false
-	for name, file in pairs(settings.layout) do
-		if event == 'mouse_drag' and selectedFile == name then
-			settings.layout[name].x = x + dragRelPos.x
-			settings.layout[name].y = y + dragRelPos.y
-			local foundDrag = false
-			for n, f in pairs(settings.layout) do
-				if n ~= name and FileHitTest(f, n, x, y) and fs.isDir('/Desktop/'..n) then
-					foundDrag = true
-					dragOverItem = n
-					dragOverSource = name
-					Desktop.desktopDragOverTimer = os.startTimer(0.5)
-					break
-				end
+	if (event == 'mouse_drag' and dragRelPos) or (event == 'mouse_scroll' and not dragLock) then
+		if event == 'mouse_drag' then
+			offset = x - dragRelPos
+		else
+			offset = offset - side
+		end
+		if not dragLock then
+			Desktop.dragTimeout = os.startTimer(1)
+			local relOffset = (offset + Drawing.Screen.Width * (currentPage - 1))
+			if relOffset < 0 and relOffset < -1*Drawing.Screen.Width/4 then
+				GoToPage(currentPage + 1)
+			elseif relOffset > 0 and relOffset > Drawing.Screen.Width/4 then
+				GoToPage(currentPage - 1)
+			else
+				MainDraw()
 			end
-			if not foundDrag then
-				dragOverItem = nil
-				dragOverSource = nil
-			end
-			found = true
-			MainDraw()
-			SaveSettings()
-		elseif event == 'mouse_click' and FileHitTest(file, name, x, y) then
-			dragRelPos = {x = file.x - x,  y = file.y - y}
-			
+		end
+		return
+	end
+	for i, file in ipairs(files) do
+		local name = fs.getName(file)
+		if event == 'mouse_click' and FileHitTest(file, i, x, y) then
 			if selectedFile == name and lastClick and (os.clock() - lastClick) < 0.5 then
 				Helpers.OpenFile('Desktop/'..name)
 			end
@@ -173,9 +180,6 @@ function Click(event, side, x, y)
 										if err then
 											ButtonDialogueWindow:Initialise("Rename Failed!", 'Error: '..errr, 'Ok', nil, function()end):Show()
 										end
-										settings.layout[value..Helpers.Extension(name, true)] = settings.layout[name]
-										settings.layout[name] = nil
-										SaveSettings()
 										RefreshFiles()
 									end
 								end):Show()
@@ -192,8 +196,6 @@ function Click(event, side, x, y)
 								ButtonDialogueWindow:Initialise("Delete '"..Helpers.TruncateString(Helpers.RemoveExtension(name), 16).."'?", "Are you sure you want to delete '"..name.."'?", 'Yes', 'Cancel', function(success)
 									if success then
 										fs.delete('Desktop/'..name)
-										settings.layout[name] = nil
-										SaveSettings()
 										RefreshFiles()
 									end
 								end):Show()
@@ -238,14 +240,15 @@ function Click(event, side, x, y)
 						Separator = true
 					},
 					{
-						Title = 'Clean Up',
+						Title = 'Refresh',
 						Click = function()
-							Clean()
+							RefreshFiles()
 						end
-					}}):Show()
+					}
+				}):Show()
 			end
-
 			MainDraw()
+			return
 		end
 	end
 
@@ -253,75 +256,75 @@ function Click(event, side, x, y)
 		selectedFile = nil
 		MainDraw()
 	elseif not found then
-		if event == 'mouse_click' and side == 2 then
+		if event == 'mouse_click' and side ~= 2 then
+			dragRelPos = offset + x
+		elseif event == 'mouse_click' and side == 2 then
 			Menu:Initialise(x, y, nil, nil, self,{ 
 				{
-						Title = 'New Folder...',
-						Click = function()
-							TextDialogueWindow:Initialise("Create a Folder", function(success, value)
-								if success then
-									if fs.exists('Desktop/'..value) then
-										ButtonDialogueWindow:Initialise("File/Folder Exists!", 'A file/folder with that name already exists!', 'Ok', nil, function()end):Show()
-									else
-										fs.makeDir('Desktop/'..value)
-										RefreshFiles()
-									end
-								end
-							end):Show()
-						end
-					},
-					{
-						Title = 'New File...',
-						Click = function()
-						TextDialogueWindow:Initialise("Create a File", function(success, value)
+					Title = 'New Folder...',
+					Click = function()
+						TextDialogueWindow:Initialise("Create a Folder", function(success, value)
 							if success then
 								if fs.exists('Desktop/'..value) then
 									ButtonDialogueWindow:Initialise("File/Folder Exists!", 'A file/folder with that name already exists!', 'Ok', nil, function()end):Show()
 								else
-									local h = fs.open('Desktop/'..value, 'w')
-									h.close()
+									fs.makeDir('Desktop/'..value)
 									RefreshFiles()
 								end
 							end
 						end):Show()
+					end
+				},
+				{
+					Title = 'New File...',
+					Click = function()
+					TextDialogueWindow:Initialise("Create a File", function(success, value)
+						if success then
+							if fs.exists('Desktop/'..value) then
+								ButtonDialogueWindow:Initialise("File/Folder Exists!", 'A file/folder with that name already exists!', 'Ok', nil, function()end):Show()
+							else
+								local h = fs.open('Desktop/'..value, 'w')
+								h.close()
+								RefreshFiles()
+							end
 						end
-					},
+					end):Show()
+					end
+				},
 				{
 					Separator = true
 				},
 				{
-					Title = 'Clean Up',
+					Title = 'Refresh',
 					Click = function()
-						Clean()
+						RefreshFiles()
 					end
-			}}):Show()
+				}
+			}):Show()
 		end
 		
 		MainDraw()
 	end
 end
 
-function Clean()
-	for i, file in ipairs(files) do
-		local x, y = IconLocation(i, true)
-		settings.layout[file] = {x = x, y = y}
+function HandleKey(key)
+	if key == keys.enter then
+		Desktop.OpenSelected()
+	elseif key == keys.delete or key == keys.backspace then
+		Desktop.DeleteSelected()
+	elseif key == keys.right then
+		GoToPage(currentPage + 1)
+	elseif key == keys.left then
+		GoToPage(currentPage - 1)
 	end
-	SaveSettings()
 end
 
-function DrawFile(fileName)
-	if not settings.layout[fileName] then
-		for i, v in ipairs(files) do
-			if v == fileName then
-				table.remove(files, i)
-				return
-			end
-		end
+function DrawFile(fileName, i)
+	local x, y = IconLocation(i)
+	if x + 4 < 0 or x - 2 > Drawing.Screen.Width then
+		return
 	end
-
-	local layout = settings.layout[fileName]
-
-	local backgroundColour = settings.colour
+	local backgroundColour = wallpaperColour
 	local textColour = colours.black
 
 	if selectedFile and selectedFile == fileName then
@@ -329,17 +332,16 @@ function DrawFile(fileName)
 		textColour = colours.white
 	end
 
-	--Drawing.DrawArea(layout.x, layout.y, 4, 3, " ", colours.black, colours.grey)
+	--Drawing.DrawArea(x - 3, y, 9, 5, " ", colours.black, colours.grey)
 	local shortenedName = Helpers.RemoveExtension(fileName)
 	shortenedName = Helpers.TruncateString(shortenedName, 10)
-	Drawing.DrawImage(layout.x, layout.y, Helpers.IconForFile('Desktop/'..fileName), 4, 3)
+	Drawing.DrawImage(x, y, Helpers.IconForFile('Desktop/'..fileName), 4, 3)
 
-	--shortcut indicator, not sure about thsi
 	if Helpers.Extension(fileName) == 'shortcut' then
-		Drawing.WriteToBuffer(layout.x+3, layout.y+2, '>', colours.black, colours.white)
+		Drawing.WriteToBuffer(x+3, y+2, '>', colours.black, colours.white)
 	end
 
-	Drawing.DrawCharacters(math.floor(layout.x+2-(#shortenedName/2)), layout.y+3, shortenedName, textColour, backgroundColour)
+	Drawing.DrawCharacters(math.floor(x+2-(#shortenedName/2)), y+3, shortenedName, textColour, backgroundColour)
 end
 
 function OpenSelected()
@@ -360,8 +362,6 @@ function DeleteSelected()
 		ButtonDialogueWindow:Initialise("Delete '"..Helpers.TruncateString(Helpers.RemoveExtension(selectedFile), 16).."'?", "Are you sure you want to delete '"..selectedFile.."'?", 'Yes', 'Cancel', function(success)
 			if success then
 				fs.delete('Desktop/'..selectedFile)
-				settings.layout[selectedFile] = nil
-				SaveSettings()
 				RefreshFiles()
 			end
 		end):Show()
