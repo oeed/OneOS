@@ -18,7 +18,7 @@
 			if peripheral.isPresent( sSide ) then
 				table.insert( tResults, sSide )
 				local isWireless = false
-				if not pcall(function()isWireless = peripheral.call(sSide, 'isWireless') end) then
+				if pcall(function()isWireless = peripheral.call(sSide, 'isWireless') end) then
 					isWireless = true
 				end     
 				if peripheral.getType( sSide ) == "modem" and not isWireless then
@@ -52,7 +52,7 @@
 				local _type = peripheral.getType(side)
 				local isWireless = false
 				if _type == 'modem' then
-					if not pcall(function()isWireless = peripheral.call(sSide, 'isWireless') end) then
+					if pcall(function()isWireless = peripheral.call(sSide, 'isWireless') end) then
 						isWireless = true
 					end     
 					if isWireless then

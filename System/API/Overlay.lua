@@ -1,6 +1,6 @@
 ToolBarColour = colours.white
 ToolBarTextColour = colours.black
-hideTime = false
+HideTime = false
 
 Elements = {
 	
@@ -11,7 +11,7 @@ function Initialise()
 end
 local availableSpace = 0
 function UpdateButtons()
-	hideTime = false
+	Overlay.HideTime = false
 	if Current.Program then
 		if Current.Program.Environment.OneOS.ToolBarColor ~= colours.white then
 			Overlay.ToolBarColour = Current.Program.Environment.OneOS.ToolBarColor
@@ -29,7 +29,11 @@ function UpdateButtons()
 		Overlay.ToolBarTextColour = colours.black
 	end
 	Elements = {}
-	table.insert(Elements, Button:Initialise(Drawing.Screen.Width - 1, 1, 2, 1, Overlay.ToolBarColour, Overlay.ToolBarTextColour, colours.lightBlue, colours.white,  nil, function() Search.Activate() end, ' S', Current.SearchActive))
+	local searchChar = '@'
+	if Current.DidIndex then
+		searchChar = '%'
+	end
+	table.insert(Elements, Button:Initialise(Drawing.Screen.Width - 2, 1, 3, 1, Overlay.ToolBarColour, Overlay.ToolBarTextColour, colours.blue, colours.white,  nil, function() Search.Activate() end, searchChar, Current.SearchActive))
 	InsertMenu("One", {
 				{
 					Title = 'Desktop',
@@ -95,12 +99,12 @@ function UpdateButtons()
 				},
 			}, 2)
 	local currentProgramI = 1
-	availableSpace = Drawing.Screen.Width - 5
+	availableSpace = Drawing.Screen.Width - 8
 	local menuPrograms = {}
 	if Current.Programs and #Current.Programs >= 1 then
 		for i, program in ipairs(Current.Programs) do
 			if availableSpace - 2 - #program.Title <= 2 then
-				hideTime = true
+				Overlay.HideTime = true
 				table.insert(menuPrograms, {
 					Title = program.Title,
 					Click = function(self, side)
@@ -114,11 +118,11 @@ function UpdateButtons()
 				})
 			else
 			
-				local textColour = ToolBarTextColour
+				local textColour = Overlay.ToolBarTextColour
 				local activeBackgroundColour = colours.lightBlue
 
 				if not program.Process or coroutine.status(program.Process) == "dead" then
-					textColour = ToolBarTextColour--colours.grey
+					textColour = Overlay.ToolBarTextColour--colours.grey
 					activeBackgroundColour = colours.grey
 				end
 				
@@ -148,14 +152,14 @@ function UpdateButtons()
 					end)
 				end
 				if availableSpace <= 8 then
-					hideTime = true
+					Overlay.HideTime = true
 				end
 			end
 		end
 	end
 
 	if #menuPrograms ~= 0 then
-		InsertMenu("=", menuPrograms, Drawing.Screen.Width - 1)
+		InsertMenu("=", menuPrograms, Drawing.Screen.Width - 3)
 	end
 
 	Draw()
@@ -225,8 +229,8 @@ function Draw()
 		elem:Draw()
 	end
 
-	if not hideTime then
+	if not Overlay.HideTime then
 		local timeString = textutils.formatTime(os.time())
-		Drawing.DrawCharacters(Drawing.Screen.Width - #timeString - 1, 1, timeString, Overlay.ToolBarTextColour, Overlay.ToolBarColour)
+		Drawing.DrawCharacters(Drawing.Screen.Width - #timeString - 2, 1, timeString, Overlay.ToolBarTextColour, Overlay.ToolBarColour)
 	end
 end

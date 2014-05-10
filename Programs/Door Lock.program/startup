@@ -576,7 +576,7 @@ Peripheral = {
 				local _type = peripheral.getType(side)
 				local isWireless = false
 				if _type == 'modem' then
-					if not pcall(function()isWireless = peripheral.call(sSide, 'isWireless') end) then
+					if pcall(function()isWireless = peripheral.call(sSide, 'isWireless') end) then
 						isWireless = true
 					end     
 					if isWireless then

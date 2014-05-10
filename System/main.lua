@@ -30,6 +30,8 @@ Current = {
 	AllowAnimate = true,
 	Daemons = {},
 	SearchActive = false,
+	DidIndexTimer = nil,
+	DidIndex = false --when true a special icon will appear on the overlay
 }
 
 Events = {
@@ -74,6 +76,8 @@ end
 local fingerprint = ''
 function Initialise()
 	Indexer.RefreshIndex()
+	Current.DidIndex = false
+	Current.DidIndexTimer = nil
 	EventRegister('mouse_click', TryClick)
 	EventRegister('mouse_drag', TryClick)
 	EventRegister('monitor_touch', TryClick)
@@ -109,7 +113,6 @@ function Initialise()
 	OneOSVersion = h.readAll()
 	h.close()
 
-	--Helpers.OpenFile('Programs/Ink.program', {'/Desktop/Documents/Welcome!.txt'})
 	if Settings:GetValues()['StartupProgram'] then
 		Helpers.OpenFile('Programs/'..Settings:GetValues()['StartupProgram'])
 	end
@@ -270,6 +273,9 @@ end
 function Update(event, timer)
 	if timer == indexTimer then
 		Indexer.RefreshIndex()
+	elseif timer == Current.DidIndexTimer then
+		Current.DidIndex = false
+		Overlay.UpdateButtons()
 	elseif timer == updateTimer then
 		updateTimer = os.startTimer(0.5)
 		Current.Program.AppRedirect:Draw()

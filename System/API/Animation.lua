@@ -109,9 +109,13 @@ SearchToggle = function(isActivate, done)
 		currentOffset = -1*Search.Width
 	end
 	if not Settings:GetValues()['UseAnimations'] then
+		local endOffset = -1*Search.Width 
+		if not isActivate then
+			endOffset = 0
+		end
 		for y, row in ipairs(Search.Buffer) do
 			for x, pixel in pairs(row) do
-				Drawing.WriteToBuffer(x + math.ceil(currentOffset), y, pixel[1], pixel[2], pixel[3])
+				Drawing.WriteToBuffer(x + math.ceil(endOffset), y, pixel[1], pixel[2], pixel[3])
 			end
 		end
 		Drawing.DrawBuffer()

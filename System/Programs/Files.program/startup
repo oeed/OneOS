@@ -47,6 +47,11 @@ Current = {
 	Peripheral = {}
 }
 
+if tArgs[2] then
+	Current.Path = Helpers.TidyPath(Helpers.ParentFolder(startPath))
+	Current.SelectedFile = fs.getName(tArgs[1])
+end
+
 Events = {
 	
 }

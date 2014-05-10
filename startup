@@ -124,11 +124,11 @@ function LoadingScreen()
 	local screenWidth, screenHeight = term.getSize()
 	term.setBackgroundColour(colours.white)	
 	term.clear()
-	local x = (screenWidth - 14) / 2
+	local x = math.ceil((screenWidth - 14) / 2) + 1
 	local y = (screenHeight - 9) / 2
 
 	local text = 'OneOS by oeed'
-	term.setCursorPos((screenWidth - #text) / 2, y + 13)
+	term.setCursorPos(math.ceil((screenWidth - #text) / 2) + 1, y + 13)
 	term.setTextColour(colours.blue)
 	term.write(text)
 
@@ -215,6 +215,7 @@ function BootMenu()
 	Drawing.DrawCharactersCenter(1, (Drawing.Screen.Height/2), nil, nil, 'Use arrow keys to select, enter to accept', colours.grey, colours.white)
 	local continue = false
 	local options = {
+		{'Boot Normally', function() continue = true end},
 		{'Reset Settings', function() if fs.exists('/System/.OneOS.settings') then fs.delete('/System/.OneOS.settings') end continue = true end},
 		{'Wipe Computer', function()
 			term.setCursorPos(1,1)
@@ -241,8 +242,7 @@ function BootMenu()
 			removeFolder('')
 			
 		end},
-		{'Use CraftOS', function()end},
-		{'Boot Normally', function() continue = true end}
+		{'Use CraftOS', function()end}
 	}
 
 	local selected = 1
