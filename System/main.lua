@@ -21,13 +21,14 @@ Current = {
 	Programs = {},
 	Window = nil,
 	CursorPos = {1,1},
-	CursorColour = colours.white,
+	CursorColour = colours.black,
 	Program = nil,
 	Input = nil,
 	IconCache = {},
 	CanDraw = true,
 	AllowAnimate = true,
-	Daemons = {}
+	Daemons = {},
+	ScoutActive = false
 }
 
 Events = {
@@ -303,6 +304,9 @@ function Draw()
 	end
 
 	if not Current.CanDraw then
+		if Current.ScoutActive then
+			Scout.Draw()
+		end
 		return
 	end
 
@@ -336,7 +340,6 @@ function Draw()
 	drawing = false
 	needsDisplay = false
 end
-
 
 MainDraw = Draw
 

@@ -9,7 +9,9 @@ HandleTimer = function(timer)
 				animation.step = animation.step + 1
 				animation.func()
 				if animation.step == animation.maxstep + 1 then
-					Current.CanDraw = true
+					if animation.canDraw or animation.canDraw == nil then
+						Current.CanDraw = true
+					end
 					animation.done()
 					--MainDraw()
 				else
@@ -94,6 +96,41 @@ SwipeProgram = function(currentProgram, newProgram, direction)
 		for y, row in ipairs(newBuffer) do
 			for x, pixel in pairs(row) do
 				Drawing.WriteToBuffer(x + math.ceil(newOffset), y+1, pixel[1], pixel[2], pixel[3])
+			end
+		end
+
+		Drawing.DrawBuffer()
+	end})
+end
+
+ScoutToggle = function(isActivate, done)
+	if not Settings:GetValues()['UseAnimations'] then
+		done()
+		return
+	end
+	local direction = 1
+	if isActivate then
+		direction = -1
+	end
+	local fps = 20
+	local steps = fps * 0.2
+	local deltaX = (Scout.Width / steps) * direction
+
+	local timer = os.startTimer(1 / fps)
+	local currentOffset = 0
+	local newOffset = -1*Scout.Width
+	if not isActivate then
+		currentOffset = -1*Scout.Width
+		newOffset = 0
+	end
+
+	Current.CanDraw = false
+	table.insert(Animations, {step = 1, maxstep = steps, interval = 1 / fps, timer = timer, done = done, canDraw = not isActivate, func = function(self)
+		currentOffset = currentOffset + deltaX
+		newOffset = newOffset - deltaX
+		for y, row in ipairs(Scout.Buffer) do
+			for x, pixel in pairs(row) do
+				Drawing.WriteToBuffer(x + math.ceil(currentOffset), y, pixel[1], pixel[2], pixel[3])
 			end
 		end
 

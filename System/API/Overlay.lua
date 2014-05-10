@@ -1,6 +1,6 @@
-local toolBarColour = colours.white
-local toolBarTextColour = colours.black
-local hideTime = false
+toolBarColour = colours.white
+toolBarTextColour = colours.black
+hideTime = false
 
 Elements = {
 	
@@ -29,6 +29,7 @@ function UpdateButtons()
 		toolBarTextColour = colours.black
 	end
 	Elements = {}
+	table.insert(Elements, Button:Initialise(Drawing.Screen.Width - 1, 1, 2, 1, colours.white, colours.black, colours.lightBlue, colours.white,  nil, function() Scout.Activate() end, ' S', Current.ScoutActive))
 	InsertMenu("One", {
 				{
 					Title = 'Desktop',
@@ -226,6 +227,6 @@ function Draw()
 
 	if not hideTime then
 		local timeString = textutils.formatTime(os.time())
-		Drawing.DrawCharacters(Drawing.Screen.Width - #timeString, 1, timeString, toolBarTextColour, toolBarColour)
+		Drawing.DrawCharacters(Drawing.Screen.Width - #timeString - 1, 1, timeString, toolBarTextColour, toolBarColour)
 	end
 end
