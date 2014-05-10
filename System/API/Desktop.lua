@@ -47,19 +47,19 @@ function DragTimeout()
 	if relOffset > 0 then
 		fakeOld = currentPage - 1
 	end
-	AnimatePageChange(fakeOld, currentPage)
+	AnimatePageChange(currentPage, currentPage)
 end
 
 function AnimatePageChange(from, to)
 	dragLock = true
 	dragRelPos = nil
 	local max = -1*Drawing.Screen.Width * (to - 1)
-	local direction = 1
-	if from < to then
-		direction = -1
+	local relOffset = (offset + Drawing.Screen.Width * (to - 1))
+	local direction = -1
+	if relOffset < 0 then
+		direction = 1
 	end
 	if Settings:GetValues()['UseAnimations'] then
-		local relOffset = (offset + Drawing.Screen.Width * (currentPage - 1))
 		if relOffset < 0 then
 			relOffset = relOffset * -1
 		end
@@ -130,9 +130,9 @@ function Click(event, side, x, y)
 	local found = false
 	if (event == 'mouse_drag' and dragRelPos) or (event == 'mouse_scroll' and not dragLock) then
 		if event == 'mouse_drag' then
-			offset = x - dragRelPos
+			offset =  (x - dragRelPos) - Drawing.Screen.Width * (currentPage - 1)
 		else
-			offset = offset - side
+			offset = offset + side
 		end
 		if not dragLock then
 			Desktop.dragTimeout = os.startTimer(1)
@@ -257,7 +257,7 @@ function Click(event, side, x, y)
 		MainDraw()
 	elseif not found then
 		if event == 'mouse_click' and side ~= 2 then
-			dragRelPos = offset + x
+			dragRelPos = x
 		elseif event == 'mouse_click' and side == 2 then
 			Menu:Initialise(x, y, nil, nil, self,{ 
 				{
