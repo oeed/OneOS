@@ -51,16 +51,18 @@ OpenFile = function(path, args)
 			end
 		elseif fs.isDir(path) then
 			LaunchProgram('/System/Programs/Files.program/startup', {path}, 'Files')
-		elseif extension == 'nfp' or extension == 'nft' or extension == 'skch' then
-			LaunchProgram('/Programs/Sketch.program/startup', {path}, 'Sketch')
-		elseif extension == 'pkg' then
-			LaunchProgram('/System/Programs/Unpackager.program/startup', {path}, 'Unpackager')
-		elseif extension == 'txt' or extension == 'text' or extension == 'ink' then
-			LaunchProgram('/Programs/Ink.program/startup', {path}, 'Ink')
+		elseif extension then
+			local _path = Indexer.FindFileInFolder(extension, 'Icons')
+			Helpers.OpenFile(Helpers.ParentFolder(Helpers.ParentFolder(_path)), {path})
 		else
 			LaunchProgram('/Programs/LuaIDE.program/startup', {path}, 'LuaIDE')
 		end
 	end
+end
+
+ParentFolder = function(path)
+	local folderName = fs.getName(path)
+	return path:sub(1, #path-#folderName-1)
 end
 
 ListPrograms = function()
@@ -75,11 +77,12 @@ ListPrograms = function()
 	return programs
 end
 
-ReadIcon = function(path)
-	if not Current.IconCache[path] then
-		Current.IconCache[path] = Drawing.LoadImage(path, true)
+ReadIcon = function(path, cacheName)
+	cacheName = cacheName or path
+	if not Current.IconCache[cacheName] then
+		Current.IconCache[cacheName] = Drawing.LoadImage(path, true)
 	end
-	return Current.IconCache[path]
+	return Current.IconCache[cacheName]
 end
 
 Split = function(str,sep)
@@ -137,7 +140,9 @@ end
 IconForFile = function(path)
 	path = TidyPath(path)
 	local extension = Helpers.Extension(path)
-	if extension and extension == 'shortcut' then
+	if extension and Current.IconCache[extension] then
+		return Current.IconCache[extension]
+	elseif extension and extension == 'shortcut' then
 		h = fs.open(path, 'r')
 		if h then
 			local shortcutPointer = h.readLine()
@@ -153,12 +158,17 @@ IconForFile = function(path)
 		else
 			return ReadIcon('System/Images/Icons/folder')
 		end
-	elseif extension and extension == 'daemon' then
-		return ReadIcon('System/Images/Icons/daemon')
 	elseif fs.isDir(path) then
 		return ReadIcon('System/Images/Icons/folder')
 	elseif extension and fs.exists('System/Images/Icons/'..extension) then
 		return ReadIcon('System/Images/Icons/'..extension)
+	elseif extension then
+		local _path = Indexer.FindFileInFolder(extension, 'Icons')
+		if _path then
+			return ReadIcon(_path, extension)
+		else
+			return ReadIcon('System/Images/Icons/unknown')
+		end
 	else
 		return ReadIcon('System/Images/Icons/unknown')
 	end

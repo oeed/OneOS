@@ -72,6 +72,7 @@ end
 
 local fingerprint = ''
 function Initialise()
+	Indexer.RefreshIndex()
 	EventRegister('mouse_click', TryClick)
 	EventRegister('mouse_drag', TryClick)
 	EventRegister('monitor_touch', TryClick)
@@ -82,7 +83,7 @@ function Initialise()
 	EventRegister('timer', Update)
 	EventRegister('http_success', AutoUpdateRespose)
 	EventRegister('http_failure', AutoUpdateFail)
-	EventRegister('mouse_scroll', function(...)if Desktop then Desktop.Click(unpack({...})) end end)
+	EventRegister('mouse_scroll', function(...)if Desktop and not Current.Program then Desktop.Click(unpack({...})) return true end return false end)
 	EventRegister('modem_message', function(event, side, channel, replyChannel, message, distance)
 		if pocket and channel == Wireless.Channels.UltimateDoorlockPing then
 			message = textutils.unserialize(message)
