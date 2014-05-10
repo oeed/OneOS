@@ -253,15 +253,24 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 	end
 
 	FS = function(env, program, path)
+		local function doIndex()
+			_G.indexTimer = os.startTimer(Indexer.FSIndexRate)
+		end
 		local relPath = Helpers.RemoveFileName(path)
 		local list = {}
 		for k, f in pairs(fs) do
-			if k ~= 'open' and k ~= 'combine' and k ~= 'copy' and k ~= 'move' then
+			if k ~= 'open' and k ~= 'combine' and k ~= 'copy' and k ~= 'move' and k ~= 'delete' and k ~= 'makeDir' then
 				list[k] = function(_path)
+					return fs[k](relPath .. _path)
+				end
+			elseif k == 'delete' or k == 'makeDir' then
+				list[k] = function(_path)
+					doIndex()
 					return fs[k](relPath .. _path)
 				end
 			elseif k == 'copy' or k == 'move' then
 				list[k] = function(_path, _path2)
+					doIndex()
 					return fs[k](relPath .. _path, relPath .. _path2)
 				end
 			elseif k == 'combine' then
@@ -270,6 +279,9 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 				end
 			elseif k == 'open' then
 				list[k] = function(_path, mode)
+					if mode ~= 'r' then 
+						doIndex()
+					end
 					return fs[k](relPath .. _path, mode)
 				end
 			end

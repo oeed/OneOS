@@ -5,9 +5,11 @@
 	Height = 0
 	BackgroundColour = colours.lightGrey
 	TextColour = colours.black
+	PlaceholderTextColour = colours.lightGrey
 	Parent = nil
 	TextInput = nil
 	Visible = true
+	Placeholder = ''
 
 	Draw = function(self)
 		if not self.Visible then
@@ -33,13 +35,19 @@
 				Current.CursorPos = {pos.X + 1 + self.TextInput.CursorPos, pos.Y}
 			end
 		end
-		Drawing.DrawCharacters(pos.X + 1, pos.Y, text, self.TextColour, self.BackgroundColour)
 
-		Current.CursorColour = colours.black--self.TextColour
+		if #tostring(text) == 0 then
+			Drawing.DrawCharacters(pos.X + 1, pos.Y, self.Placeholder, self.PlaceholderTextColour, self.BackgroundColour)
+		else
+			Drawing.DrawCharacters(pos.X + 1, pos.Y, text, self.TextColour, self.BackgroundColour)
+		end
+
+
+		Current.CursorColour = self.TextColour
 		RegisterClick(self)
 	end
 
-	Initialise = function(self, x, y, width, height, parent, text, backgroundColour, textColour, change, numerical)
+	Initialise = function(self, x, y, width, height, parent, text, backgroundColour, textColour, change, numerical, placeholder, placeholderColour)
 		local new = {}    -- the new instance
 		setmetatable( new, {__index = self} )
 		height = height or 1
@@ -54,6 +62,8 @@
 		new.BackgroundColour = backgroundColour or colours.lightGrey
 		new.TextColour = textColour or colours.black
 		new.Parent = parent
+		new.Placeholder = placeholder or ''
+		new.PlaceholderTextColour = placeholderColour or colours.lightGrey
 		return new
 	end
 

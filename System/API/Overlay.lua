@@ -1,5 +1,5 @@
-toolBarColour = colours.white
-toolBarTextColour = colours.black
+ToolBarColour = colours.white
+ToolBarTextColour = colours.black
 hideTime = false
 
 Elements = {
@@ -14,22 +14,22 @@ function UpdateButtons()
 	hideTime = false
 	if Current.Program then
 		if Current.Program.Environment.OneOS.ToolBarColor ~= colours.white then
-			toolBarColour = Current.Program.Environment.OneOS.ToolBarColor
+			Overlay.ToolBarColour = Current.Program.Environment.OneOS.ToolBarColor
 		else
-			toolBarColour = Current.Program.Environment.OneOS.ToolBarColour
+			Overlay.ToolBarColour = Current.Program.Environment.OneOS.ToolBarColour
 		end
 		
 		if Current.Program.Environment.OneOS.ToolBarTextColor ~= colours.black then
-			toolBarTextColour = Current.Program.Environment.OneOS.ToolBarTextColor
+			Overlay.ToolBarTextColour = Current.Program.Environment.OneOS.ToolBarTextColor
 		else
-			toolBarTextColour = Current.Program.Environment.OneOS.ToolBarTextColour
+			Overlay.ToolBarTextColour = Current.Program.Environment.OneOS.ToolBarTextColour
 		end
 	else
-		toolBarColour = colours.white
-		toolBarTextColour = colours.black
+		Overlay.ToolBarColour = colours.white
+		Overlay.ToolBarTextColour = colours.black
 	end
 	Elements = {}
-	table.insert(Elements, Button:Initialise(Drawing.Screen.Width - 1, 1, 2, 1, toolBarColour, toolBarTextColour, colours.lightBlue, colours.white,  nil, function() Search.Activate() end, ' S', Current.SearchActive))
+	table.insert(Elements, Button:Initialise(Drawing.Screen.Width - 1, 1, 2, 1, Overlay.ToolBarColour, Overlay.ToolBarTextColour, colours.lightBlue, colours.white,  nil, function() Search.Activate() end, ' S', Current.SearchActive))
 	InsertMenu("One", {
 				{
 					Title = 'Desktop',
@@ -114,17 +114,17 @@ function UpdateButtons()
 				})
 			else
 			
-				local textColour = toolBarTextColour
+				local textColour = ToolBarTextColour
 				local activeBackgroundColour = colours.lightBlue
 
 				if not program.Process or coroutine.status(program.Process) == "dead" then
-					textColour = toolBarTextColour--colours.grey
+					textColour = ToolBarTextColour--colours.grey
 					activeBackgroundColour = colours.grey
 				end
 				
 				if not Current.Program or Current.Program ~= program then
 					availableSpace = availableSpace - 2 - #program.Title
-					InsertButton(program.Title, false, toolBarColour, activeBackgroundColour, textColour, colours.white, function(self, side, x, y, toggle)
+					InsertButton(program.Title, false, Overlay.ToolBarColour, activeBackgroundColour, textColour, colours.white, function(self, side, x, y, toggle)
 						if side == 3 then
 							program:Close()
 							program = nil
@@ -169,7 +169,7 @@ function InsertMenu(title, items, x)
 	end
 
 	table.insert(Elements,
-	Button:Initialise(x-1, 1, #title+2, 1, toolBarColour, toolBarTextColour, nil, nil, nil, function(self, side, x, y, toggle)
+	Button:Initialise(x-1, 1, #title+2, 1, Overlay.ToolBarColour, Overlay.ToolBarTextColour, nil, nil, nil, function(self, side, x, y, toggle)
 		local menu = nil
 		if toggle then
 			menu = Menu:Initialise(0-menuX, 2, nil, nil, self, items, true, function()
@@ -204,22 +204,22 @@ function Draw()
 	
 	if Current.Program then
 		if Current.Program.Environment.OneOS.ToolBarColor ~= colours.white then
-			toolBarColour = Current.Program.Environment.OneOS.ToolBarColor
+			Overlay.ToolBarColour = Current.Program.Environment.OneOS.ToolBarColor
 		else
-			toolBarColour = Current.Program.Environment.OneOS.ToolBarColour
+			Overlay.ToolBarColour = Current.Program.Environment.OneOS.ToolBarColour
 		end
 		
 		if Current.Program.Environment.OneOS.ToolBarTextColor ~= colours.black then
-			toolBarTextColour = Current.Program.Environment.OneOS.ToolBarTextColor
+			Overlay.ToolBarTextColour = Current.Program.Environment.OneOS.ToolBarTextColor
 		else
-			toolBarTextColour = Current.Program.Environment.OneOS.ToolBarTextColour
+			Overlay.ToolBarTextColour = Current.Program.Environment.OneOS.ToolBarTextColour
 		end
 	else
-		toolBarColour = colours.white
-		toolBarTextColour = colours.black
+		Overlay.ToolBarColour = colours.white
+		Overlay.ToolBarTextColour = colours.black
 	end
 
-	Drawing.DrawBlankArea(1, 1, Drawing.Screen.Width, 1, toolBarColour)
+	Drawing.DrawBlankArea(1, 1, Drawing.Screen.Width, 1, Overlay.ToolBarColour)
 
 	for i, elem in ipairs(Elements) do
 		elem:Draw()
@@ -227,6 +227,6 @@ function Draw()
 
 	if not hideTime then
 		local timeString = textutils.formatTime(os.time())
-		Drawing.DrawCharacters(Drawing.Screen.Width - #timeString - 1, 1, timeString, toolBarTextColour, toolBarColour)
+		Drawing.DrawCharacters(Drawing.Screen.Width - #timeString - 1, 1, timeString, Overlay.ToolBarTextColour, Overlay.ToolBarColour)
 	end
 end

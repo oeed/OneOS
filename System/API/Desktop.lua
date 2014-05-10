@@ -34,6 +34,7 @@ end
 
 function GoToPage(i)
 	if i > 0 and i <= totalPages then
+		selectedFile = nil
 		local old = currentPage
 		currentPage = i
 		Desktop.dragTimeout = nil
@@ -80,14 +81,20 @@ function AnimatePageChange(from, to)
 	dragLock = false
 end
 
+local function doIndex()
+	_G.indexTimer = os.startTimer(Indexer.FSIndexRate)
+end
+
 function RefreshFiles()
 	files = {}
 
 	if not fs.exists('Desktop/') then
 		fs.makeDir('Desktop/')
+		doIndex()
 	elseif not fs.isDir('Desktop/') then
 		fs.delete('Destop/')
 		fs.makeDir('Desktop/')
+		doIndex()
 	end
 
 	for i, file in ipairs(fs.list('Desktop/')) do
@@ -176,7 +183,7 @@ function Click(event, side, x, y)
 							else
 								TextDialogueWindow:Initialise("Rename '"..Helpers.TruncateString(name, 17).."'", function(success, value)
 									if success and #value ~= 0 then
-										local _, err = pcall(function()fs.move('Desktop/'..name, 'Desktop/'..value) end)
+										local _, err = pcall(function()fs.move('Desktop/'..name, 'Desktop/'..value)doIndex() end)
 										if err then
 											ButtonDialogueWindow:Initialise("Rename Failed!", 'Error: '..errr, 'Ok', nil, function()end):Show()
 										end
@@ -196,6 +203,7 @@ function Click(event, side, x, y)
 								ButtonDialogueWindow:Initialise("Delete '"..Helpers.TruncateString(Helpers.RemoveExtension(name), 16).."'?", "Are you sure you want to delete '"..name.."'?", 'Yes', 'Cancel', function(success)
 									if success then
 										fs.delete('Desktop/'..name)
+										doIndex()
 										RefreshFiles()
 									end
 								end):Show()
@@ -214,6 +222,7 @@ function Click(event, side, x, y)
 										ButtonDialogueWindow:Initialise("File/Folder Exists!", 'A file/folder with that name already exists!', 'Ok', nil, function()end):Show()
 									else
 										fs.makeDir('Desktop/'..value)
+										doIndex()
 										RefreshFiles()
 									end
 								end
@@ -230,6 +239,7 @@ function Click(event, side, x, y)
 								else
 									local h = fs.open('Desktop/'..value, 'w')
 									h.close()
+									doIndex()
 									RefreshFiles()
 								end
 							end
@@ -269,6 +279,7 @@ function Click(event, side, x, y)
 									ButtonDialogueWindow:Initialise("File/Folder Exists!", 'A file/folder with that name already exists!', 'Ok', nil, function()end):Show()
 								else
 									fs.makeDir('Desktop/'..value)
+									doIndex()
 									RefreshFiles()
 								end
 							end
@@ -285,6 +296,7 @@ function Click(event, side, x, y)
 							else
 								local h = fs.open('Desktop/'..value, 'w')
 								h.close()
+								doIndex()
 								RefreshFiles()
 							end
 						end
@@ -362,6 +374,7 @@ function DeleteSelected()
 		ButtonDialogueWindow:Initialise("Delete '"..Helpers.TruncateString(Helpers.RemoveExtension(selectedFile), 16).."'?", "Are you sure you want to delete '"..selectedFile.."'?", 'Yes', 'Cancel', function(success)
 			if success then
 				fs.delete('Desktop/'..selectedFile)
+				doIndex()
 				RefreshFiles()
 			end
 		end):Show()

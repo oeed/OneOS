@@ -1,8 +1,16 @@
+--how often the computer is indexed
+IndexRate = 60
+
+--fs api calls will cause an index 3 seconds after they are run
+FSIndexRate = 3
 
 Index = {}
 
 function AddToIndex(path, index)
 	if string.sub(fs.getName(path),1,1) == '.' or string.sub(path,1,string.len("rom"))=="rom" or string.sub(path,1,string.len("/rom"))=="/rom" then
+		if fs.getName(path) == '.DS_Store' then
+			fs.delete(path)
+		end
 		return index
 	elseif fs.isDir(path) then
 		index[fs.getName(path)] = {}
@@ -23,6 +31,8 @@ function RefreshIndex()
 		h.close()
 		Index = index
 	end
+	Current.IconCache = {}
+	_G.indexTimer = os.startTimer(Indexer.IndexRate)
 end
 
 function Search(filter)

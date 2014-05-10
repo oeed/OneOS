@@ -12,6 +12,7 @@ local needsDisplay = true
 local drawing = false
 
 local updateTimer = nil
+indexTimer = nil
 clockTimer = nil
 local desktopRefreshTimer = nil
 
@@ -28,7 +29,7 @@ Current = {
 	CanDraw = true,
 	AllowAnimate = true,
 	Daemons = {},
-	SearchActive = false
+	SearchActive = false,
 }
 
 Events = {
@@ -267,7 +268,9 @@ function SwitchToProgram(newProgram, currentIndex, newIndex)
 end
 
 function Update(event, timer)
-	if timer == updateTimer then
+	if timer == indexTimer then
+		Indexer.RefreshIndex()
+	elseif timer == updateTimer then
 		updateTimer = os.startTimer(0.5)
 		Current.Program.AppRedirect:Draw()
 		Drawing.DrawBuffer()
@@ -374,7 +377,9 @@ function DoClick(event, object, side, x, y)
 end
 
 function TryClick(event, side, x, y)
-	if Current.Menu and DoClick(event, Current.Menu, side, x, y) then
+	if Current.SearchActive then
+		Search.Click(event, side, x, y)
+	elseif Current.Menu and DoClick(event, Current.Menu, side, x, y) then
 		Draw()
 		return
 	elseif Current.Window then

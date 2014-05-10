@@ -130,6 +130,9 @@ RemoveExtension = function(path)
 end
 
 RemoveFileName = function(path)
+	if string.sub(path, -1) == '/' then
+		path = string.sub(path, 1, -2)
+	end
 	local v = string.match(path, "(.-)([^\\/]-%.?([^%.\\/]*))$")
 	if type(v) == 'string' then
 		return v
