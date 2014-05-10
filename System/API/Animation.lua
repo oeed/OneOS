@@ -103,7 +103,7 @@ SwipeProgram = function(currentProgram, newProgram, direction)
 	end})
 end
 
-ScoutToggle = function(isActivate, done)
+SearchToggle = function(isActivate, done)
 	if not Settings:GetValues()['UseAnimations'] then
 		done()
 		return
@@ -114,13 +114,13 @@ ScoutToggle = function(isActivate, done)
 	end
 	local fps = 20
 	local steps = fps * 0.2
-	local deltaX = (Scout.Width / steps) * direction
+	local deltaX = (Search.Width / steps) * direction
 
 	local timer = os.startTimer(1 / fps)
 	local currentOffset = 0
-	local newOffset = -1*Scout.Width
+	local newOffset = -1*Search.Width
 	if not isActivate then
-		currentOffset = -1*Scout.Width
+		currentOffset = -1*Search.Width
 		newOffset = 0
 	end
 
@@ -128,7 +128,7 @@ ScoutToggle = function(isActivate, done)
 	table.insert(Animations, {step = 1, maxstep = steps, interval = 1 / fps, timer = timer, done = done, canDraw = not isActivate, func = function(self)
 		currentOffset = currentOffset + deltaX
 		newOffset = newOffset - deltaX
-		for y, row in ipairs(Scout.Buffer) do
+		for y, row in ipairs(Search.Buffer) do
 			for x, pixel in pairs(row) do
 				Drawing.WriteToBuffer(x + math.ceil(currentOffset), y, pixel[1], pixel[2], pixel[3])
 			end

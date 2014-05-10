@@ -29,7 +29,7 @@ function UpdateButtons()
 		toolBarTextColour = colours.black
 	end
 	Elements = {}
-	table.insert(Elements, Button:Initialise(Drawing.Screen.Width - 1, 1, 2, 1, colours.white, colours.black, colours.lightBlue, colours.white,  nil, function() Scout.Activate() end, ' S', Current.ScoutActive))
+	table.insert(Elements, Button:Initialise(Drawing.Screen.Width - 1, 1, 2, 1, colours.white, colours.black, colours.lightBlue, colours.white,  nil, function() Search.Activate() end, ' S', Current.SearchActive))
 	InsertMenu("One", {
 				{
 					Title = 'Desktop',

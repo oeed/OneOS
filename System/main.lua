@@ -28,7 +28,7 @@ Current = {
 	CanDraw = true,
 	AllowAnimate = true,
 	Daemons = {},
-	ScoutActive = false
+	SearchActive = false
 }
 
 Events = {
@@ -304,8 +304,8 @@ function Draw()
 	end
 
 	if not Current.CanDraw then
-		if Current.ScoutActive then
-			Scout.Draw()
+		if Current.SearchActive then
+			Search.Draw()
 		end
 		return
 	end
