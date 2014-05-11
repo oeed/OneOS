@@ -332,7 +332,16 @@ function GetHash()
 end
 
 function IsSystemModified()
-	GetHash()
+	local h = fs.open('/System/.hash', 'r')
+	if h then
+		local correctHash = tonumber(h.readLine())
+		h.close()
+		local hash = GetHash()
+		if hash == correctHash then
+			return false
+		end		
+	end
+	return true
 end
 
 
@@ -360,7 +369,6 @@ if not term.isColour() then
 	term.setCursorPos(1,1)
 
 elseif Start() then
-IsSystemModified()
 	if fs.exists('/.update/') and fs.isDir('/.update/') then
 		if not fs.exists('/.update/.version') then
 			fs.delete('/.update/')
@@ -463,57 +471,67 @@ IsSystemModified()
 		    print(v)
 		end
 
-		PrintCentered('Please report this on the forum.', Drawing.Screen.Height)
+		PrintCentered('Checking for file modifications...', Drawing.Screen.Height-3)
+		local modified = IsSystemModified()
+		term.clearLine()
+		if not modified then
+			PrintCentered('Please report this on the forum.', Drawing.Screen.Height)
+		end
 		term.setTextColor(colours.white)
 		if http then
-			PrintCentered('Sending error report, please wait.', Drawing.Screen.Height-3)
-			local success = false
-			parallel.waitForAny(function()sleep(7) end, function()
-				local s = ok[#ok]
-				local pastebin = 'Not1.6'
-				if fs.find then
-					local f = fs.find('*/'..s:sub(1, s:find(':')-1))[1]
-					if not f then
-						pastebin = PastebinPut(s)
-					else
-						pastebin = PastebinPut(f)
+			if modified then
+				PrintCentered('Modified file system detected.', Drawing.Screen.Height-3)
+				PrintCentered('Not sending report.', Drawing.Screen.Height-2)
+			else
+				PrintCentered('Sending error report, please wait.', Drawing.Screen.Height-3)
+				local success = false
+				parallel.waitForAny(function()sleep(7) end, function()
+					local s = ok[#ok]
+					local pastebin = 'Not1.6'
+					if fs.find then
+						local f = fs.find('*/'..s:sub(1, s:find(':')-1))[1]
+						if not f then
+							pastebin = PastebinPut(s)
+						else
+							pastebin = PastebinPut(f)
+						end
 					end
-				end
-				local detail = {message='Crashed Before Main Initialise', time = os.clock(), errors = ok, pastebin = pastebin}
-				if Current and Current.Programs then
-					detail.message = 'Crashed After Main Initialise'
-					detail.programs = {}
-					for i, v in ipairs(Current.Programs) do
-						table.insert(detail.programs, v.Name)
+					local detail = {message='Crashed Before Main Initialise', time = os.clock(), errors = ok, pastebin = pastebin}
+					if Current and Current.Programs then
+						detail.message = 'Crashed After Main Initialise'
+						detail.programs = {}
+						for i, v in ipairs(Current.Programs) do
+							table.insert(detail.programs, v.Name)
+						end
 					end
-				end
-				local version = '?'
+					local version = '?'
 
-				local h = fs.open('/System/.version', 'r')
-				if h then
-					version = h.readAll()
-					h.close()
-				else
-					version = 'N/E'
-				end
-				if not isDebug then
-					local _ = http.post('http://olivercooper.me/errorSubmit.php', 
-	                                "product="..textutils.urlEncode(tostring('OneOS')).."&"..
-	                                "version="..textutils.urlEncode(tostring(version)).."&"..
-	                                "error="..textutils.urlEncode(ok[#ok]).."&"..
-	                                "detail="..textutils.urlEncode(textutils.serialize(detail)));
-					if _ then
-						success = true
+					local h = fs.open('/System/.version', 'r')
+					if h then
+						version = h.readAll()
+						h.close()
+					else
+						version = 'N/E'
 					end
+					if not isDebug then
+						local _ = http.post('http://olivercooper.me/errorSubmit.php', 
+		                                "product="..textutils.urlEncode(tostring('OneOS')).."&"..
+		                                "version="..textutils.urlEncode(tostring(version)).."&"..
+		                                "error="..textutils.urlEncode(ok[#ok]).."&"..
+		                                "detail="..textutils.urlEncode(textutils.serialize(detail)));
+						if _ then
+							success = true
+						end
+					end
+				end)
+				local message = 'Error report failed!'
+				if success then
+					message = 'Error report sent!'
 				end
-			end)
-			local message = 'Error report failed!'
-			if success then
-				message = 'Error report sent!'
+				term.setCursorPos(1, Drawing.Screen.Height-3)
+				term.clearLine()
+				PrintCentered(message..' Click to reboot.', Drawing.Screen.Height-3)
 			end
-			term.setCursorPos(1, Drawing.Screen.Height-3)
-			term.clearLine()
-			PrintCentered(message..' Click to reboot.', Drawing.Screen.Height-3)
 		end
 
 		os.pullEvent('mouse_click')
