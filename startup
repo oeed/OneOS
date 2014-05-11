@@ -302,6 +302,40 @@ function BootMenu()
 	return continue
 end
 
+local function addFile(path, input)
+	local h = fs.open(path, 'r')
+	if h then
+		input = input .. '\0' .. h.readAll()
+		h.close()
+	end
+	return input
+end
+
+local function addFolder(path, input)
+	for i, file in ipairs(fs.list(path)) do
+		local _path = path .. '/' .. file
+		if fs.isDir(_path) then
+			input = addFolder(_path, input)
+		elseif file:sub(1,1) ~= '.' then
+			input = addFile(_path, input)
+		end
+	end
+	return input
+end
+
+function GetHash()
+	local toCheck = {'/System/', 'startup'}
+	local raw = addFile('startup', '')
+	raw = addFolder('/System/', raw)
+	local hash = CRC32.Hash(raw)
+	return hash
+end
+
+function IsSystemModified()
+	GetHash()
+end
+
+
 function Start()
 	local key = nil
 	local success = false
@@ -326,7 +360,7 @@ if not term.isColour() then
 	term.setCursorPos(1,1)
 
 elseif Start() then
-
+IsSystemModified()
 	if fs.exists('/.update/') and fs.isDir('/.update/') then
 		if not fs.exists('/.update/.version') then
 			fs.delete('/.update/')
