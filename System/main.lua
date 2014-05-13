@@ -88,7 +88,7 @@ function Initialise()
 	EventRegister('timer', Update)
 	EventRegister('http_success', AutoUpdateRespose)
 	EventRegister('http_failure', AutoUpdateFail)
-	EventRegister('mouse_scroll', function(...)if Desktop and not Current.Program then Desktop.Click(unpack({...})) return true end return false end)
+	EventRegister('mouse_scroll', function(...) term.setTextColour(colours.black) if Current.SearchActive then Search.Scroll(unpack({...})) elseif Desktop and not Current.Program then Desktop.Click(unpack({...})) return true end return false end)
 	EventRegister('modem_message', function(event, side, channel, replyChannel, message, distance)
 		if pocket and channel == Wireless.Channels.UltimateDoorlockPing then
 			message = textutils.unserialize(message)
@@ -276,10 +276,12 @@ function Update(event, timer)
 	elseif timer == Current.DidIndexTimer then
 		Current.DidIndex = false
 		Overlay.UpdateButtons()
+--[[
 	elseif timer == updateTimer then
 		updateTimer = os.startTimer(0.5)
 		Current.Program.AppRedirect:Draw()
 		Drawing.DrawBuffer()
+]]--
 	elseif timer == clockTimer then
 		clockTimer = os.startTimer(0.8333333)
 		Draw()
@@ -378,7 +380,7 @@ end
 
 function DoClick(event, object, side, x, y)
 	if object and CheckClick(object, x, y) then
-		return object:Click(side, x - object.X + 1, y - object.Y + 1)
+		return object:Click(side, x - object.X + 1, y - object.Y + 1, event == 'mouse_drag')
 	end	
 end
 
@@ -425,7 +427,8 @@ function HandleKey(...)
 		os.reboot()
 	end
 
-	if Current.Input then
+	if Current.SearchActive and event == 'key' and Search.Key(keychar) then
+	elseif Current.Input then
 		if event == 'char' then
 			Current.Input:Char(keychar)
 		elseif event == 'key' then

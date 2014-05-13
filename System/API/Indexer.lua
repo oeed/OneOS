@@ -1,5 +1,5 @@
 --how often the computer is indexed
-IndexRate = 10
+IndexRate = 60
 
 --fs api calls will cause an index 3 seconds after they are run
 FSIndexRate = 60
@@ -30,10 +30,12 @@ function RefreshIndex()
 	end
 	Current.IconCache = {}
 	_G.indexTimer = os.startTimer(Indexer.IndexRate)
-	Current.DidIndex = true
-	Overlay.UpdateButtons()
-	MainDraw()
-	Current.DidIndexTimer = os.startTimer(1)
+	if Current.CanDraw then
+		Current.DidIndex = true
+		Overlay.UpdateButtons()
+		MainDraw()
+		Current.DidIndexTimer = os.startTimer(1)
+	end
 end
 
 function Search(filter, items, index, indexName)

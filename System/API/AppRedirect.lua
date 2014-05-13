@@ -91,7 +91,7 @@
 			return
 		end
 		
-		if not Current.Window and not Current.Menu and Current.Program == self.Program and (not self.Buffer[y] or (self.Buffer[y][x][1] ~= character or self.Buffer[y][x][2] ~= textColour or self.Buffer[y][x][3] ~= backgroundColour)) then
+		if Current.CanDraw and not Current.Window and not Current.Menu and Current.Program == self.Program and (not self.Buffer[y] or (self.Buffer[y][x][1] ~= character or self.Buffer[y][x][2] ~= textColour or self.Buffer[y][x][3] ~= backgroundColour)) then
 			--Drawing.WriteToBuffer(pos.X+x-1, pos.Y+y-1, character, textColour, backgroundColour)
 			_oldterm.setCursorPos(x+self.X-1, y+self.Y-1)
 			_oldterm.setTextColour(textColour)

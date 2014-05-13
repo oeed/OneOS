@@ -71,14 +71,21 @@ function AnimatePageChange(from, to)
 			if speed > relOffset and relOffset > -1*speed then
 				offset = max
 			end
-			MainDraw()
+			QuickDraw()
 			sleep(0.05)
 		end
 		os.queueEvent('timer', clockTimer)
 	end
 	offset = max
-	MainDraw()
+	QuickDraw()
 	dragLock = false
+end
+
+function QuickDraw()
+	if Current.CanDraw then
+		Draw()
+		Drawing.DrawBuffer()
+	end
 end
 
 local function doIndex()
@@ -109,7 +116,7 @@ function RefreshFiles()
 end
 
 function Draw()
-	Drawing.Clear(wallpaperColour)
+	Drawing.DrawBlankArea(1, 2, Drawing.Screen.Width, Drawing.Screen.Height - 1, wallpaperColour)
 
 	for i, file in ipairs(files) do
 		DrawFile(file, i)
@@ -149,7 +156,7 @@ function Click(event, side, x, y)
 			elseif relOffset > 0 and relOffset > Drawing.Screen.Width/4 then
 				GoToPage(currentPage - 1)
 			else
-				MainDraw()
+				QuickDraw()
 			end
 		end
 		return
