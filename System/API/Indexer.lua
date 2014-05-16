@@ -2,7 +2,7 @@
 IndexRate = 60
 
 --fs api calls will cause an index 3 seconds after they are run
-FSIndexRate = 60
+FSIndexRate = 3
 
 Index = {}
 

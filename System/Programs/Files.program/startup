@@ -704,10 +704,6 @@ function RightClickFile(file, absX, absY)
 				else
 					local tdw = TextDialogueWindow:Initialise("Rename '"..Helpers.TruncateString(file.name, 17).."'", function(success, value)
 						if success and #value ~= 0 then
-							print('***')
-							print(file.path)
-							print(Helpers.RemoveFileName(file.path)..value)
-							print('---')
 							OneOS.FS.move(file.path, Helpers.RemoveFileName(file.path)..value)
 							Update()
 						end

@@ -147,10 +147,7 @@ end
 function installApplication(id, path, removeSpaces, alwaysFolder, fullPath)
 	local package = downloadApplication(id)
 	if type(package) ~= 'string' or #package == 0 then
-		print(package)
-		print('*')
-		sleep(4)
-		--error('The application did not download correctly or is empty. Try again.')
+		error('The application did not download correctly or is empty. Try again.')
 	end
 	local pack = JSON.decode(package)
 	if pack then
@@ -246,5 +243,8 @@ function testConnection()
 	end,function()
 	  	sleep(10)
 	end)
+	if not ok then
+		error('Network error')
+	end
 	return ok	
 end

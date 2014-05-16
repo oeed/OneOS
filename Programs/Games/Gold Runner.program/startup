@@ -5,8 +5,8 @@
 OneOS.ToolBarColour = colours.grey
 OneOS.ToolBarTextColour = colours.white
 
-local applicationID = 58
-local applicationName = 'Lasers'
+local applicationID = 57
+local applicationName = 'Gold Runner'
 
 OneOS.LoadAPI('/System/API/Drawing.lua', true)
 OneOS.LoadAPI('/System/API/Button.lua', true)

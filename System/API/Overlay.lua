@@ -171,23 +171,27 @@ function InsertMenu(title, items, x)
 	if Drawing.Screen.Width < x + width then
 		menuX = width - 1
 	end
-
+	local highlighted = false
+	if Current.Menu and Current.Menu.Tag == title then
+		highlighted = true
+	end
 	table.insert(Elements,
 	Button:Initialise(x-1, 1, #title+2, 1, Overlay.ToolBarColour, Overlay.ToolBarTextColour, nil, nil, nil, function(self, side, x, y, toggle)
 		local menu = nil
 		if toggle then
 			menu = Menu:Initialise(0-menuX, 2, nil, nil, self, items, true, function()
-				if Current.Program then
-					MainDraw()
-					--Current.Program.AppRedirect:Draw()
-				end
-			end):Show()
+				Current.Menu = nil
+				Overlay.UpdateButtons()
+				MainDraw()
+			end)
+			menu.Tag = title
+			menu:Show()
 		else
 			Current.Menu:Close()
 			return false
 		end
 		return true
-	end, title, false))
+	end, title, highlighted))
 end
 
 function InsertButton(title, active, backgroundColour, activeBackgroundColour, textColour, activeTextColour, click)

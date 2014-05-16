@@ -983,7 +983,7 @@ function Load(title, func)
 end
 
 function DisplayLoader()
-  local maxStep = 70 -- about 10 seconds, timeout
+  local maxStep = 140 -- about 20 seconds, timeout
   local currStep = 0
   local loadStep = 0
   while isLoading do
@@ -1306,10 +1306,66 @@ function TidyPath(path)
   return path
 end
 
+function ConnectionError()
+  print = _print
+  term.setBackgroundColor(colours.grey)
+  term.setTextColor(colours.white)
+  term.clear()
+
+  term.setCursorPos(2,2)
+  print("Failed to connect to the server!\n\n")
+
+  term.setTextColour(colours.lightGrey)
+  term.setCursorPos(2,4)
+  print("An error occured while trying to")
+  term.setCursorPos(2,5)
+  print("connect to the server.")
+  term.setCursorPos(2,6)
+  print("Check the following things then try again:")
+  term.setTextColour(colours.white)
+  term.setCursorPos(1,8)
+  print(" - Check that your internet is online and working")
+  print(" - Ensure that the HTTP API is on")
+  print(" - Ensure that ccappstore.com is whitelisted")
+  print(" - Try accesing ccappstore.com in your browser")
+
+
+  term.setCursorPos(2,Drawing.Screen.Height - 1)
+  term.setTextColour(colours.white)
+  print(" Click anywhere to exit...")
+  os.pullEvent("mouse_click")
+  if OneOS then
+    OneOS.Close()
+  end
+  term.setTextColour(colours.white)
+  term.setBackgroundColour(colours.black)
+  term.clear()
+  term.setCursorPos(1,1)
+end
+
 function Initialise()
   os.loadAPI('api')
   if tArgs and tArgs[1] then
     if tArgs[1] == 'install' and tArgs[2] and tonumber(tArgs[2]) then
+      if OneOS then
+        Load('Connecting', api.testConnection)
+        Load("Installing App", function()
+          local path = tArgs[3] or ''
+          local app = api.getApplication(tonumber(tArgs[2]))
+          if not app then
+            error('Network error')
+          end
+          api.installApplication(tonumber(tArgs[2]), Settings.InstallLocation..'/'..path..'/'..app.name..".program/", false, Settings.AlwaysFolder, true)
+          api.saveApplicationIcon(tonumber(tArgs[2]), Settings.InstallLocation..'/'..path..'/'..app.name..".program/icon")
+          if tArgs[4] then
+            OneOS.OpenFile(Settings.InstallLocation..'/'..path..'/'..app.name..".program/")
+          end 
+        end)
+        Load("Application Installed!", function()
+          sleep(1)
+        end)
+        OneOS.Close()
+      end
       print('Connecting...')
       if api.testConnection() then
         print('Downloading program...')
@@ -1325,6 +1381,8 @@ function Initialise()
         printError('Could not connect to the App Store.')
         printError('Check your connection and try again.')
       end
+
+      
     elseif tArgs[1] == 'submit' and tArgs[2] and fs.exists(shell.resolve(tArgs[2])) then
       print('Packaging...')
       local pkg = Package(shell.resolve(tArgs[2]))
@@ -1450,43 +1508,47 @@ if term.isColor and term.isColor() then
     -- Run main function
     local _, err = pcall(Initialise)
     if err then
-      print = _print
-      term.setBackgroundColor(colours.lightGrey)
-      term.setTextColor(colours.white)
-      term.clear()
+      if string.find(err, 'Network error') then
+        ConnectionError()
+      else
+        print = _print
+        term.setBackgroundColor(colours.lightGrey)
+        term.setTextColor(colours.white)
+        term.clear()
 
 
-      term.setBackgroundColor(colours.grey)
-      term.setCursorPos(1, 2)
-      term.clearLine()
-      term.setCursorPos(1, 3)
-      term.clearLine()
-      term.setCursorPos(1, 4)
-      term.clearLine()
-      term.setCursorPos(3, 3)
+        term.setBackgroundColor(colours.grey)
+        term.setCursorPos(1, 2)
+        term.clearLine()
+        term.setCursorPos(1, 3)
+        term.clearLine()
+        term.setCursorPos(1, 4)
+        term.clearLine()
+        term.setCursorPos(3, 3)
 
-      print("The ComputerCraft App Store has crashed!\n\n")
+        print("The ComputerCraft App Store has crashed!\n\n")
 
-      term.setBackgroundColour(colours.lightGrey)
-      print("Try repeating what you just did, if this is the second time you've seen this message go to")
-      term.setTextColour(colours.black)
-      print("http://ccappstore.com/help#crash/\n")
-      term.setTextColour(colours.white)    
-      print("The error was:")
+        term.setBackgroundColour(colours.lightGrey)
+        print("Try repeating what you just did, if this is the second time you've seen this message go to")
+        term.setTextColour(colours.black)
+        print("http://ccappstore.com/help#crash/\n")
+        term.setTextColour(colours.white)    
+        print("The error was:")
 
-      term.setTextColour(colours.black)
-      print(" " .. tostring(err) .. "\n\n")
+        term.setTextColour(colours.black)
+        print(" " .. tostring(err) .. "\n\n")
 
-      term.setTextColour(colours.white)
-      print(" Click anywhere to exit...")
-      os.pullEvent("mouse_click")
-      if OneOS then
-        OneOS.Close()
+        term.setTextColour(colours.white)
+        print(" Click anywhere to exit...")
+        os.pullEvent("mouse_click")
+        if OneOS then
+          OneOS.Close()
+        end
+        term.setTextColour(colours.white)
+        term.setBackgroundColour(colours.black)
+        term.clear()
+        term.setCursorPos(1,1)
       end
-      term.setTextColour(colours.white)
-      term.setBackgroundColour(colours.black)
-      term.clear()
-      term.setCursorPos(1,1)
     end
   end
 else
