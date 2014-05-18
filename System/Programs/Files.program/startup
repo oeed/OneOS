@@ -17,6 +17,9 @@ local startPath = tArgs[1] or '/Desktop/'
 local dragRelPos = nil
 local lastClick = nil
 
+--if running on small screens (e.g. pocket computers)
+local isCompressed = false
+
 Current = {
 	Clicks = {},
 	History = {},
@@ -46,6 +49,11 @@ Current = {
 	CursorColour = colours.black,
 	Peripheral = {}
 }
+
+if Drawing.Screen.Width <= 30 then
+	isCompressed = true
+	Current.SidebarWidth = 1
+end
 
 if tArgs[2] then
 	Current.Path = Helpers.TidyPath(Helpers.ParentFolder(startPath))
@@ -93,26 +101,38 @@ function Initialise()
 
 	OneOS.ToolBarColour = colours.lightGrey
 	OneOS.ToolBarTextColour = colours.white
+	local xPos = 9
+	if not isCompressed then
+		BackButton = Button:Initialise(2, 2, nil, 1, colours.white, colours.lightGrey, colours.lightBlue, colours.white, nil, function(self)
+			if Current.History[Current.HistoryItem-1] then
+				GoBack()
+			else
+				self.Toggle = true
+			end
+			os.startTimer(0.5)
+		end, '<', 3):Register()
+		
+		ForwardButton = Button:Initialise(5, 2, nil, 1, colours.white, colours.lightGrey, colours.lightBlue, colours.white, nil, function(self)
+			if Current.History[Current.HistoryItem+1] then
+				GoForward()
+			else
+				self.Toggle = true
+			end
+			os.startTimer(0.5)
+		end, '>', 3):Register()
+	else
+		BackButton = Button:Initialise(2, 2, nil, 1, colours.white, colours.lightGrey, colours.lightBlue, colours.white, nil, function(self)
+			if Current.Path ~= '/' then
+				GoToPath(Helpers.ParentFolder(Current.Path))
+			else
+				self.Toggle = true
+			end
+			os.startTimer(0.5)
+		end, 'Up', 3):Register()
+		xPos = 7
+	end
 
-	BackButton = Button:Initialise(2, 2, nil, 1, colours.white, colours.lightGrey, colours.lightBlue, colours.white, nil, function(self)
-		if Current.History[Current.HistoryItem-1] then
-			GoBack()
-		else
-			self.Toggle = true
-		end
-		os.startTimer(0.5)
-	end, '<', 3):Register()
-	
-	ForwardButton = Button:Initialise(5, 2, nil, 1, colours.white, colours.lightGrey, colours.lightBlue, colours.white, nil, function(self)
-		if Current.History[Current.HistoryItem+1] then
-			GoForward()
-		else
-			self.Toggle = true
-		end
-		os.startTimer(0.5)
-	end, '>', 3):Register()
-
-	ListToggleButton = Button:Initialise(9, 2, nil, 1, colours.white, colours.black, colours.lightBlue, colours.white, nil, function(self)
+	ListToggleButton = Button:Initialise(xPos, 2, nil, 1, colours.white, colours.black, colours.lightBlue, colours.white, nil, function(self)
 		Settings.ListMode = not Settings.ListMode
 		if Settings.ListMode then
 			self.Text = 'Icon'
@@ -123,22 +143,42 @@ function Initialise()
 		Current.FileScroll = 0
 		os.startTimer(0.5)
 	end, 'List', 3):Register()
+	xPos = xPos + 7
+	local title = 16
 
+	if Settings.ShowHidden then
+		if not isCompressed then
+			title = 'Hide Hidden'
+		else
+			title = 'Hide Hiddn'
+		end
+	else
+		if not isCompressed then
+			title = 'Show Hidden'
+		else
+			title = 'Show Hiddn'
+		end
+	end
 
-	HiddenToggleButton = Button:Initialise(16, 2, nil, 1, colours.white, colours.black, colours.lightBlue, colours.white, nil, function(self)
+	HiddenToggleButton = Button:Initialise(xPos, 2, nil, 1, colours.white, colours.black, colours.lightBlue, colours.white, nil, function(self)
 		Settings.ShowHidden = not Settings.ShowHidden
 		if Settings.ShowHidden then
-			self.Text = 'Hide Hidden'
+			if not isCompressed then
+				self.Text = 'Hide Hidden'
+			else
+				self.Text = 'Hide Hiddn'
+			end
 		else
-			self.Text = 'Show Hidden'
+			if not isCompressed then
+				self.Text = 'Show Hidden'
+			else
+				self.Text = 'Show Hiddn'
+			end
 		end
 		WriteSettings()
 		Update()
 		os.startTimer(0.5)
-	end, 'Show Hidden', 3):Register()
-	if Settings.ShowHidden then
-		HiddenToggleButton.Text = 'Hide Hidden'
-	end
+	end, title, 3):Register()
 
 	if Settings.ListMode then
 		ListToggleButton.Text = 'Icon'
@@ -151,19 +191,21 @@ function Initialise()
 end
 
 function DrawSidebar()
-	Drawing.DrawArea(Current.SidebarWidth, 4, 1, Drawing.Screen.Height-3, '|', colours.lightGrey, colours.white)
-	local scroll = Current.SidebarScroll
-	local y = 5
+	if not isCompressed then
+		Drawing.DrawArea(Current.SidebarWidth, 4, 1, Drawing.Screen.Height-3, '|', colours.lightGrey, colours.white)
+		local scroll = Current.SidebarScroll
+		local y = 5
 
-	for groupName, items in pairs(Current.SidebarList) do
-		Drawing.DrawCharacters(1, y + scroll, groupName, colours.lightGrey, colours.white)
-		y = y + 1
-		for i, name in ipairs(items) do
-			local _name = name[1] or name.Name
-			Drawing.DrawCharacters(2, y + scroll, _name, colours.grey, colours.white)
+		for groupName, items in pairs(Current.SidebarList) do
+			Drawing.DrawCharacters(1, y + scroll, groupName, colours.lightGrey, colours.white)
+			y = y + 1
+			for i, name in ipairs(items) do
+				local _name = name[1] or name.Name
+				Drawing.DrawCharacters(2, y + scroll, _name, colours.grey, colours.white)
+				y = y + 1
+			end
 			y = y + 1
 		end
-		y = y + 1
 	end
 end
 
@@ -174,7 +216,7 @@ function DrawScrollBar(x, current, max)
 		barHeight = 5
 	end
 	Drawing.DrawBlankArea(x, 4, 1, fullHeight, colours.grey)
-	Drawing.DrawBlankArea(x, 4+current, 1, barHeight, colours.lightGrey)
+	Drawing.DrawBlankArea(x, 4+current, 1, barHeight, colours.lightBlue)
 end
 
 local diskOpenButton = nil
@@ -190,7 +232,7 @@ function DrawPeripheral()
 		Drawing.DrawCharacters(Current.SidebarWidth+x, y, v, colours.black, colours.white)
 		y = y + 1
 	end
-	if Current.Peripheral.Type == 'Drive' and diskOpenButton then
+	if diskOpenButton then
 		diskOpenButton:Draw()
 	end
 end
@@ -357,6 +399,22 @@ function RefreshFiles()
 				if peripheral.call(Current.Peripheral.Side:lower(), 'isColour') then
 					screenType = 'Colour'
 				end
+				local buttonTitle = 'Use as Screen'
+				if OneOS.Settings:GetValues()['Monitor'] == Current.Peripheral.Side:lower() then
+					buttonTitle = 'Use Computer Screen'
+				end
+				diskOpenButton = Button:Initialise(Current.SidebarWidth+10, 9, nil, nil, colours.lightGrey, nil, nil, nil, nil, function() 
+					ButtonDialogueWindow:Initialise("Reboot Required", "To change screen you'll need to reboot your computer.", 'Reboot', 'Cancel', function(self, success)
+						if success then
+							if buttonTitle == 'Use Computer Screen' then
+								OneOS.Settings:SetValue('Monitor', nil)
+							else
+								OneOS.Settings:SetValue('Monitor', Current.Peripheral.Side:lower())
+							end
+							OneOS.Reboot()
+						end
+					end):Show()
+				end, buttonTitle)
 				Current.Peripheral.Info = {
 					['Type'] = screenType,
 					['Width'] = tostring(w),
@@ -450,16 +508,23 @@ function Draw()
 	Current.Clicks = {}
 	Drawing.DrawBlankArea(1, 1, Drawing.Screen.Width, 3, colours.lightGrey)
 	Drawing.DrawBlankArea(1, 4, Drawing.Screen.Width, Drawing.Screen.Height-3, colours.white)
-
-	if Current.History[Current.HistoryItem-1] then
-		BackButton.TextColour = colours.black
+	if not isCompressed then
+		if Current.History[Current.HistoryItem-1] then
+			BackButton.TextColour = colours.black
+		else
+			BackButton.TextColour = colours.lightGrey
+		end
 	else
-		BackButton.TextColour = colours.lightGrey
+		if Current.Path ~= '/' then
+			BackButton.TextColour = colours.black
+		else
+			BackButton.TextColour = colours.lightGrey
+		end
 	end
 
-	if Current.History[Current.HistoryItem+1] then
+	if ForwardButton and Current.History[Current.HistoryItem+1] then
 		ForwardButton.TextColour = colours.black
-	else
+	elseif  ForwardButton then
 		ForwardButton.TextColour = colours.lightGrey
 	end
 

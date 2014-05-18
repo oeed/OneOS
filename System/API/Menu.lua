@@ -104,8 +104,9 @@
 			topHeight = 0
 		end
 		if self.Items[y-topHeight] and self.Items[y-topHeight].Click then
-			if side == 1 then
-				self.Items[y-topHeight]:Click()
+			if side ~= 2 then
+				local pos = GetAbsolutePosition(self)
+				self.Items[y-topHeight]:Click(side, 1 + x - 2 * pos.X, 1)
 				self:Close()
 			end
 			return true

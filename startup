@@ -92,6 +92,29 @@ function PrintCentered(text, y)
     write(text)
 end
 
+LoadAPI('System/API/Settings.lua')
+local _side = Settings:GetValues()['Monitor']
+if not term.setTextScale and _side then
+	if peripheral.isPresent(_side) and peripheral.getType(_side) == 'monitor' and peripheral.call(_side, 'isColour') == true then
+		term.setBackgroundColor(colours.grey)
+		term.clear()
+		term.setTextColor(colours.white)
+		PrintCentered('OneOS is being run off a monitor', 6)
+		term.setTextColor(colours.lightGrey)
+		PrintCentered('To stop it from running off a monitor try:', 8)
+		term.setTextColor(colours.white)
+		PrintCentered('- Save you files, then find the monitor in Files', 10)
+		PrintCentered("and click: 'Use Computer Screen'", 11)
+		
+		PrintCentered('- Break the monitor next to the computer', 13)
+		PrintCentered('This method will NOT save your files.', 14)
+		term.redirect(peripheral.wrap(Settings:GetValues()['Monitor']))
+	else
+		Settings:SetValue('Monitor', nil)
+	end
+end
+
+
 function LoadingScreen()
 	if fs.getFreeSpace and fs.getFreeSpace('/') < 51200 then
 		term.setBackgroundColor(colours.grey)
@@ -446,8 +469,8 @@ elseif Start() then
 		term.setTextColor(colours.white)
 		term.clear()
 		local w,h = term.getSize()
-		if fs.exists('System/Images/crash') then
-			paintutils.drawImage(paintutils.loadImage('System/Images/crash'), (w-7)/2 + 1, 3)
+		if fs.exists('/System/Images/crash') then
+			paintutils.drawImage(paintutils.loadImage('/System/Images/crash'), (w-7)/2 + 1, 3)
 		else
 			table.insert(ok, 'Crash image nonexistent!')
 		end

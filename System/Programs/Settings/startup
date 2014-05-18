@@ -65,7 +65,7 @@ function Initialise()
 				settings[k].Control.Width = 4
 			end
 		elseif v.Type == 'Colour' then
-			local x = controlX + 1
+			local x = controlX
 			_colours = {
 				colours.white,
 				colours.orange,
@@ -167,10 +167,11 @@ function Draw()
 	local startX = 2
 	local startY = 5
 	for k, v in pairs(settings) do
-		Drawing.DrawCharacters(startX, startY, v.Label, colours.black, colours.white)
 		if v.Control and v.Control.Draw then
+			Drawing.DrawCharacters(startX, startY, v.Label, colours.black, colours.white)
 			v.Control:Draw()
 		elseif v.Controls then
+			Drawing.DrawCharacters(startX, startY, v.Label, colours.black, colours.white)
 			for i, c in ipairs(v.Controls) do
 				c:Draw()
 			end

@@ -19,6 +19,11 @@
 			Type = 'Program',
 			Label = 'Startup Program',
 			Default = nil,
+		},
+		Monitor = {
+			Type = 'Side',
+			Label = 'Monitor Side',
+			Default = nil
 		}
 	}
 --[[
@@ -66,7 +71,7 @@
 	function UpdateInterfaceForKey(key, value)
 		if key == 'DesktopColour' then
 			if Desktop then
-				Desktop.LoadSettings()
+				Desktop.RefreshFiles()
 			end
 		elseif key == 'ComputerName' then
 			os.setComputerLabel(value)

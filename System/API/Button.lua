@@ -18,9 +18,6 @@
 			return
 		end
 		local bg = self.BackgroundColour
-		if type(bg) == 'function' then
-			bg = bg()
-		end
 
 		if self.Toggle then
 			bg = self.ActiveBackgroundColour

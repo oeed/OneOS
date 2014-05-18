@@ -101,14 +101,20 @@ function UpdateButtons()
 	local currentProgramI = 1
 	availableSpace = Drawing.Screen.Width - 8
 	local menuPrograms = {}
+	local activeInMenu = false
+	local activeInMenuText = false
 	if Current.Programs and #Current.Programs >= 1 then
 		for i, program in ipairs(Current.Programs) do
 			if availableSpace - 2 - #program.Title <= 2 then
 				Overlay.HideTime = true
+				if Current.Program and Current.Program == program then
+					activeInMenu = colours.lightBlue
+					activeInMenuText = colours.white
+				end
 				table.insert(menuPrograms, {
-					Title = program.Title,
-					Click = function(self, side)
-						if side == 3 then
+					Title = 'x '..program.Title,
+					Click = function(self, side, x, y)
+						if side == 3 or x == 2 then
 							program:Close()
 							program = nil
 							return
@@ -159,24 +165,26 @@ function UpdateButtons()
 	end
 
 	if #menuPrograms ~= 0 then
-		InsertMenu("=", menuPrograms, Drawing.Screen.Width - 3)
+		InsertMenu("=", menuPrograms, Drawing.Screen.Width - 3, activeInMenu, activeInMenuText)
 	end
 
 	Draw()
 end
 
-function InsertMenu(title, items, x)
+function InsertMenu(title, items, x, bg, tc)
 	local menuX = -1
 	local width = Helpers.LongestString(items, 'Title')
 	if Drawing.Screen.Width < x + width then
 		menuX = width - 1
 	end
+	local bg = bg or Overlay.ToolBarColour
+	local tc = tc or Overlay.ToolBarTextColour
 	local highlighted = false
 	if Current.Menu and Current.Menu.Tag == title then
 		highlighted = true
 	end
 	table.insert(Elements,
-	Button:Initialise(x-1, 1, #title+2, 1, Overlay.ToolBarColour, Overlay.ToolBarTextColour, nil, nil, nil, function(self, side, x, y, toggle)
+	Button:Initialise(x-1, 1, #title+2, 1, bg, tc, nil, nil, nil, function(self, side, x, y, toggle)
 		local menu = nil
 		if toggle then
 			menu = Menu:Initialise(0-menuX, 2, nil, nil, self, items, true, function()

@@ -12,6 +12,7 @@ HandleTimer = function(timer)
 					if animation.canDraw or animation.canDraw == nil then
 						Current.CanDraw = true
 					end
+					Restore()
 					animation.done()
 					--MainDraw()
 				else
@@ -30,7 +31,7 @@ RectangleSize = function(centerX, centerY, startWidth, startHeight, doneWidth, d
 		done()
 		return
 	end
-
+	Restore()
 	doneHeight = doneHeight + 2
 	doneWidth = doneWidth + 2
 	Current.CanDraw = false
@@ -67,6 +68,7 @@ SwipeProgram = function(currentProgram, newProgram, direction)
 		done()
 		return
 	end
+	Restore()
 	local fps = 20
 	local steps = fps * 0.2
 	local deltaX = ((Drawing.Screen.Width + 4) / steps) * direction
@@ -109,6 +111,7 @@ SearchToggle = function(isActivate, done)
 		currentOffset = -1*Search.Width
 	end
 	if not Settings:GetValues()['UseAnimations'] then
+		Restore()
 		local endOffset = -1*Search.Width 
 		if not isActivate then
 			endOffset = 0
@@ -122,6 +125,7 @@ SearchToggle = function(isActivate, done)
 		done()
 		return
 	end
+	--Restore()
 	local direction = 1
 	if isActivate then
 		direction = -1

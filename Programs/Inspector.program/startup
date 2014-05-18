@@ -1,0 +1,268 @@
+OneOS.ToolBarColour = colours.grey
+OneOS.ToolBarTextColour = colours.white
+
+OneOS.LoadAPI('/System/API/Drawing.lua')
+OneOS.LoadAPI('/System/API/Button.lua')
+OneOS.LoadAPI('/System/API/Helpers.lua')
+OneOS.LoadAPI('/System/API/Peripheral.lua')
+OneOS.LoadAPI('/System/API/ScrollBar.lua')
+
+Current = {
+	Clicks = {},
+	Page = 1,
+	MEController = nil,
+	Items = {}
+}
+
+Events = {
+	
+}
+
+InterfaceElements = {
+	
+}
+
+Pages = {
+	Items = 1,
+	Monitor = 2,
+	Control = 3
+}
+
+function Initialise()
+	EventRegister('mouse_click', TryClick)
+	EventRegister('mouse_drag', TryClick)
+	EventRegister('timer', Update)
+	itemsButton = Button:Initialise(2, 2, nil, 1, colours.lightGrey, nil, colours.lightBlue, nil, nil, function(self, x, y, toggle) ChangePage(Pages.Items) end, 'Items', true):Register()
+	monitorButton = Button:Initialise(10, 2, nil, 1, colours.lightGrey, nil, colours.lightBlue, nil, nil, function(self, x, y, toggle) ChangePage(Pages.Monitor) end, 'Resource Monitor', false):Register()
+	controlButton = Button:Initialise(29, 2, nil, 1, colours.lightGrey, nil, colours.lightBlue, nil, nil, function(self, x, y, toggle) ChangePage(Pages.Controller) end, 'Base Controller', false):Register()
+	itemsScrollBar = ScrollBar:Initialise(Drawing.Screen.Width, 5, Drawing.Screen.Height - 4, 10, nil, nil, nil, function()end)
+	Current.MEController = peripheral.wrap(Peripheral.GetPeripheral('appeng_me_tilecontroller').Side)
+
+	UpdateItems(true)
+	Update()
+	EventHandler()
+end
+
+function ChangePage(page)
+	Current.Page = page
+	itemsButton.Toggle = false
+	monitorButton.Toggle = false
+	controlButton.Toggle = false
+	Update()
+end
+
+local function contains(table, element)
+  for _, value in pairs(table) do
+    if value == element then
+      return true
+    end
+  end
+  return false
+end
+
+function ItemKey(item)
+	return item.rawName .. ':' .. item.dmg
+end
+
+function UpdateItems(isFirst)
+	local avilableItems = Current.MEController.getAvailableItems()
+	term.setTextColour(colours.white)
+	local oldItems = Current.Items
+	local proccessedItems = {}
+	for i, item in ipairs(avilableItems) do
+		local change = 0
+		if Current.Items[ItemKey(item)] then
+			change = Current.Items[ItemKey(item)].Change + item.qty - Current.Items[ItemKey(item)].Quantity
+		elseif not isFirst then
+			change = item.qty
+		end
+		Current.Items[ItemKey(item)] = {
+			Name = item.name,
+			RawName = item.rawName,
+			Quantity = item.qty,
+			ItemID = item.id,
+			Change = change,
+			Damage = item.damage
+		}
+		table.insert(proccessedItems, ItemKey(item))
+	end
+
+	for key, item in pairs(oldItems) do
+		if not contains(proccessedItems, key) then
+			if item.Quantity ~= 0 then
+				Current.Items[key].Change = 0-item.Quantity
+				Current.Items[key].Quantity = 0
+			else
+				Current.Items[key].Change = item.Change
+			end
+		end	
+	end
+end
+
+function Update()
+	if Current.Page == Pages.Items then
+		UpdateItems()
+	end
+	Draw()
+	updateTimer = os.startTimer(1)
+end
+
+function DrawItems()
+	local collumnWidths = {
+		Qty = 6,
+		Name = 40,
+		Chng = 6
+	}
+	local y = 4
+	local odd = false
+	local x = 1
+	for name, width in pairs(collumnWidths) do
+		local colour = colours.grey
+		--[[
+		if odd then
+			colour = colours.lightGrey
+		end
+		odd = not odd
+		]]--
+		Drawing.DrawBlankArea(x, y, width, 1, colour)
+		Drawing.DrawCharacters(x + 1, y, Helpers.TruncateString(tostring(name), width), colours.white, colour)
+		x = x  + width
+	end
+	y = y + 1
+	odd = false
+	for rawName, item in pairs(Current.Items) do
+		x = 1
+		local bgColour = colours.black
+		local textColour = colours.white
+		if odd then
+			bgColour = colours.black
+			textColour = colours.lightGrey
+		end
+		odd = not odd
+		Drawing.DrawBlankArea(1, y, Drawing.Screen.Width, 1, bgColour)
+
+		for name, width in pairs(collumnWidths) do
+			if name == 'Qty' then
+				local colour = bgColour
+				local tc = textColour
+				if item.Quantity == 0 then
+					colour = colours.red
+					tc = colours.white
+				end
+				Drawing.DrawBlankArea(x, y, width, 1, colour)
+				Drawing.DrawCharacters(x + 1, y, Helpers.TruncateString(tostring(item.Quantity), width - 2), tc, colour)
+			elseif name == 'Chng' then
+				local colour = bgColour
+				local tc = textColour
+				if item.Change > 0 then
+					colour = colours.green
+					tc = colours.white
+				elseif item.Change < 0 then
+					colour = colours.red
+					tc = colours.white
+				end
+				Drawing.DrawBlankArea(x, y, width, 1, colour)
+				Drawing.DrawCharacters(x + 1, y, Helpers.TruncateString(tostring(item.Change), width - 2), tc, colour)
+			elseif name == 'Name' then
+				Drawing.DrawBlankArea(x, y, width, 1, bgColour)
+				Drawing.DrawCharacters(x + 1, y, Helpers.TruncateString(tostring(item.Name), width - 2), textColour, bgColour)
+			end
+			x = x + width
+		end
+		y = y + 1
+	end
+
+	itemsScrollBar:Draw()
+end
+
+function Draw()
+	Drawing.Clear(colours.black)
+
+	Drawing.DrawBlankArea(1, 1, Drawing.Screen.Width, 3, colours.grey)
+
+	for i, elem in ipairs(InterfaceElements) do
+		if elem.Draw then
+			elem:Draw()
+		end
+	end
+
+	if Current.Page == Pages.Items then
+		DrawItems()
+	elseif Current.Page == Pages.Items then
+		DrawItems()
+	end
+
+	Drawing.DrawBuffer()
+end
+
+MainDraw = Draw
+
+function RegisterElement(elem)
+	table.insert(InterfaceElements, elem)
+end
+
+function UnregisterElement(elem)
+	for i, e in ipairs(InterfaceElements) do
+		if elem == e then
+			InterfaceElements[i] = nil
+		end
+	end
+end
+
+function RegisterClick(elem)
+	table.insert(Current.Clicks, elem)
+end
+
+function CheckClick(object, x, y)
+	local pos = GetAbsolutePosition(object)
+	if pos.X <= x and pos.Y <= y and  pos.X + object.Width > x and pos.Y + object.Height > y then
+		return true
+	end
+end
+
+function DoClick(event, object, side, x, y)
+	if object and CheckClick(object, x, y) then
+		return object:Click(side, x - object.X + 1, y - object.Y + 1)
+	end	
+end
+
+function TryClick(event, side, x, y)
+	for i, object in ipairs(Current.Clicks) do
+		if DoClick(event, object, side, x, y, event == 'mouse_drag') then
+			Draw()
+			return
+		end		
+	end
+end
+
+function GetAbsolutePosition(obj)
+	if not obj.Parent then
+		return {X = obj.X, Y = obj.Y}
+	else
+		local pos = GetAbsolutePosition(obj.Parent)
+		local x = pos.X + obj.X - 1
+		local y = pos.Y + obj.Y - 1
+		return {X = x, Y = y}
+	end
+end
+
+function EventRegister(event, func)
+	if not Events[event] then
+		Events[event] = {}
+	end
+
+	table.insert(Events[event], func)
+end
+
+function EventHandler()
+	while true do
+		local event = { coroutine.yield() }
+		if Events[event[1]] then
+			for i, e in ipairs(Events[event[1]]) do
+				e(event[1], event[2], event[3], event[4], event[5])
+			end
+		end
+	end
+end
+
+Initialise()

@@ -1,7 +1,7 @@
 OneOSVersion = '...'
 nativeTerm = term.native
 if type(nativeTerm) == 'function' then
-	nativeTerm = nativeTerm()
+	nativeTerm = term.current()
 end
 
 local x = 1
@@ -11,7 +11,6 @@ local m = 4
 local needsDisplay = true
 local drawing = false
 
-local updateTimer = nil
 indexTimer = nil
 clockTimer = nil
 local desktopRefreshTimer = nil
@@ -31,7 +30,8 @@ Current = {
 	Daemons = {},
 	SearchActive = false,
 	DidIndexTimer = nil,
-	DidIndex = false --when true a special icon will appear on the overlay
+	DidIndex = false, --when true a special icon will appear on the overlay
+	OnMonitor = false
 }
 
 Events = {
@@ -61,7 +61,6 @@ function FirstSetup()
 	EventRegister('key', HandleKey)
 	EventRegister('char', HandleKey)
 	EventRegister('timer', Update)
-	--updateTimer = os.startTimer(0.5)
 	isFirstSetup = true
 	Overlay:Initialise()
 	RegisterElement(Overlay)
@@ -75,12 +74,17 @@ end
 
 local fingerprint = ''
 function Initialise()
+	if Settings:GetValues()['Monitor'] then
+		Current.OnMonitor = true
+	end
+
 	Indexer.RefreshIndex()
 	Current.DidIndex = false
 	Current.DidIndexTimer = nil
 	EventRegister('mouse_click', TryClick)
 	EventRegister('mouse_drag', TryClick)
-	EventRegister('monitor_touch', TryClick)
+	EventRegister('monitor_touch', MonitorTouch)
+	EventRegister('peripheral_detach', function(event, side) if side == Settings:GetValues()['Monitor'] then term.setBackgroundColour(colours.black) term.clear() os.reboot() end return false end)
 	EventRegister('oneos_draw', Draw)
 	EventRegister('oneos_shutdown', function(ev, restart)Shutdown(true, restart)end)
 	EventRegister('key', HandleKey)
@@ -143,6 +147,10 @@ function Initialise()
 				h.close()
 			end
 		end
+	end
+
+	if Current.OnMonitor then
+		OnscreenKeyboard:Initialise()
 	end
 
 	CheckAutoUpdate()
@@ -245,6 +253,7 @@ end
 
 function LaunchProgram(path, args, title)
 	Animation.RectangleSize(Drawing.Screen.Width/2, Drawing.Screen.Height/2, 1, 1, Drawing.Screen.Width, Drawing.Screen.Height, colours.grey, 0.3, function()
+		Current.CanDraw = true
 		if Current.Menu then
 			Current.Menu:Close()
 		end
@@ -262,6 +271,10 @@ function SwitchToProgram(newProgram, currentIndex, newIndex)
 		Animation.SwipeProgram(Current.Program, newProgram, direction)
 	else
 		Animation.RectangleSize(Drawing.Screen.Width/2, Drawing.Screen.Height/2, 1, 1, Drawing.Screen.Width, Drawing.Screen.Height, colours.grey, 0.3, function()
+			if Current.Menu then
+				Current.Menu:Close()
+			end
+			Current.CanDraw = true
 			Current.Program = newProgram
 			Overlay.UpdateButtons()
 			Current.Program.AppRedirect:Draw()
@@ -276,12 +289,6 @@ function Update(event, timer)
 	elseif timer == Current.DidIndexTimer then
 		Current.DidIndex = false
 		Overlay.UpdateButtons()
---[[
-	elseif timer == updateTimer then
-		updateTimer = os.startTimer(0.5)
-		Current.Program.AppRedirect:Draw()
-		Drawing.DrawBuffer()
-]]--
 	elseif timer == clockTimer then
 		clockTimer = os.startTimer(0.8333333)
 		Draw()
@@ -302,14 +309,16 @@ function Update(event, timer)
 	end
 end
 
-
-
-function Draw()
+function Restore()
 	if term.restore then
 		term.restore()
 	else
 		term.redirect(nativeTerm)
 	end
+end
+
+function Draw()
+	Restore()
 	if isFirstSetup then
 		Current.Program.AppRedirect:Draw()
 		Drawing.DrawBuffer()
@@ -336,6 +345,10 @@ function Draw()
 		if elem.Draw then
 			elem:Draw()
 		end
+	end
+
+	if Current.OnMonitor then
+		OnscreenKeyboard:Draw()
 	end
 
 	if Current.Window then
@@ -415,6 +428,11 @@ function TryClick(event, side, x, y)
 			end		
 		end
 	end
+end
+
+function MonitorTouch(event, _side, x, y)
+	TryClick('mouse_click', 1, x, y)
+	return true
 end
 
 function HandleKey(...)
