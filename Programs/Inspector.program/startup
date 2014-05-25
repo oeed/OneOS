@@ -9,10 +9,13 @@ OneOS.LoadAPI('/System/API/ScrollBar.lua')
 
 Current = {
 	Clicks = {},
-	Page = 1,
+	Page = 3,
 	MEController = nil,
 	Items = {}
 }
+
+local appliedEnergisticsActive = false
+local openpInstalled = false
 
 Events = {
 	
@@ -32,15 +35,37 @@ function Initialise()
 	EventRegister('mouse_click', TryClick)
 	EventRegister('mouse_drag', TryClick)
 	EventRegister('timer', Update)
-	itemsButton = Button:Initialise(2, 2, nil, 1, colours.lightGrey, nil, colours.lightBlue, nil, nil, function(self, x, y, toggle) ChangePage(Pages.Items) end, 'Items', true):Register()
-	monitorButton = Button:Initialise(10, 2, nil, 1, colours.lightGrey, nil, colours.lightBlue, nil, nil, function(self, x, y, toggle) ChangePage(Pages.Monitor) end, 'Resource Monitor', false):Register()
-	controlButton = Button:Initialise(29, 2, nil, 1, colours.lightGrey, nil, colours.lightBlue, nil, nil, function(self, x, y, toggle) ChangePage(Pages.Controller) end, 'Base Controller', false):Register()
-	itemsScrollBar = ScrollBar:Initialise(Drawing.Screen.Width, 5, Drawing.Screen.Height - 4, 10, nil, nil, nil, function()end)
-	Current.MEController = peripheral.wrap(Peripheral.GetPeripheral('appeng_me_tilecontroller').Side)
 
-	UpdateItems(true)
+	local meController = Peripheral.GetPeripheral('appeng_me_tilecontroller')
+	if meController then
+		appliedEnergisticsActive = true
+	end
+
+	if fs.exists('/openp/') then
+		openpInstalled = true
+	end
+	
+	if appliedEnergisticsActive then
+		Current.MEController = peripheral.wrap(meController.Side)
+		UpdateItems(true)
+	end
+
+
+	monitorButton = Button:Initialise(10, 2, nil, 1, colours.lightGrey, nil, colours.lightBlue, nil, nil, function(self, x, y, toggle) ChangePage(Pages.Monitor) end, 'Resource Monitor', false):Register()
+	itemsButton = Button:Initialise(2, 2, nil, 1, colours.lightGrey, nil, colours.lightBlue, nil, nil, function(self, x, y, toggle) ChangePage(Pages.Items) end, 'Items', false):Register()
+	controlButton = Button:Initialise(29, 2, nil, 1, colours.lightGrey, nil, colours.lightBlue, nil, nil, function(self, x, y, toggle) ChangePage(Pages.Controller) end, 'Base Controller', true):Register()
+	itemsScrollBar = ScrollBar:Initialise(Drawing.Screen.Width, 5, Drawing.Screen.Height - 4, 10, nil, nil, nil, function()end)
+
 	Update()
 	EventHandler()
+		--[[
+Drawing.Clear(colours.grey)
+		Drawing.DrawCharactersCenter(0, -4, nil, nil, 'OpenPeripheral not installed!', colours.white, colours.grey)
+		Drawing.DrawCharactersCenter(0, -4, nil, nil, 'Inspector is a program which monitors various things around your base. However, it required OpenPeripheral to be installed, please', colours.white, colours.grey)
+		Drawing.DrawBuffer()
+		os.pullEvent('mouse_click')
+		OneOS.Close()
+]]--
 end
 
 function ChangePage(page)
@@ -101,7 +126,9 @@ end
 
 function Update()
 	if Current.Page == Pages.Items then
-		UpdateItems()
+		if appliedEnergisticsActive then
+			UpdateItems()	
+		end
 	end
 	Draw()
 	updateTimer = os.startTimer(1)
@@ -187,9 +214,16 @@ function Draw()
 	end
 
 	if Current.Page == Pages.Items then
-		DrawItems()
-	elseif Current.Page == Pages.Items then
-		DrawItems()
+		if appliedEnergisticsActive then
+			DrawItems()
+		else
+			Drawing.DrawBlankArea(1, 4, Drawing.Screen.Width, Drawing.Screen.Height - 1, colours.grey)
+			Drawing.DrawCharactersCenter(0, -4, nil, nil, 'OpenPeripheral not installed!', colours.white, colours.grey)
+			local lines = Helpers.WrapText('OpenPeripheral is required to use mod blocks. Please install it first to use this feature.', Drawing.Screen.Width - 4)
+			for i, v in ipairs(lines) do
+				Drawing.DrawCharacters(3, 0-3+i, lines[i], colours.lightGrey, colours.grey)
+			end
+		end
 	end
 
 	Drawing.DrawBuffer()

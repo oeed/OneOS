@@ -104,7 +104,7 @@ Extension = function(path, addDot)
 		if path:sub(#path) == '/' then
 			_path = path:sub(1,#path-1)
 		end
-		local extension = _path:gmatch('\.[0-9a-z]+$')()
+		local extension = _path:gmatch('%.[0-9a-z]+$')()
 		if extension then
 			extension = extension:sub(2)
 		else
