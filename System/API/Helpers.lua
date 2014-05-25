@@ -53,7 +53,11 @@ OpenFile = function(path, args)
 			LaunchProgram('/System/Programs/Files.program/startup', {path}, 'Files')
 		elseif extension then
 			local _path = Indexer.FindFileInFolder(extension, 'Icons')
-			Helpers.OpenFile(Helpers.ParentFolder(Helpers.ParentFolder(_path)), {path})
+			if _path then
+				Helpers.OpenFile(Helpers.ParentFolder(Helpers.ParentFolder(_path)), {path})
+			else
+
+			end
 		else
 			LaunchProgram('/Programs/LuaIDE.program/startup', {path}, 'LuaIDE')
 		end

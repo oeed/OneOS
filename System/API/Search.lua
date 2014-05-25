@@ -6,22 +6,27 @@ local SearchItems = {}
 local SelectedPath = nil
 local ListScrollBar = nil
 
-local ready = false
+local ready = true
 
 function Close(done)
-	ready = false
-	Current.SearchActive = false
-	Animation.SearchToggle(Current.SearchActive, function()
-		ListScrollBar.MaxScroll = 0
-		ListScrollBar = nil
-		SearchBox = nil
-		Current.CanDraw = true
-		Overlay.UpdateButtons()
-		if done then
-			done()
-		end
-		MainDraw()
-	end)
+	if ready then
+		ready = false
+		Current.SearchActive = false
+		Animation.SearchToggle(Current.SearchActive, function()
+			ListScrollBar.MaxScroll = 0
+			ListScrollBar = nil
+			SearchBox = nil
+			Current.CanDraw = true
+			Overlay.UpdateButtons()
+			if done then
+				done()
+			end
+			Restore()
+			Drawing.Clear(colours.black)
+			MainDraw()
+		end)
+		ready = true
+	end
 end
 
 function DrawBlankToBuffer()
@@ -280,6 +285,10 @@ function Click(event, side, x, y)
 end
 
 function Activate()
+	if not ready then
+		return
+	end
+	ready = false
 	if Current.Menu then
 		Current.Menu:Close()
 	end

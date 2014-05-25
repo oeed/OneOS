@@ -12,8 +12,8 @@ HandleTimer = function(timer)
 					if animation.canDraw or animation.canDraw == nil then
 						Current.CanDraw = true
 					end
-					Restore()
 					animation.done()
+					Drawing.TryRestore = false
 					--MainDraw()
 				else
 					animation.timer = os.startTimer(animation.interval)
@@ -31,6 +31,7 @@ RectangleSize = function(centerX, centerY, startWidth, startHeight, doneWidth, d
 		done()
 		return
 	end
+	Drawing.TryRestore = true
 	Restore()
 	doneHeight = doneHeight + 2
 	doneWidth = doneWidth + 2
@@ -48,7 +49,7 @@ RectangleSize = function(centerX, centerY, startWidth, startHeight, doneWidth, d
 
 	local timer = os.startTimer(1 / fps)
 
-	table.insert(Animations, {step = 1, maxstep = steps, interval = 1 / fps, timer = timer, done = done, func = function(self)
+	table.insert(Animations, {step = 1, maxstep = steps, interval = 1 / fps, timer = timer, done = function() Drawing.Clear(colours.black) done() end, func = function(self)
 		w = w + deltaW
 		h = h + deltaH
 		Drawing.DrawArea(centerX - (w / 2), centerY - (h / 2), w, h, " ", colours.white, colour)
@@ -58,6 +59,7 @@ end
 
 SwipeProgram = function(currentProgram, newProgram, direction)
 	local done = function()
+		Drawing.Clear(colours.black)
 		Current.CanDraw = true
 		Current.Program = newProgram
 		Current.Program.AppRedirect:Draw()
@@ -68,6 +70,7 @@ SwipeProgram = function(currentProgram, newProgram, direction)
 		done()
 		return
 	end
+	Drawing.TryRestore = true
 	Restore()
 	local fps = 20
 	local steps = fps * 0.2
@@ -125,7 +128,8 @@ SearchToggle = function(isActivate, done)
 		done()
 		return
 	end
-	--Restore()
+	Restore()
+	Drawing.TryRestore = true
 	local direction = 1
 	if isActivate then
 		direction = -1

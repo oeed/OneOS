@@ -157,7 +157,13 @@ end
 Buffer = {}
 BackBuffer = {}
 
+TryRestore = false
+
 DrawBuffer = function()
+	if TryRestore and Restore then
+		Restore()
+	end
+
 	for y,row in pairs(Drawing.Buffer) do
 		for x,pixel in pairs(row) do
 			local shouldDraw = true
