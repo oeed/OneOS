@@ -1,0 +1,35 @@
+OneOS.LoadAPI('/System/API/Bedrock.lua', false)
+OneOS.LoadAPI('/System/API/Drawing.lua')
+OneOS.LoadAPI('/System/API/View.lua')
+OneOS.LoadAPI('/System/API/Button.lua')
+OneOS.LoadAPI('/System/API/Label.lua')
+
+local program = Bedrock:Initialise()
+
+program.OnKeyChar = function(event, keychar)
+	if keychar == '\\' then
+		os.reboot()
+	end
+end
+
+program:ObjectClick('BackButton', function(self, event, side, x, y)
+	self.Text = 'Hi'
+end)
+
+program:ObjectClick('Button2', function(self, event, side, x, y)
+	program:GetObject('Button2').Text = 'Cat'
+	--program:RemoveObject('Button2')
+end)
+
+
+program:Run(function()
+	program:LoadView('page1')
+	-- program:AddObject({
+	-- 	Type = 'Button',
+	-- 	X = 5,
+	-- 	Y = 4,
+	-- 	Z = 100,
+	-- 	Text = 'Text',
+	-- 	Name = 'Button2'
+	-- })
+end)

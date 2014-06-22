@@ -4,6 +4,7 @@ local round = function(num, idp)
 end
 
 local _w, _h = term.getSize()
+local copyBuffer = nil
 
 Screen = {
 	Width = _w,
@@ -159,6 +160,9 @@ BackBuffer = {}
 
 TryRestore = false
 
+
+--TODO: make this quicker
+-- maybe sort the pixels in order of colour so it doesn't have to set the colour each time
 DrawBuffer = function()
 	if TryRestore and Restore then
 		Restore()
@@ -192,8 +196,8 @@ end
 
 WriteStringToBuffer = function (x, y, characters, textColour,bgColour)
 	for i = 1, #characters do
-			local character = characters:sub(i,i)
-			Drawing.WriteToBuffer(x + i - 1, y, character, textColour, bgColour)
+		local character = characters:sub(i,i)
+		Drawing.WriteToBuffer(x + i - 1, y, character, textColour, bgColour)
 	end
 end
 
@@ -209,4 +213,27 @@ WriteToBuffer = function(x, y, character, textColour,bgColour)
 		Drawing.Buffer[y] = Drawing.Buffer[y] or {}
 		Drawing.Buffer[y][x] = {character, textColour, bgColour}
 	end
+
+	if copyBuffer then
+		copyBuffer[y] = copyBuffer[y] or {}
+		copyBuffer[y][x] = {character, textColour, bgColour}		
+	end
+end
+
+DrawCachedBuffer = function(buffer)
+	for y, row in pairs(buffer) do
+		for x, pixel in pairs(row) do
+			WriteToBuffer(x, y, pixel[1], pixel[2], pixel[3])
+		end
+	end
+end
+
+StartCopyBuffer = function()
+	copyBuffer = {}
+end
+
+EndCopyBuffer = function()
+	local tmpCopy = copyBuffer
+	copyBuffer = nil
+	return tmpCopy
 end

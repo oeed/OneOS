@@ -2,15 +2,10 @@
 	Y = 1
 	Width = 0
 	Height = 0
-	BackgroundColour = colours.white
-	ActiveBackgroundColour = colours.blue
-	ActiveTextColour = colours.white
+	BackgroundColour = colours.transparent
 	TextColour = colours.black
 	Text = ""
 	Parent = nil
-	_Click = nil
-	Toggle = nil
-	Momentary = false
 	Visible = true
 	Name = nil
 	AutoWidth = false
@@ -27,13 +22,11 @@
 				Width = UNSET,
 				Height = UNSET,
 				BackgroundColour = UNSET,
-				ActiveBackgroundColour = UNSET,
-				ActiveTextColour = UNSET,
 				TextColour = UNSET,
 				Text = UNSET,
 				Parent = UNSET,
-				Toggle = UNSET,
-				Momentary = UNSET
+				AutoWidth = UNSET,
+				Wrapping = UNSET
 			},
 			NeedsDraw = true,
 			AlwaysDraw = false,
@@ -61,42 +54,47 @@
 		self.DrawCache.Evokers = evokers
 	end
 
+	local wrapText = function(text, maxWidth)
+		local lines = {''}
+	    for word, space in text:gmatch('(%S+)(%s*)') do
+            local temp = lines[#lines] .. word .. space:gsub('\n','')
+            if #temp > maxWidth then
+                    table.insert(lines, '')
+            end
+            if space:find('\n') then
+                    lines[#lines] = lines[#lines] .. word
+                    
+                    space = space:gsub('\n', function()
+                            table.insert(lines, '')
+                            return ''
+                    end)
+            else
+                    lines[#lines] = lines[#lines] .. word .. space
+            end
+	    end
+		return lines
+	end
+
 	Draw = function(self)
 		if not self.Visible then
 			return
 		end
 
 		if self.AutoWidth then
-			self.Width = #self.Text + 2
+			self.Width = #self.Text
 		end
 
 		if self:NeedsDraw() then
-			local bg = self.BackgroundColour
-
-			if self.Toggle then
-				bg = self.ActiveBackgroundColour
-			end
-			if type(bg) == 'function' then
-				bg = bg()
-			end
-
-			local txt = self.TextColour
-			if self.Toggle then
-				txt = self.ActiveTextColour
-			end
-			if type(txt) == 'function' then
-				txt = txt()
-			end
 			local pos = GetAbsolutePosition(self)
 			Drawing.StartCopyBuffer()
-			Drawing.DrawBlankArea(pos.X, pos.Y, self.Width, self.Height, bg)
-			Drawing.DrawCharactersCenter(pos.X, pos.Y, self.Width, self.Height, self.Text, txt, bg)
+
+			for i, v in ipairs(wrapText(self.Text, self.Width)) do
+				Drawing.DrawCharacters(pos.X, pos.Y + i - 1, v, self.TextColour, self.BackgroundColour)
+			end
 			self.DrawCache.Buffer = Drawing.EndCopyBuffer()
 			self.DrawCache.NeedsDraw = false
 		else
 			Drawing.DrawCachedBuffer(self.DrawCache.Buffer)
-			-- local pos = GetAbsolutePosition(self)
-			-- Drawing.DrawBlankArea(pos.X, pos.Y, self.Width, self.Height, colours.lime)
 		end
 
 		if self.Momentary then
@@ -108,15 +106,15 @@
 		RegisterClick(self)
 	end
 
-	Initialise = function(self, x, y, width, height, backgroundColour, textColour, activeBackgroundColour, activeTextColour, parent, click, text,  toggle, name)
+	Initialise = function(self, x, y, width, height, backgroundColour, textColour, parent, click, text, name)
 		local new = {}    -- the new instance
 		setmetatable( new, {__index = self} )
 		height = height or 1
 		new.AutoWidth = not width
 		if text then
-			width = width or #text + 2
+			width = width or #text
 		else
-			width = 2
+			width = 0
 		end
 		new.Width = width
 		new.Height = height
@@ -131,8 +129,6 @@
 		new.Text = text or ""
 		new.BackgroundColour = backgroundColour or self.BackgroundColour
 		new.TextColour = textColour or self.TextColour
-		new.ActiveBackgroundColour = activeBackgroundColour or self.ActiveBackgroundColour
-		new.ActiveTextColour = activeTextColour or self.ActiveTextColour
 		new.Parent = parent
 		new._Click = click
 		new.Visible = true

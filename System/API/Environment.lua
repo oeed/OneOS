@@ -166,7 +166,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 					LaunchProgram(path, args, Helpers.RemoveExtension(fs.getName(path)))
 				end
 			end,
-			LoadAPI = function(_sPath)
+			LoadAPI = function(_sPath, global)
 				local sName = Helpers.RemoveExtension(fs.getName( _sPath))
 				if tAPIsLoading[sName] == true then
 					env.printError( "API "..sName.." is already being loaded" )
@@ -176,7 +176,9 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 					
 				local tEnv = {}
 				setmetatable( tEnv, { __index = env } )
-				tEnv.fs = fs
+				if not global == false then
+					tEnv.fs = fs
+				end
 				local fnAPI, err = loadfile( _sPath)
 				if fnAPI then
 					setfenv( fnAPI, tEnv )

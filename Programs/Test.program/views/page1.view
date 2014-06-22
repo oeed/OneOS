@@ -1,0 +1,49 @@
+{
+  ["Objects"]={
+    [1]={
+      ["Y"]=1,
+      ["X"]=1,
+      ["Width"]="100%",
+      ["Height"]=3,
+      ["Name"]="Toolbar",
+      ["Type"]="View",
+      ["BackgroundColour"] = 128,
+      ["Z"] = 0
+    },
+    [2]={
+      ["Y"]=5,
+      ["X"]=3,
+      ["Width"]="100%,-6",
+      ["Name"]="Label",
+      ["Type"]="Label",
+      ["Text"]="Welcome to OneOS!\n\nBefore you get started follow these short steps to customise OneOS to your liking."
+    },
+    [3]={
+      ["Y"]=2,
+      ["X"]=2,
+      ["Name"]="OneOSLabel",
+      ["Type"]="Label",
+      ["Text"]="OneOS",
+      ["TextColour"]=1
+    },
+    [4]={
+      ["Y"]=2,
+      ["X"]=8,
+      ["Name"]="SetupLabel",
+      ["Type"]="Label",
+      ["Text"]="Setup",
+      ["TextColour"]=256
+    },
+    [5]={
+      ["Y"]="100%,-1",
+      ["X"]="100%,-10",
+      ["Name"]="NextButton",
+      ["Type"]="Button",
+      ["Text"]="Next",
+      ["BackgroundColour"]=256
+    },
+  },
+  ["BackgroundColour"]=1,
+  ["ToolBarColour"] = 128,
+  ["ToolBarTextColour"] = 1
+}
