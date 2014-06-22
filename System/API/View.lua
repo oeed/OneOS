@@ -43,14 +43,14 @@
 		return new
 	end
 
-	local function CheckClick(self, object, x, y)
+	function CheckClick(self, object, x, y)
 		local pos = self.Bedrock:GetAbsolutePosition(object)
 		if pos.X <= x and pos.Y <= y and  pos.X + object.Width > x and pos.Y + object.Height > y then
 			return true
 		end
 	end
 
-	local function DoClick(self, event, object, side, x, y)
+	function DoClick(self, event, object, side, x, y)
 		if object and self:CheckClick(object, x, y) then
 			return object:Click(event, side, x - object.X + 1, y - object.Y + 1)
 		end	

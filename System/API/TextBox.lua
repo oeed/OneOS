@@ -18,8 +18,8 @@
 
 	Draw = function(self)
 		if not self.Visible then
-			if Bedrock:GetActiveObject() == self then
-				Bedrock:SetActiveObject()
+			if self.Bedrock:GetActiveObject() == self then
+				self.Bedrock:SetActiveObject()
 			end
 			return
 		end
@@ -28,25 +28,27 @@
 		Drawing.DrawBlankArea(pos.X, pos.Y, self.Width, self.Height, self.BackgroundColour)
 		if self.CursorPos > #self.Text then
 			self.CursorPos = #self.Text
+		elseif self.CursorPos < 0 then
+			self.CursorPos = 0
 		end
-
-		if Bedrock:GetActiveObject() == self then
-			if #self.Text > (self.Width - 2) then
-				self.Text = self.Text:sub(#self.Text-(self.Width - 3))
-				Bedrock.CursorPos = {pos.X + 1 + self.Width-2, pos.Y}
+		local text = self.Text
+		if self.Bedrock:GetActiveObject() == self then
+			if #text > (self.Width - 2) then
+				text = text:sub(#text-(self.Width - 3))
+				self.Bedrock.CursorPos = {pos.X + 1 + self.Width-2, pos.Y}
 			else
-				Bedrock.CursorPos = {pos.X + 1 + self.CursorPos, pos.Y}
+				self.Bedrock.CursorPos = {pos.X + 1 + self.CursorPos, pos.Y}
 			end
 		end
 
-		if #tostring(self.Text) == 0 then
+		if #tostring(text) == 0 then
 			Drawing.DrawCharacters(pos.X + 1, pos.Y, self.Placeholder, self.PlaceholderTextColour, self.BackgroundColour)
 		else
-			Drawing.DrawCharacters(pos.X + 1, pos.Y, self.Text, self.TextColour, self.BackgroundColour)
+			Drawing.DrawCharacters(pos.X + 1, pos.Y, text, self.TextColour, self.BackgroundColour)
 		end
 
 
-		Bedrock.CursorColour = self.TextColour
+		self.Bedrock.CursorColour = self.TextColour
 		RegisterClick(self)
 	end
 
@@ -76,11 +78,18 @@
 		return new
 	end
 
+	InitialiseUpdate = function(self)
+		self.CursorPos = #self.Text
+		if self.Active then
+			self.Bedrock:SetActiveObject(self)
+		end
+	end
+
 	Click = function(self, event, side, x, y)
 		if not self.Visible then
 			return false
 		end
-		Bedrock:SetActiveObject(self)
+		self.Bedrock:SetActiveObject(self)
 		self.CursorPos = x - 2
 	end
 
@@ -89,73 +98,78 @@
 		return self
 	end
 
-	Char = function(self, char)
-		if self.Numerical then
-			char = tostring(tonumber(char))
-		end
-		if char == 'nil' then
-			return
-		end
-		self.Text = string.sub(self.Text, 1, self.CursorPos ) .. char .. string.sub( self.Text, self.CursorPos + 1 )
-		if self.Numerical then
-			self.Text = tostring(tonumber(self.Text))
-			if self.Text == 'nil' then
-				self.Text = '1'
+	OnKeyChar = function(self, event, keychar)
+		if event == 'char' then
+			if self.Numerical then
+				keychar = tostring(tonumber(keychar))
 			end
-		end
-		
-		self.CursorPos = self.CursorPos + 1
-		self.Change(key)
-	end
-
-	Key = function(self, key)
-		if key == keys.enter then
-			self.Change(true)		
-		elseif key == keys.left then
-			-- Left
-			if self.CursorPos > 0 then
-				self.CursorPos = self.CursorPos - 1
-				self.Change(key)
+			if keychar == 'nil' then
+				return
+			end
+			self.Text = string.sub(self.Text, 1, self.CursorPos ) .. keychar .. string.sub( self.Text, self.CursorPos + 1 )
+			if self.Numerical then
+				self.Text = tostring(tonumber(self.Text))
+				if self.Text == 'nil' then
+					self.Text = '1'
+				end
 			end
 			
-		elseif key == keys.right then
-			-- Right				
-			if self.CursorPos < string.len(self.Text) then
-				self.CursorPos = self.CursorPos + 1
-				self.Change(key)
-			end
-		
-		elseif key == keys.backspace then
-			-- Backspace
-			if self.CursorPos > 0 then
-				self.Text = string.sub( self.Text, 1, self.CursorPos - 1 ) .. string.sub( self.Text, self.CursorPos + 1 )
-				self.CursorPos = self.CursorPos - 1					
-				if self.Numerical then
-					self.Text = tostring(tonumber(self.Text))
-					if self.Text == 'nil' then
-						self.Text = '1'
-					end
+			self.CursorPos = self.CursorPos + 1
+			self:_Update(keychar)
+			return false
+		elseif event == 'key' then
+			if keychar == keys.enter then
+				self:_Update(true)		
+			elseif keychar == keys.left then
+				--[[
+TODO: behaves odly when the text is too long and arrow keys are pushed
+]]--
+				-- Left
+				if self.CursorPos > 0 then
+					self.CursorPos = self.CursorPos - 1
+					self:_Update(keychar)
 				end
-				self.Change(key)
-			end
-		elseif key == keys.home then
-			-- Home
-			self.CursorPos = 0
-			self.Change()
-		elseif key == keys.delete then
-			if self.CursorPos < string.len(self.Text) then
-				self.Text = string.sub( self.Text, 1, self.CursorPos ) .. string.sub( self.Text, self.CursorPos + 2 )		
-				if self.Numerical then
-					self.Text = tostring(tonumber(self.Text))
-					if self.Text == 'nil' then
-						self.Text = '1'
-					end
+				
+			elseif keychar == keys.right then
+				-- Right				
+				if self.CursorPos < string.len(self.Text) then
+					self.CursorPos = self.CursorPos + 1
+					self:_Update(keychar)
 				end
-				self.Change(key)
+			
+			elseif keychar == keys.backspace then
+				-- Backspace
+				if self.CursorPos > 0 then
+					self.Text = string.sub( self.Text, 1, self.CursorPos - 1 ) .. string.sub( self.Text, self.CursorPos + 1 )
+					self.CursorPos = self.CursorPos - 1					
+					if self.Numerical then
+						self.Text = tostring(tonumber(self.Text))
+						if self.Text == 'nil' then
+							self.Text = '1'
+						end
+					end
+					self:_Update(keychar)
+				end
+			elseif keychar == keys.home then
+				-- Home
+				self.CursorPos = 0
+				self:_Update()
+			elseif keychar == keys.delete then
+				if self.CursorPos < string.len(self.Text) then
+					self.Text = string.sub( self.Text, 1, self.CursorPos ) .. string.sub( self.Text, self.CursorPos + 2 )		
+					if self.Numerical then
+						self.Text = tostring(tonumber(self.Text))
+						if self.Text == 'nil' then
+							self.Text = '1'
+						end
+					end
+					self:_Update(keychar)
+				end
+			elseif keychar == keys["end"] then
+				-- End
+				self.CursorPos = string.len(self.Text)
+				self:_Update(keychar)
 			end
-		elseif key == keys["end"] then
-			-- End
-			self.CursorPos = string.len(self.Text)
-			self.Change(key)
+			return false
 		end
 	end

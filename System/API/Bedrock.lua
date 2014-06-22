@@ -48,10 +48,26 @@ end
 
 function HandleClick(self, event, side, x, y)
 	if self.View then
-		if self.View:Click(event, side, x, y) then
-			sleep(1)
+		if self.View:Click(event, side, x, y) ~= false then
 			self:Draw()
 		end		
+	end
+end
+
+function HandleKeyChar(self, event, keychar)
+	if self:GetActiveObject() then
+		local activeObject = self:GetActiveObject()
+		if activeObject.OnKeyChar then
+			if activeObject:OnKeyChar(event, keychar) ~= false then
+				self:Draw()
+			end
+		end
+--[[
+	elseif keychar == keys.up then
+		Scroll('mouse_scroll', -1)
+	elseif keychar == keys.down then
+		Scroll('mouse_scroll', 1)
+]]--
 	end
 end
 
@@ -72,6 +88,7 @@ end
 function UpdateObject(self, object, ...)
 	if self.ObjectUpdateHandlers[object.Name] then
 		self.ObjectUpdateHandlers[object.Name](object, ...)
+		self:Draw()
 	end
 end
 
@@ -88,8 +105,8 @@ end
 _G.RegisterClick = function()end --TODO: remove this from all programs
 
 function LoadView(self, name)
-	if self.OnViewClose then
-		self:OnViewClose(self.View.Name)
+	if self.View and self.OnViewClose then
+		self.OnViewClose(self.View.Name)
 	end
 	local success = false
 
@@ -115,6 +132,7 @@ function LoadView(self, name)
 		self:Draw()
 		self:OnViewOpen(name, success)
 	end
+	return success
 end
 
 local function findObjectNamed(view, name)
@@ -206,6 +224,9 @@ function ObjectFromFile(self, file, view)
 
 		object._Click = function(...) self:ClickObject(...) end
 		object._Update = function(...) self:UpdateObject(...) end
+		if object.InitialiseUpdate then
+			object:InitialiseUpdate()
+		end
 		if object.UpdateEvokers then
 			object:UpdateEvokers()
 		end
@@ -286,6 +307,7 @@ local eventFuncs = {
 	OnDrag = {{'mouse_drag'}},
 	OnScroll = {{'mouse_scroll'}},
 	HandleClick = {{'mouse_click'}, true},
+	HandleKeyChar = {{'key', 'char'}, true},
 }
 
 function Draw(self)
@@ -297,7 +319,7 @@ function Draw(self)
 
 	Drawing.DrawBuffer()
 
-	if self:GetActiveObject() and self.CursorPos then
+	if self:GetActiveObject() and self.CursorPos and type(self.CursorPos[1]) == 'number' and type(self.CursorPos[2]) == 'number' then
 		term.setCursorPos(self.CursorPos[1], self.CursorPos[2])
 		term.setTextColour(self.CursorColour)
 		term.setCursorBlink(true)

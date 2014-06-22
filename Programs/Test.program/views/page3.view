@@ -13,19 +13,9 @@
       ["Width"]="100%,-6",
       ["Name"]="Label",
       ["Type"]="Label",
-      ["Text"]="Enter the name of this computer."
+      ["Text"]="Pick a desktop background colour."
     },
     [3]={
-      ["Y"]="8",
-      ["X"]="15%",
-      ["Width"]="70%",
-      ["Name"]="ComputerNameTextBox",
-      ["Type"]="TextBox",
-      ["Text"]="OneOS Computer",
-      ["BackgroundColour"]=256,
-      ["Active"]=true
-    },
-    [4]={
       ["Y"]="100%,-1",
       ["X"]="100%,-7",
       ["Name"]="NextButton",
@@ -33,12 +23,30 @@
       ["Text"]="Next",
       ["BackgroundColour"]=256
     },
-    [5]={
+    [4]={
       ["Y"]="100%,-1",
       ["X"]="3",
       ["Name"]="BackButton",
       ["Type"]="Button",
       ["Text"]="Back",
+      ["BackgroundColour"]=256
+    },
+    [5]={
+      ["Y"]=7,
+      ["X"]="50%,-18",
+      ["Width"] = 4,
+      ["Height"] = 3,
+      ["Name"]="ColourWell",
+      ["Type"]="View",
+      ["BackgroundColour"]=256
+    },
+    [6]={
+      ["Y"]=8,
+      ["X"]="50%,-13",
+      ["Width"] = 2,
+      ["Height"] = 1,
+      ["Name"]="OrangeButton",
+      ["Type"]="Button",
       ["BackgroundColour"]=256
     },
   },

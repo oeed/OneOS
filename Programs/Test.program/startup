@@ -9,8 +9,13 @@ OneOS.LoadAPI('/System/API/TextBox.lua')
 local program = Bedrock:Initialise()
 
 Current = {
-	Page = 1
+	Page = 3,
+	ComputerName = nil,
 }
+
+function loadCurrentView()
+	program:LoadView('page'..Current.Page)
+end
 
 program.OnKeyChar = function(event, keychar)
 	if keychar == '\\' then
@@ -18,19 +23,25 @@ program.OnKeyChar = function(event, keychar)
 	end
 end
 
+program.OnViewClose = function(viewName)
+	if viewName == 'page2' then
+		Current.ComputerName = program:GetObject('ComputerNameTextBox').Text
+	end
+end
+
 program:ObjectClick('NextButton', function(self, event, side, x, y)
 	Current.Page = Current.Page + 1
-	--program:LoadView('page'..Current.Page)
+	loadCurrentView()
 end)
 
 program:ObjectClick('BackButton', function(self, event, side, x, y)
 	Current.Page = Current.Page - 1
-	--program:LoadView('page'..Current.Page)
+	loadCurrentView()
 end)
 
 program:ObjectUpdate('ComputerNameTextBox', function(self, keychar)
 end)
 
 program:Run(function()
-	program:LoadView('page2')
+	loadCurrentView()
 end)
