@@ -440,9 +440,8 @@ function HandleKey(...)
 	local event = args[1]
 	local keychar = args[2]
 	
-	--REMOVE THIS AT RELEASE!
 	if keychar == '\\' and isDebug then
-		os.reboot()
+--		os.reboot()
 	end
 
 	if Current.SearchActive and event == 'key' and Search.Key(keychar) then

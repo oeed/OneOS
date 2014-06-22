@@ -192,6 +192,19 @@ TruncateString = function(sString, maxLength)
 	return sString
 end
 
+TruncateStringStart = function(sString, maxLength)
+	local len = #sString
+	if #sString > maxLength then
+		sString = sString:sub(len - maxLength, len - 3)
+		if sString:sub(-1) == ' ' then
+			sString = sString:sub(len - maxLength, len - 4)
+		end
+		sString = '...' .. sString
+	end
+	return sString
+end
+
+
 WrapText = function(text, maxWidth)
 	local lines = {''}
     for word, space in text:gmatch('(%S+)(%s*)') do
