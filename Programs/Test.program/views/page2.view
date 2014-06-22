@@ -13,14 +13,31 @@
       ["Width"]="100%,-6",
       ["Name"]="Label",
       ["Type"]="Label",
-      ["Text"]="Welcome to OneOS!\n\nBefore you get started follow these short steps to customise OneOS to your liking."
+      ["Text"]="Enter the name of this computer."
     },
     [3]={
+      ["Y"]="8",
+      ["X"]="15%",
+      ["Width"]="70%",
+      ["Name"]="ComputerNameTextBox",
+      ["Type"]="TextBox",
+      ["Text"]="Back",
+      ["BackgroundColour"]=256
+    },
+    [4]={
       ["Y"]="100%,-1",
       ["X"]="100%,-7",
       ["Name"]="NextButton",
       ["Type"]="Button",
       ["Text"]="Next",
+      ["BackgroundColour"]=256
+    },
+    [5]={
+      ["Y"]="100%,-1",
+      ["X"]="3",
+      ["Name"]="BackButton",
+      ["Type"]="Button",
+      ["Text"]="Back",
       ["BackgroundColour"]=256
     },
   },

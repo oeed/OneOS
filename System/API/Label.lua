@@ -85,7 +85,7 @@
 		end
 
 		if self:NeedsDraw() then
-			local pos = GetAbsolutePosition(self)
+			local pos = self.Bedrock:GetAbsolutePosition(self)
 			Drawing.StartCopyBuffer()
 
 			for i, v in ipairs(wrapText(self.Text, self.Width)) do

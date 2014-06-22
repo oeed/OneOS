@@ -87,7 +87,12 @@
 			if type(txt) == 'function' then
 				txt = txt()
 			end
-			local pos = GetAbsolutePosition(self)
+			local pos = nil
+			if GetAbsolutePosition then
+				pos = GetAbsolutePosition(self)
+			else
+				pos = self.Bedrock:GetAbsolutePosition(self)
+			end
 			Drawing.StartCopyBuffer()
 			Drawing.DrawBlankArea(pos.X, pos.Y, self.Width, self.Height, bg)
 			Drawing.DrawCharactersCenter(pos.X, pos.Y, self.Width, self.Height, self.Text, txt, bg)
@@ -115,7 +120,7 @@
 		new.AutoWidth = not width
 		if text then
 			width = width or #text + 2
-		else
+		elseif not width then
 			width = 2
 		end
 		new.Width = width

@@ -8,7 +8,7 @@
 	Name = nil
 
 	Draw = function(self)
-		local pos = GetAbsolutePosition(self)
+		local pos = self.Bedrock:GetAbsolutePosition(self)
 		Drawing.DrawBlankArea(pos.X, pos.Y, self.Width, self.Height, self.BackgroundColour)
 
 		for i, child in ipairs(self.Children) do
@@ -31,8 +31,8 @@
 
 	InitialiseFile = function(self, bedrock, file, name)
 		local new = self:Initialise(1, 1, Drawing.Screen.Width, Drawing.Screen.Height, file.BackgroundColour, name, {})
-
-		for i, obj in ipairs(file.Objects) do
+		new.Bedrock = bedrock
+		for i, obj in ipairs(file.Children) do
 			local view = bedrock:ObjectFromFile(obj, new)
 			if not view.Z then
 				view.Z = i
@@ -43,22 +43,22 @@
 		return new
 	end
 
-	local function CheckClick(object, x, y)
-		local pos = GetAbsolutePosition(object)
+	local function CheckClick(self, object, x, y)
+		local pos = self.Bedrock:GetAbsolutePosition(object)
 		if pos.X <= x and pos.Y <= y and  pos.X + object.Width > x and pos.Y + object.Height > y then
 			return true
 		end
 	end
 
-	local function DoClick(event, object, side, x, y)
-		if object and CheckClick(object, x, y) then
+	local function DoClick(self, event, object, side, x, y)
+		if object and self:CheckClick(object, x, y) then
 			return object:Click(event, side, x - object.X + 1, y - object.Y + 1)
 		end	
 	end
 
 	Click = function(self, event, side, x, y)
 		for i, child in ipairs(self.Children) do
-			if DoClick(event, child, side, x, y) then
+			if self:DoClick(event, child, side, x, y) then
 				return true
 			end		
 		end

@@ -1,6 +1,6 @@
 --[[
 		Bedrock is the core program framework used by all OneOS and OneCode programs.
-							Inspired by Apple'a Cocoa framework.
+							Inspired by Apple's Cocoa framework.
 									   (c) oeed 2014
 
 		  For documentation see the OneOS wiki, github.com/oeed/OneOS/wiki/Bedrock/
@@ -10,11 +10,17 @@ AllowTerminate = true
 
 View = nil
 
+ActiveObject = nil
+
 EventHandlers = {
 	
 }
 
 ObjectClickHandlers = {
+	
+}
+
+ObjectUpdateHandlers = {
 	
 }
 
@@ -43,6 +49,7 @@ end
 function HandleClick(self, event, side, x, y)
 	if self.View then
 		if self.View:Click(event, side, x, y) then
+			sleep(1)
 			self:Draw()
 		end		
 	end
@@ -53,20 +60,31 @@ function ObjectClick(self, name, func)
 end
 
 function ClickObject(self, object, event, side, x, y)
-	self.ObjectClickHandlers[object.Name](object, event, side, x, y)
+	if self.ObjectClickHandlers[object.Name] then
+		self.ObjectClickHandlers[object.Name](object, event, side, x, y)
+	end
 end
 
-function GetAbsolutePosition(obj)
+function ObjectUpdate(self, name, func)
+	self.ObjectUpdateHandlers[name] = func
+end
+
+function UpdateObject(self, object, ...)
+	if self.ObjectUpdateHandlers[object.Name] then
+		self.ObjectUpdateHandlers[object.Name](object, ...)
+	end
+end
+
+function GetAbsolutePosition(self, obj)
 	if not obj.Parent then
 		return {X = obj.X, Y = obj.Y}
 	else
-		local pos = GetAbsolutePosition(obj.Parent)
+		local pos = self:GetAbsolutePosition(obj.Parent)
 		local x = pos.X + obj.X - 1
 		local y = pos.Y + obj.Y - 1
 		return {X = x, Y = y}
 	end
 end
-_G.GetAbsolutePosition = GetAbsolutePosition
 _G.RegisterClick = function()end --TODO: remove this from all programs
 
 function LoadView(self, name)
@@ -88,11 +106,13 @@ function LoadView(self, name)
 			if view.ToolBarTextColour then
 				OneOS.ToolBarTextColour = view.ToolBarTextColour
 			end
+			self:SetActiveObject()
 			success = true
 		end
 	end
 
 	if success and self.OnViewOpen then
+		self:Draw()
 		self:OnViewOpen(name, success)
 	end
 end
@@ -112,10 +132,31 @@ local function findObjectNamed(view, name)
 	end
 end
 
+function InheritFile(self, file, name)
+	local h = fs.open('views/'..name..'.view', 'r')
+	if h then
+		local super = textutils.unserialize(h.readAll())
+		if super then
+			for k, v in pairs(super) do
+				if not file[k] then
+					file[k] = v
+				end
+			end
+			return file
+		end
+	end
+	return file
+end
+
 function ObjectFromFile(self, file, view)
 	local env = getfenv()
 	if env[file.Type] then
 		local object = env[file.Type]:Initialise()
+
+		if file.InheritView then
+			file = self:InheritFile(file, file.InheritView)
+		end
+
 		for k, v in pairs(file) do
 			if k == 'Width' or k == 'X' or k == 'Height' or k == 'Y' then
 				local parentSize = view.Width
@@ -145,10 +186,26 @@ function ObjectFromFile(self, file, view)
 					object.AutoWidth = false
 				end
 			end
-			object[k] = v
+			if k ~= 'Children' then
+				object[k] = v
+			end
 		end
 
+		if file.Children then
+			for i, obj in ipairs(file.Children) do
+				local view = self:ObjectFromFile(obj, object)
+				if not view.Z then
+					view.Z = i
+				end
+				view.Parent = object
+				table.insert(object.Children, view)
+			end
+		end
+
+		object.Bedrock = self
+
 		object._Click = function(...) self:ClickObject(...) end
+		object._Update = function(...) self:UpdateObject(...) end
 		if object.UpdateEvokers then
 			object:UpdateEvokers()
 		end
@@ -199,6 +256,21 @@ function RegisterEvent(self, event, func, passSelf)
 	table.insert(self.EventHandlers[event], {func, passSelf})
 end
 
+function SetActiveObject(self, object)
+	if object then
+		if object ~= self.ActiveObject then
+			self.ActiveObject = object
+		end
+	else
+		self.CursorPos = {}
+	end
+	self:Draw()
+end
+
+function GetActiveObject(self)
+	return self.ActiveObject
+end
+
 OnTimer = nil
 OnClick = nil
 OnKeyChar = nil
@@ -222,7 +294,16 @@ function Draw(self)
 	else
 		print('No view loaded (LoadView was not called or loading failed.)')
 	end
+
 	Drawing.DrawBuffer()
+
+	if self:GetActiveObject() and self.CursorPos then
+		term.setCursorPos(self.CursorPos[1], self.CursorPos[2])
+		term.setTextColour(self.CursorColour)
+		term.setCursorBlink(true)
+	else
+		term.setCursorBlink(false)
+	end
 end
 
 function Run(self, ready)
