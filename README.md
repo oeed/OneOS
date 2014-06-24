@@ -1,3 +1,7 @@
+Version 1.2
+====
+I am currently working on version 1.2, I'm not sure when it will be released, but it's got some *huge* changes. The most significant being the new Bedrock framework which revolutionizes how GUI programs are made. You can try it out, by downloading this git, but the latest build may crash immediatly, so don't expect it to work.
+
 If you are going to modify any part of OneOS you MUST set isDebug to true in the startup folder. Otherwise I'll be bombarded with error reports that have nothing to do with me.
 
 Forums Post: http://www.computercraft.info/forums2/index.php?s=6cde19f0e95d5793f759f7ab9687abe4&app=forums&module=post&section=post&do=edit_post&f=32&t=17286&p=166445&st=0&_from=quickedit
