@@ -1,0 +1,421 @@
+tArgs = {...}
+
+if OneOS then
+	OneOS.ToolBarColour = colours.lightGrey
+	OneOS.ToolBarTextColour = colours.white
+end
+
+OneOS.LoadAPI('/System/API/Bedrock.lua')
+OneOS.LoadAPI('/System/API/TextBox.lua', true)
+OneOS.LoadAPI('/System/API/Peripheral.lua', true)
+OneOS.LoadAPI('/System/API/ButtonDialogueWindow.lua', true)
+
+
+OneOS.LoadAPI('/System/API/Helpers.lua', true)
+
+_fs = fs
+if OneOS then
+	fs = OneOS.FS
+end
+
+Views = {
+	Welcome = 0,
+	Project = 1,
+	Interface = 2,
+	Code = 3
+}
+
+Current = {
+	Clicks = {},
+	View = Views.Welcome,
+	Project = nil,
+	ViewSpace = nil,
+	CursorPos = {1,1},
+	CursorColour = colours.black,
+	Theme = {
+		String = colours.green,
+		Text = colours.black
+	},
+	Input
+}
+
+Events = {
+	
+}
+
+InterfaceElements = {
+	
+}
+
+local imageCache = {}
+
+function Initialise()
+	EventRegister('mouse_click', TryClick)
+	EventRegister('mouse_drag', TryClick)
+	EventRegister('monitor_touch', TryClick)
+	EventRegister('mouse_scroll', Scroll)
+	EventRegister('key', HandleKey)
+	EventRegister('char', HandleKey)
+	EventRegister('timer', Update)
+
+	imageCache.Icon = Drawing.LoadImage('iconLarge')
+	if not fs.exists('/Desktop/Documents/OneCode Projects/') then
+		fs.makeDir('/Desktop/Documents/OneCode Projects/')
+	end
+
+	--ChangeView(Views.Welcome)
+	OpenProject('/Desktop/Documents/OneCode Projects/Test.ocproj/')
+	EventHandler()
+end
+
+function ChangeView(view)
+	Current.View = view
+	Current.ViewSpace = {}
+	InterfaceElements = {}
+	if Current.View == Views.Welcome then
+		LoadWelcome()
+	elseif Current.View == Views.Project then
+		LoadProject()
+	elseif Current.View == Views.Code then
+		LoadCode()
+	else
+		error('Tried to load non-existant view: ' .. view)
+	end
+
+	Update()
+end
+
+function Update(e, timer)
+	if e == nil or timer == updateTimer then
+		Draw()
+		--updateTimer = os.startTimer(0.5)
+	end
+end
+
+function LoadWelcome()
+	Button:Initialise(3, 11, nil, 1, colours.lightGrey, colours.black, colours.lightBlue, colours.white, nil, function(self)end, 'Start a New Project'):Register()
+	Button:Initialise(3, 13, nil, 1, colours.lightGrey, colours.black, colours.lightBlue, colours.white, nil, function(self)end, 'Open Another Project'):Register()
+end
+
+function DrawWelcome()
+	Drawing.Clear(colours.white)
+	Drawing.DrawCharacters(4, 8, 'Welcome to OneCode', colours.grey, colours.transparent)
+	Drawing.DrawImage(10, 3, imageCache.Icon, 6, 4)
+	Drawing.DrawArea(30, 3, 1, Drawing.Screen.Height - 3, '|', colours.lightGrey, colours.transparent)
+	Drawing.DrawCharacters(34, 1, 'Recent Projects', colours.lightGrey, colours.transparent)
+
+	local Projects = {
+		{
+			Name = 'Test',
+			Path = '/Documents/OneCode Projects/Test.ocproj'
+		},
+		{
+			Name = 'Another Test',
+			Path = '/Documents/OneCode Projects/Another Test.ocproj'
+		}
+	}
+	local maxLen = Drawing.Screen.Width - 33
+	for i, proj in ipairs(Projects) do
+		Drawing.DrawCharacters(32, 3 + (i - 1) * 3, Helpers.TruncateString(proj.Name, maxLen), colours.black, colours.transparent)
+		Drawing.DrawCharacters(32, 4 + (i - 1) * 3, Helpers.TruncateString(proj.Path, maxLen), colours.lightGrey, colours.transparent)
+	end
+end
+
+function LoadToolbar()
+	Current.ViewSpace.PlayStopButton = Button:Initialise(2, 2, nil, 1, colours.white, colours.black, colours.lightBlue, colours.white, nil, function(self) RunOneOSMode() end, '>'):Register()
+	Current.ViewSpace.Design = Button:Initialise(Drawing.Screen.Width - 25, 2, nil, 1, colours.white, colours.black, colours.lightBlue, colours.white, nil, function(self)ChangeView(Views.Project)end, 'Project'):Register()
+	Current.ViewSpace.Design = Button:Initialise(Drawing.Screen.Width - 15, 2, nil, 1, colours.white, colours.black, colours.lightBlue, colours.white, nil, function(self)ChangeView(Views.Code) end, 'Code'):Register()
+	Current.ViewSpace.Design = Button:Initialise(Drawing.Screen.Width - 8, 2, nil, 1, colours.white, colours.black, colours.lightBlue, colours.white, nil, function(self)ChangeView(Views.Design) end, 'Design'):Register()
+end
+
+function DrawToolbar()
+	Drawing.DrawBlankArea(1, 1, Drawing.Screen.Width, 3, colours.lightGrey)
+end
+
+function LoadProject()
+	LoadToolbar()
+	Current.ViewSpace.NameTextBox = TextBox:Initialise(14, 7, 20, 1, nil, '', colours.lightGrey, colours.white, function()end, false, 'Project Name', colours.grey):Register()
+
+	Current.ViewSpace.ChangeIconButton = Button:Initialise(9, 9, nil, 1, colours.lightGrey, colours.black, colours.lightBlue, colours.white, nil, function(self)end, 'Choose New Icon'):Register()
+	Current.ViewSpace.EditIconButton = Button:Initialise(27, 9, nil, 1, colours.lightGrey, colours.black, colours.lightBlue, colours.white, nil, function(self)end, 'Edit in Sketch'):Register()
+end
+
+function DrawProject()
+	Drawing.DrawCharacters(4, 5, 'Project Settings', colours.black, colours.transparent)
+
+	Drawing.DrawImage(4, 7, imageCache.Icon, 4, 3)
+	Drawing.DrawCharacters(9, 7, 'Name', colours.grey, colours.transparent)
+	--Drawing.DrawCharacters(4, 6, 'Name', colours.grey, colours.transparent)
+end
+
+function LoadCode()
+	LoadToolbar()
+	local h = fs.open(Current.Project .. 'code/startup', 'r')
+	Current.ViewSpace.Code = {}
+    local sLine = h.readLine()
+    local num = 1
+    while sLine do
+    	table.insert(Current.ViewSpace.Code, sLine)
+    	sLine = h.readLine()
+    end
+	h.close()
+
+	Current.ViewSpace.Line = 1
+	UpdateTextInput()
+end
+
+function SetCursorPos()	
+	Current.CursorPos = {
+		6 + Current.Input.CursorPos,
+		3 + Current.ViewSpace.Line
+	}
+end
+
+function UpdateTextInput(pos)
+	pos = pos or 0
+	Current.Input = TextInput:Initialise(Current.ViewSpace.Code[Current.ViewSpace.Line], function(key)
+		if key == keys.up then
+			Current.ViewSpace.Line = Current.ViewSpace.Line - 1
+			if Current.Input.CursorPos == #Current.Input.Value then
+				UpdateTextInput(999)
+			else
+				UpdateTextInput(Current.Input.CursorPos)
+			end
+		elseif key == keys.down then
+			Current.ViewSpace.Line = Current.ViewSpace.Line + 1
+			if Current.Input.CursorPos == #Current.Input.Value then
+				UpdateTextInput(999)
+			else
+				UpdateTextInput(Current.Input.CursorPos)
+			end
+		elseif key == keys.enter then
+			Current.ViewSpace.Line = Current.ViewSpace.Line + 1
+			UpdateTextInput()
+		elseif type(key) == 'string' then
+			SetCursorPos()
+		else
+			SetCursorPos()
+		end
+		Draw()
+	end, false, pos)
+	SetCursorPos()
+end
+
+local highlightingTerms = {
+	
+}
+
+function ExtractMatch(line, pattern, colour)
+	local match = string.match(line, pattern)
+	return {match, colour}
+end
+
+function Highlight(line)
+	print(line)
+	sleep(1)
+	local highlighted = {}
+	while #line > 0 do
+		local m = ExtractMatch(line, '".*[^\\]"', Current.Theme.String) or
+							  ExtractMatch(line, "'.*[^\\]'", Current.Theme.String) or
+							  ExtractMatch(line, "^[^%w_]", Current.Theme.Text)
+							  print(m)
+							  print(m[1])
+							  sleep(1)
+		if m and m[1] then
+			table.insert(highlighted, m)
+			line = string.sub(line, #m[1] + 1, -1)
+		else
+			line = ''
+		end
+	end
+
+	return highlighted
+	--return {{'print(', colours.black},{"'hello world'", colours.green},{")", colours.black}}
+end
+
+function DrawCode()
+	for i = 1, Drawing.Screen.Height - 3 do
+		local lineNumber = tostring(i)
+		lineNumber = ("   "):sub(#lineNumber) .. lineNumber
+		Drawing.DrawCharacters(1, 3 + i, lineNumber, colours.lightGrey, colours.transparent)
+	end
+
+	for i, line in ipairs(Current.ViewSpace.Code) do
+		Drawing.DrawCharacters(6, 3 + i, line, colours.black, colours.transparent)
+--[[
+
+		local highlightedLine = Highlight(line)
+		local x = 1
+		for i2, section in ipairs(highlightedLine) do
+			Drawing.DrawCharacters(5 + x, 3 + i, section[1], section[2], colours.transparent)
+			x = x + #section[1]
+		end
+
+]]--
+	end
+end
+
+function Build()
+	Current.ViewSpace.PlayStopButton.BackgroundColour = colours.orange
+	Current.ViewSpace.PlayStopButton.TextColour = colours.white
+	Draw()
+	fs.delete(Current.Project..'/build/')
+	fs.makeDir(Current.Project..'/build/')
+	fs.copy(Current.Project..'/code/', Current.Project..'/build/Build.program/')
+end
+
+function RunOneOSMode()
+	Build()
+	Current.ViewSpace.PlayStopButton.BackgroundColour = colours.green
+	Current.ViewSpace.PlayStopButton.TextColour = colours.white
+	Draw()
+	OneOS.OpenFile(Current.Project..'/build/Build.program/')
+end
+
+function Draw()
+	Current.Clicks = {}
+	
+	if Current.View == Views.Welcome then
+		DrawWelcome()
+	elseif Current.View == Views.Project then
+		Drawing.Clear(colours.white)
+		DrawToolbar()
+		DrawProject()
+	elseif Current.View == Views.Code then
+		Drawing.Clear(colours.white)
+		DrawToolbar()
+		DrawCode()
+	else
+		error('Tried to draw non-existant view: ' .. Current.View)
+	end
+
+	for i, elem in ipairs(InterfaceElements) do
+		if elem.Draw then
+			RegisterClick(elem)
+			elem:Draw()
+		end
+	end
+
+	Drawing.DrawBuffer()
+
+	UpdateCursor()
+end
+
+function UpdateCursor()
+	if Current.Input then
+		term.setCursorPos(Current.CursorPos[1], Current.CursorPos[2])
+		term.setCursorBlink(true)
+		term.setTextColour(colours.black)--Current.CursorColour
+	else
+		term.setCursorBlink(false)
+	end
+end
+
+MainDraw = Draw
+
+function OpenProject(path)
+	Current.Project = path
+	ChangeView(Views.Project)
+end
+
+function RegisterElement(elem)
+	table.insert(InterfaceElements, elem)
+end
+
+function UnregisterElement(elem)
+	for i, e in ipairs(InterfaceElements) do
+		if elem == e then
+			InterfaceElements[i] = nil
+		end
+	end
+end
+
+function RegisterClick(x, y, width, height, click)
+	if type(x) == 'table' then
+		table.insert(Current.Clicks, x)
+	else
+		table.insert(Current.Clicks,{
+			X = x,
+			Y = y,
+			Width = width,
+			Height = height,
+			Click = click
+		})
+	end
+end
+
+function CheckClick(object, x, y)
+	local pos = GetAbsolutePosition(object)
+	if pos.X <= x and pos.Y <= y and  pos.X + object.Width > x and pos.Y + object.Height > y then
+		return true
+	end
+end
+
+function DoClick(event, object, side, x, y)
+	if object and CheckClick(object, x, y) then
+		return object:Click(side, x - object.X + 1, y - object.Y + 1)
+	end	
+end
+
+function TryClick(event, side, x, y)
+	if Current.Status == 4 then
+		OneOS.Close()
+		return
+	end
+	for i, object in ipairs(Current.Clicks) do
+		if DoClick(event, object, side, x, y) then
+			Draw()
+			return
+		end
+	end
+end
+
+function HandleKey(...)
+	local args = {...}
+	local event = args[1]
+	local keychar = args[2]
+
+	if keychar == '\\' then
+		os.reboot()
+	end
+
+	if Current.Input then
+		if event == 'char' then
+			Current.Input:Char(keychar)
+		elseif event == 'key' then
+			Current.Input:Key(keychar)
+		end
+	end
+end
+
+function GetAbsolutePosition(obj)
+	if not obj.Parent then
+		return {X = obj.X, Y = obj.Y}
+	else
+		local pos = GetAbsolutePosition(obj.Parent)
+		local x = pos.X + obj.X - 1
+		local y = pos.Y + obj.Y - 1
+		return {X = x, Y = y}
+	end
+end
+
+function EventRegister(event, func)
+	if not Events[event] then
+		Events[event] = {}
+	end
+
+	table.insert(Events[event], func)
+end
+
+function EventHandler()
+	while true do
+		local event = { coroutine.yield() }
+		if Events[event[1]] then
+			for i, e in ipairs(Events[event[1]]) do
+				e(event[1], event[2], event[3], event[4], event[5])
+			end
+		end
+	end
+end
+
+Initialise()

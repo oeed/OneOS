@@ -6,6 +6,41 @@
 		  For documentation see the OneOS wiki, github.com/oeed/OneOS/wiki/Bedrock/
 ]]
 
+local load = os.loadAPI
+if OneOS then
+	load = OneOS.LoadAPI
+end
+
+local apis = {
+	'Drawing',
+	'Object',
+	'View',
+	'Button',
+	'Label',
+	'Separator',
+	'TextInput',
+	'TextBox',
+	'ImageView'
+}
+
+local env = getfenv()
+if not isStartup then
+	for i, v in ipairs(apis) do
+		load('/System/API/'..v..'.lua', false)
+		if not env[v] then
+			error('Could not find API: '..v)
+		elseif v == 'Separator' or v == 'Label' or v == 'ImageView'  or v == 'Button' then--v ~= 'Object' and v ~= 'Drawing' then
+			env[v].__index = Object
+			if env[v].Inheirt then
+				env[v].__index = env[v].Inheirt
+			end
+			setmetatable(env[v], env[v])
+		end
+	end
+end
+
+
+
 AllowTerminate = true
 
 View = nil
@@ -128,10 +163,10 @@ function LoadView(self, name)
 		end
 	end
 
-	if success and self.OnViewOpen then
-		self:Draw()
-		self:OnViewOpen(name, success)
+	if success and self.OnViewLoad then
+		self.OnViewLoad(name, success)
 	end
+	self:Draw()
 	return success
 end
 
@@ -224,8 +259,8 @@ function ObjectFromFile(self, file, view)
 
 		object._Click = function(...) self:ClickObject(...) end
 		object._Update = function(...) self:UpdateObject(...) end
-		if object.InitialiseUpdate then
-			object:InitialiseUpdate()
+		if object.OnLoad then
+			object:OnLoad()
 		end
 		if object.UpdateEvokers then
 			object:UpdateEvokers()
@@ -297,7 +332,7 @@ OnClick = nil
 OnKeyChar = nil
 OnDrag = nil
 OnScroll = nil
-OnViewOpen = nil
+OnViewLoad = nil
 OnViewClose = nil
 
 local eventFuncs = {

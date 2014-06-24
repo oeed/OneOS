@@ -59,8 +59,8 @@ function LoadAPI(_sPath)
 	end
 	tAPIsLoading[sName] = true
 		
-	local tEnv = {}
-	setmetatable( tEnv, { __index = getfenv() } )
+	local tEnv = {isStartup = true }
+	setmetatable( tEnv, { __index = getfenv()} )
 	local fnAPI, err = loadfile( _sPath )
 	if fnAPI then
 		setfenv( fnAPI, tEnv )

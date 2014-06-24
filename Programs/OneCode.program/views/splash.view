@@ -1,0 +1,48 @@
+{
+  ["Children"]={
+    [1]={
+      ["Y"]=3,
+      ["X"]=10,
+      ["Width"]=6,
+      ["Height"]=4,
+      ["Name"]="Logo",
+      ["Type"]="ImageView",
+      ["Path"]="iconLarge"
+    },
+    [2]={
+      ["Y"]=8,
+      ["X"]=4,
+      ["Width"]="100%,-6",
+      ["Name"]="WelcomeLabel",
+      ["Type"]="Label",
+      ["Text"]="Welcome to OneCode",
+      ["TextColour"]=256
+    },
+    [3]={
+      ["Y"]=11,
+      ["X"]=3,
+      ["Name"]="NewButton",
+      ["Type"]="Button",
+      ["Text"]="Start a New Project"
+    },
+    [4]={
+      ["Y"]=13,
+      ["X"]=3,
+      ["Name"]="OpenButton",
+      ["Type"]="Button",
+      ["Text"]="Open Another Project"
+    },
+    [5]={
+      ["Y"]=3,
+      ["X"]=30,
+      ["Width"]=1,
+      ["Height"]="100%,-3",
+      ["Name"]="Separator",
+      ["Type"]="Separator",
+      ["Colour"]=256
+    },
+  },
+  ["BackgroundColour"]=1,
+  ["ToolBarColour"]=1,
+  ["ToolBarTextColour"]=32768
+}
