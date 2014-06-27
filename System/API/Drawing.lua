@@ -204,6 +204,11 @@ end
 WriteToBuffer = function(x, y, character, textColour,bgColour)
 	x = round(x)
 	y = round(y)
+
+	if textColour == colours.transparent then
+		character = ' '
+	end
+
 	if bgColour == colours.transparent then
 		Drawing.Buffer[y] = Drawing.Buffer[y] or {}
 		Drawing.Buffer[y][x] = Drawing.Buffer[y][x] or {"", colours.white, colours.black}

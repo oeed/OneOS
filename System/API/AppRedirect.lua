@@ -1,8 +1,6 @@
 	
 	--buffer item: text, text colour, background colour
 
-	X = 1
-	Y = 1
 	Buffer = {}
 	TextColour = colours.white
 	BackgroundColour = colours.black
@@ -10,12 +8,10 @@
 	Size = {1, 1}
 	CursorBlink = false
 
-	Initialise = function(self, x, y, width, height, program)
+	Initialise = function(self, program)
 		local new = {}    -- the new instance
 		setmetatable( new, {__index = self} )
-		new.X = x
-		new.Y = y
-		new.Size = {width, height}
+		new.Size = {Current.ProgramView.Width, Current.ProgramView.Height}
 		new.CursorPos = {1, 1}
 		new.Buffer = {}
 		new.TextColour = colours.white
@@ -25,19 +21,6 @@
 		new:ResizeBuffer()
 		new.Program = program
 		return new
-	end
-	
-	Draw = function(self)
-		local start = os.clock()
-		local pos = GetAbsolutePosition(self)
-		for y, row in ipairs(self.Buffer) do
-			for x, pixel in pairs(row) do
-				Drawing.WriteToBuffer(pos.X+x-1, pos.Y+y-1, pixel[1], pixel[2], pixel[3])
-			end
-		end
-		Current.CursorPos = {pos.X+self.CursorPos[1]-1, pos.Y+self.CursorPos[2]-1}
-		Current.CursorColour = self.TextColour
-		term.setCursorBlink(self.CursorBlink)
 	end
 
 	ResizeBuffer = function(self)
@@ -62,10 +45,6 @@
 		end
 	end
 
-	local _oldterm = term.native
-	if type(_oldterm) == 'function' then
-		_oldterm = _oldterm()
-	end
 	local count = 1
 
 	ClearLine = function(self, y, backgroundColour)
@@ -74,9 +53,7 @@
 		end
 
 		if not Current.Window and not Current.Menu and Current.Program == self.Program then
-			_oldterm.setBackgroundColour(backgroundColour)
-			_oldterm.setCursorPos(1, y+1)
-			_oldterm.clearLine()
+			Current.ProgramView:ForceDraw()
 		end
 		self.Buffer[y] = self.Buffer[y] or {}
 		for x = 1, self.Size[1] do
@@ -91,12 +68,8 @@
 			return
 		end
 		
-		if Current.CanDraw and not Current.Window and not Current.Menu and Current.Program == self.Program and (not self.Buffer[y] or (self.Buffer[y][x][1] ~= character or self.Buffer[y][x][2] ~= textColour or self.Buffer[y][x][3] ~= backgroundColour)) then
-			--Drawing.WriteToBuffer(pos.X+x-1, pos.Y+y-1, character, textColour, backgroundColour)
-			_oldterm.setCursorPos(x+self.X-1, y+self.Y-1)
-			_oldterm.setTextColour(textColour)
-			_oldterm.setBackgroundColour(backgroundColour)
-			_oldterm.write(character)
+		if Current.Program == self.Program and (not self.Buffer[y] or (self.Buffer[y][x][1] ~= character or self.Buffer[y][x][2] ~= textColour or self.Buffer[y][x][3] ~= backgroundColour)) then
+			Current.ProgramView:ForceDraw()
 		end
 		self.Buffer[y] = self.Buffer[y] or {}
 		self.Buffer[y][x] = {character, textColour, backgroundColour}
@@ -120,6 +93,7 @@
 				self.CursorPos[1] = self.CursorPos[1] + 1
 				self:WriteToBuffer(character, self.TextColour, self.BackgroundColour)
 			end
+			
 			self.CursorPos[1] = self.CursorPos[1] + 1
 		end
 
@@ -142,10 +116,10 @@
 		end
 
 		_term.setCursorPos = function(x, y)
-			local pos = GetAbsolutePosition(self)
 			self.CursorPos[1] = math.floor( tonumber(x) ) or self.CursorPos[1]
 			self.CursorPos[2] = math.floor( tonumber(y) ) or self.CursorPos[2]
-			Current.CursorPos = {pos.X+self.CursorPos[1]-1, pos.Y+self.CursorPos[2]-1}
+			--TODO
+			--Current.CursorPos = {pos.X+self.CursorPos[1]-1, pos.Y+self.CursorPos[2]-1}
 		end
 
 		_term.setCursorBlink = function(blink)
@@ -204,7 +178,6 @@
 			for i, v in ipairs(lines) do
 				self:ClearLine(v, self.BackgroundColour)
 			end
-			self:Draw()
 		end
 
 		return _term

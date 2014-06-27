@@ -6,9 +6,14 @@
 		  For documentation see the OneOS wiki, github.com/oeed/OneOS/wiki/Bedrock/
 ]]
 
+--adds a few debugging things (a draw call counter)
+local isDebug = true
+
 local load = os.loadAPI
+local viewPath = '/System/Views/'
 if OneOS then
 	load = OneOS.LoadAPI
+	viewPath = 'Views/'
 end
 
 local apis = {
@@ -39,7 +44,7 @@ if not isStartup then
 	end
 end
 
-
+CanDraw = true
 
 AllowTerminate = true
 
@@ -56,6 +61,10 @@ ObjectClickHandlers = {
 }
 
 ObjectUpdateHandlers = {
+	
+}
+
+Timers = {
 	
 }
 
@@ -84,7 +93,7 @@ end
 function HandleClick(self, event, side, x, y)
 	if self.View then
 		if self.View:Click(event, side, x, y) ~= false then
-			self:Draw()
+			--self:Draw()
 		end		
 	end
 end
@@ -94,7 +103,7 @@ function HandleKeyChar(self, event, keychar)
 		local activeObject = self:GetActiveObject()
 		if activeObject.OnKeyChar then
 			if activeObject:OnKeyChar(event, keychar) ~= false then
-				self:Draw()
+				--self:Draw()
 			end
 		end
 --[[
@@ -123,7 +132,7 @@ end
 function UpdateObject(self, object, ...)
 	if self.ObjectUpdateHandlers[object.Name] then
 		self.ObjectUpdateHandlers[object.Name](object, ...)
-		self:Draw()
+		--self:Draw()
 	end
 end
 
@@ -145,7 +154,7 @@ function LoadView(self, name)
 	end
 	local success = false
 
-	local h = fs.open('views/'..name..'.view', 'r')
+	local h = fs.open(viewPath..name..'.view', 'r')
 	if h then
 		local view = textutils.unserialize(h.readAll())
 		if view then
@@ -186,7 +195,7 @@ local function findObjectNamed(view, name)
 end
 
 function InheritFile(self, file, name)
-	local h = fs.open('views/'..name..'.view', 'r')
+	local h = fs.open(viewPath..name..'.view', 'r')
 	if h then
 		local super = textutils.unserialize(h.readAll())
 		if super then
@@ -204,12 +213,16 @@ end
 function ObjectFromFile(self, file, view)
 	local env = getfenv()
 	if env[file.Type] then
+		if not env[file.Type].Initialise then
+			error('Malformed Object: '..file.Type)
+		end
 		local object = env[file.Type]:Initialise()
 
 		if file.InheritView then
 			file = self:InheritFile(file, file.InheritView)
 		end
-
+		
+		object.AutoWidth = true
 		for k, v in pairs(file) do
 			if k == 'Width' or k == 'X' or k == 'Height' or k == 'Y' then
 				local parentSize = view.Width
@@ -235,9 +248,7 @@ function ObjectFromFile(self, file, view)
 			end
 
 			if k == 'Width' then
-				if object.AutoWidth then
-					object.AutoWidth = false
-				end
+				object.AutoWidth = false
 			end
 			if k ~= 'Children' then
 				object[k] = v
@@ -312,6 +323,22 @@ function RegisterEvent(self, event, func, passSelf)
 	table.insert(self.EventHandlers[event], {func, passSelf})
 end
 
+function StartRepeatingTimer(self, func, interval)
+	local timer = os.startTimer(interval)
+	self.Timers[timer] = {func, interval}
+end
+
+function HandleTimer(self, event, timer)
+	if self.Timers[timer] then
+		local oldTimer = self.Timers[timer]
+		self.Timers[timer] = nil
+		oldTimer[1]()
+		self:StartRepeatingTimer(oldTimer[1], oldTimer[2])
+	elseif self.OnTimer then
+		self.OnTimer(event, timer)
+	end
+end
+
 function SetActiveObject(self, object)
 	if object then
 		if object ~= self.ActiveObject then
@@ -336,23 +363,40 @@ OnViewLoad = nil
 OnViewClose = nil
 
 local eventFuncs = {
-	OnTimer = {{'timer'}},
 	OnClick = {{'mouse_click'}},
 	OnKeyChar = {{'key', 'char'}},
 	OnDrag = {{'mouse_drag'}},
 	OnScroll = {{'mouse_scroll'}},
 	HandleClick = {{'mouse_click'}, true},
 	HandleKeyChar = {{'key', 'char'}, true},
+	HandleTimer = {{'timer'}, true}
 }
 
+local drawCalls = 0
+local ignored = 0
 function Draw(self)
-	if self.View then
-		self.View:Draw()
-	else
-		print('No view loaded (LoadView was not called or loading failed.)')
+	if not self.CanDraw then
+		return
 	end
 
-	Drawing.DrawBuffer()
+	if self.View and self.View:NeedsDraw() then
+		self.View:Draw()
+		Drawing.DrawBuffer()
+		if isDebug then
+			drawCalls = drawCalls + 1
+		end
+	elseif not self.View then
+		print('No loaded view.')
+	elseif isDebug then
+		ignored = ignored + 1
+	end
+
+	if isDebug then
+		term.setCursorPos(1, Drawing.Screen.Height-1)
+		term.setBackgroundColour(colours.black)
+		term.setTextColour(colours.white)
+		term.write(drawCalls.. ":" .. ignored)
+	end
 
 	if self:GetActiveObject() and self.CursorPos and type(self.CursorPos[1]) == 'number' and type(self.CursorPos[2]) == 'number' then
 		term.setCursorPos(self.CursorPos[1], self.CursorPos[2])
@@ -360,6 +404,20 @@ function Draw(self)
 		term.setCursorBlink(true)
 	else
 		term.setCursorBlink(false)
+	end
+end
+
+function EventHandler(self)
+	local event = { os.pullEventRaw() }
+
+	if self.EventHandlers[event[1]] then
+		for i, e in ipairs(self.EventHandlers[event[1]]) do
+			if e[2] then
+				e[1](self, unpack(event))
+			else
+				e[1](unpack(event))
+			end
+		end
 	end
 end
 
@@ -375,25 +433,14 @@ function Run(self, ready)
 
 	if self.AllowTerminate then
 		--TODO: maybe quit here instead
-		self:RegisterEvent('terminate', function()error('Program terminated: terminate', 0) end)
+		self:RegisterEvent('terminate', function()error('Terminated', 0) end)
 	end
 
 	if ready then
 		ready()
 	end
-	self:Draw()
 
 	while true do
-		local event = { os.pullEventRaw() }
-
-		if self.EventHandlers[event[1]] then
-			for i, e in ipairs(self.EventHandlers[event[1]]) do
-				if e[2] then
-					e[1](self, unpack(event))
-				else
-					e[1](unpack(event))
-				end
-			end
-		end
+		self:EventHandler()
 	end
 end

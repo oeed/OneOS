@@ -10,6 +10,12 @@ term.clear()
 
 --local _, err = pcall(function()
 
+local function log(...)
+	if isDebug then
+		print(...)
+	end
+end
+
 local tAPIsLoading = {}
 
 local Extension = function(path, addDot)
@@ -52,6 +58,7 @@ local RemoveExtension = function(path)
 end
 
 function LoadAPI(_sPath)
+	log('Loading: '.._sPath)
 	local sName = RemoveExtension(fs.getName( _sPath ))
 	if tAPIsLoading[sName] == true then
 		printError( "API "..sName.." is already being loaded" )
@@ -76,9 +83,20 @@ function LoadAPI(_sPath)
 		tAPI[k] =  v
 	end
 	
+	if not tAPI then
+		error('Could not find API: '..sName)
+	elseif _sPath:find('Objects') then
+		tAPI.__index = Object
+		if tAPI.Inheirt then
+			tAPI.__index = tAPI.Inheirt
+		end
+		setmetatable(tAPI, tAPI)
+	end
+
 	getfenv()[sName] = tAPI
 
 	tAPIsLoading[sName] = nil
+
 	return true
 end
 
@@ -93,6 +111,7 @@ function PrintCentered(text, y)
 end
 
 LoadAPI('System/API/Settings.lua')
+LoadAPI('System/API/Object.lua')
 local _side = Settings:GetValues()['Monitor']
 if not term.setTextScale and _side then
 	if peripheral.isPresent(_side) and peripheral.getType(_side) == 'monitor' and peripheral.call(_side, 'isColour') == true then
@@ -134,35 +153,54 @@ function LoadingScreen()
 		os.pullEvent('mouse_click')
 	end
 
-	term.setBackgroundColour(colours.black)	
-	term.clear()
-	sleep(0.1)
-	term.setBackgroundColour(colours.grey)
-	term.clear()
-	sleep(0.1)
-	term.setBackgroundColour(colours.lightGrey)
-	term.clear()
-	sleep(0.1)
+	local x, y = nil
+	if not isDebug then
+		term.setBackgroundColour(colours.black)	
+		term.clear()
+		sleep(0.1)
+		term.setBackgroundColour(colours.grey)
+		term.clear()
+		sleep(0.1)
+		term.setBackgroundColour(colours.lightGrey)
+		term.clear()
+		sleep(0.1)
 
-	local screenWidth, screenHeight = term.getSize()
-	term.setBackgroundColour(colours.white)	
-	term.clear()
-	local x = math.ceil((screenWidth - 14) / 2) + 1
-	local y = (screenHeight - 9) / 2
+		local screenWidth, screenHeight = term.getSize()
+		term.setBackgroundColour(colours.white)	
+		term.clear()
+		x = math.ceil((screenWidth - 14) / 2) + 1
+		y = (screenHeight - 9) / 2
 
-	local text = 'OneOS by oeed'
-	term.setCursorPos(math.ceil((screenWidth - #text) / 2) + 1, y + 13)
-	term.setTextColour(colours.blue)
-	term.write(text)
-
+		local text = 'OneOS by oeed'
+		term.setCursorPos(math.ceil((screenWidth - #text) / 2) + 1, y + 13)
+		term.setTextColour(colours.blue)
+		term.write(text)
+	else
+		term.setBackgroundColour(colours.black)
+		term.setTextColor(colours.white)
+		term.clear()
+		print('Starting OneOS [Debug Mode]')
+	end
 	local currentImage = -1
-	local totalAPIs = #fs.list(root .. 'System/API/')
-
+	local totalAPIs = #fs.list(root .. 'System/API/') + #fs.list(root .. 'System/Objects/')
+	local apis = {}
 	for _, file in pairs(fs.list(root .. 'System/API/')) do
 		if string.sub(file,1,1) ~= "." then
-			--print('Loading: ' .. file)
-			if math.floor(_*(8/totalAPIs)) ~= currentImage then
-				currentImage = math.floor(_*(8/totalAPIs))
+			table.insert(apis, 'System/API/' .. file)
+		end
+	end
+	for _, file in pairs(fs.list(root .. 'System/Objects/')) do
+		if string.sub(file,1,1) ~= "." then
+			table.insert(apis, 'System/Objects/' .. file)
+		end
+	end
+
+	for _, file in pairs(apis) do
+		
+		--print('Loading: ' .. file)
+		if not isDebug then
+			if math.floor(_*(8/#apis)) ~= currentImage then
+				currentImage = math.floor(_*(8/#apis))
 				local image = paintutils.loadImage('System/Images/Boot/boot'..currentImage)
 				paintutils.drawImage(image, x, y)
 			end
@@ -171,17 +209,23 @@ function LoadingScreen()
 			
 			term.clearLine()
 			if pocket then
-				PrintCentered(file, y + 11)
+				PrintCentered(fs.getName(file), y + 11)
 			else
-				PrintCentered('Loading API '..file, y + 11)
+				PrintCentered(fs.getName(file), y + 11)
 			end
+		end
+		if not isDebug then
 			sleep(0)
-			if not LoadAPI(root .. 'System/API/' .. file) then
+		end
+		if not LoadAPI(root .. file) then
+			if not isDebug then
 				term.setTextColour(colours.red)
 				PrintCentered('Error While Loading API '..file, y + 11)
 				term.setCursorPos(1, 1)
 				sleep(3)
 				return false
+			else
+				error('Error While Loading API '..file)
 			end
 		end
 	end
@@ -432,12 +476,17 @@ elseif Start() then
 			ok = {false, err}
 		end)
 	else
-		xpcall(Initialise, function(err)
-			ok = {false, err}
-		end)
+		if isDebug then
+			Initialise()
+		else
+			xpcall(Initialise, function(err)
+				ok = {false, err}
+			end)
+		end
 	end
 
 	if not ok[1] then
+
 		xpcall(function()loadfile('/System/main.lua')end, function(err)
 			table.insert(ok, err)
 		end)
@@ -464,8 +513,7 @@ elseif Start() then
 			os.pullEvent('mouse_click')
 			os.reboot()
 		end
-
-		term.setBackgroundColor(colours.grey)
+			term.setBackgroundColor(colours.grey)
 		term.setTextColor(colours.white)
 		term.clear()
 		local w,h = term.getSize()

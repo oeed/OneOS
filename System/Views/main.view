@@ -1,0 +1,17 @@
+{
+  ["Children"]={
+    [1]={
+      ["Name"]="Overlay",
+      ["Type"]="View",
+      ["InheritView"]="overlay"
+    },
+    [2]={
+      ["Y"]=2,
+      ["X"]=1,
+      ["Width"]="100%",
+      ["Height"]="100%,-1",
+      ["Name"]="ProgramView",
+      ["Type"]="ProgramView"
+    }
+  }
+}

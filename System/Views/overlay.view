@@ -1,0 +1,36 @@
+{
+  ["Width"]="100%",
+  ["Height"]=1,
+  ["X"]=1,
+  ["Y"]=1,
+  ["Type"]="View",
+  ["BackgroundColour"] = 1,
+  ["Children"]={
+    [1]={
+      ["Y"]=1,
+      ["X"]=1,
+      ["Name"]="OneButton",
+      ["Type"]="Button",
+      ["Text"]="One",
+      ["BackgroundColour"]=-1
+    },
+    [2]={
+      ["Y"]=1,
+      ["X"]="100%,-8",
+      ["Height"]=1,
+      ["Name"]="TimeButton",
+      ["Type"]="Label",
+      ["Text"]="8:30am"     
+    },
+
+    [3]={
+      ["Y"]=1,
+      ["X"]="100%,-2",
+      ["Height"]=1,
+      ["Name"]="SearchButton",
+      ["Type"]="Button",
+      ["Text"]="@",
+      ["BackgroundColour"]=-1 
+    },
+  },
+}

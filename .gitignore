@@ -22,3 +22,5 @@ Changes
 System/.fingerprint
 
 dorelease
+
+System/main-old.lua
