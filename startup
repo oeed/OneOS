@@ -58,12 +58,11 @@ local RemoveExtension = function(path)
 end
 
 function LoadAPI(_sPath)
-	log('Loading: '.._sPath)
 	local sName = RemoveExtension(fs.getName( _sPath ))
 	if tAPIsLoading[sName] == true then
-		printError( "API "..sName.." is already being loaded" )
-		return false
+		return true
 	end
+	log('Loading: '.._sPath)
 	tAPIsLoading[sName] = true
 		
 	local tEnv = {isStartup = true }
@@ -87,15 +86,19 @@ function LoadAPI(_sPath)
 		error('Could not find API: '..sName)
 	elseif _sPath:find('Objects') then
 		tAPI.__index = Object
-		if tAPI.Inheirt then
-			tAPI.__index = tAPI.Inheirt
+		if tAPI.Inherit then
+			if not getfenv()[tAPI.Inherit] then
+				--TODO: dynamically get the path
+				LoadAPI('System/Objects/'..tAPI.Inherit..'.lua')
+			end
+			tAPI.__index = getfenv()[tAPI.Inherit]
 		end
 		setmetatable(tAPI, tAPI)
 	end
 
 	getfenv()[sName] = tAPI
 
-	tAPIsLoading[sName] = nil
+	--tAPIsLoading[sName] = nil
 
 	return true
 end

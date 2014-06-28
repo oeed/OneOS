@@ -23,7 +23,7 @@ DrawBlankArea = function (x, y, w, h, colour)
 end
 
 DrawArea = function (x, y, w, h, character, textColour, bgColour)
-	--width must be greater than 1, otherwise we get a stack overflow
+	--width must be greater than 1, otherwise we get problems
 	if w < 0 then
 		w = w * -1
 	elseif w == 0 then

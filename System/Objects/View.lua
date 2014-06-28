@@ -44,7 +44,86 @@ end
 OnClick = function(self, event, side, x, y)
 	for i, child in ipairs(self.Children) do
 		if self:DoClick(child, event, side, x, y) then
+			child:ForceDraw()
 			return
 		end
+	end
+end
+
+local function findObjectNamed(view, name, minI)
+	local minI = minI or 0
+	if view and view.Children then
+		for i, child in ipairs(view.Children) do
+			if child.Name == name then
+				return child, i, view
+			elseif child.Children then
+				local found, index, foundView = findObjectNamed(child, name)
+				if found and minI <= index then
+					return found, index, foundView
+				end
+			end
+		end
+	end
+end
+
+function AddObject(self, info, extra)
+	if type(info) == 'string' then
+		local h = fs.open(self.Bedrock.ViewPath..info..'.view', 'r')
+		if h then
+			info = textutils.unserialize(h.readAll())
+			h.close()
+		else
+			error('Error is opening object: '..info)
+		end
+	end
+
+	if extra then
+		for k, v in pairs(extra) do
+			if v then
+				info[k] = v
+			end
+		end
+	end
+
+	local view = self.Bedrock:ObjectFromFile(info, self)
+	if not view.Z then
+		view.Z = #self.Children + 1
+	end
+
+	table.insert(self.Children, view)
+	self.Bedrock:ReorderObjects()
+	return view
+end
+
+function GetObject(self, name)
+	return findObjectNamed(self, name)
+end
+
+function GetObjects(self, name)
+	local objects = {}
+	local minI = 0
+	while true do
+		local obj, index = findObjectNamed(self, name, minI)
+		if not obj then
+			break
+		end
+		table.insert(objects, obj)
+		minI = index
+	end
+	return objects
+end
+
+function RemoveObject(self, name)
+	local object, index = findObjectNamed(self, name)
+	table.remove(self.Children, index)
+end
+
+function RemoveObjects(self, name)
+	while true do
+		local obj, index = findObjectNamed(self, name)
+		if not obj then
+			break
+		end
+		table.remove(self.Children, index)
 	end
 end

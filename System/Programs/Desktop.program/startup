@@ -1,0 +1,3 @@
+term.setBackgroundColour(colours.cyan)
+term.clear()
+os.pullEvent('cat')

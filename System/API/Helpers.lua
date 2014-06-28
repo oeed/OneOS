@@ -123,6 +123,7 @@ Extension = function(path, addDot)
 end
 
 RemoveExtension = function(path)
+--local name = string.match(fs.getName(path), '(%a+)%.?.-')
 	if path:sub(1,1) == '.' then
 		return path
 	end

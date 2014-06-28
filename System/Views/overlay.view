@@ -12,24 +12,16 @@
       ["Name"]="OneButton",
       ["Type"]="Button",
       ["Text"]="One",
+      ["Toggle"]=false,
       ["BackgroundColour"]=-1
     },
     [2]={
       ["Y"]=1,
-      ["X"]="100%,-8",
-      ["Height"]=1,
-      ["Name"]="TimeButton",
-      ["Type"]="Label",
-      ["Text"]="8:30am"     
-    },
-
-    [3]={
-      ["Y"]=1,
       ["X"]="100%,-2",
-      ["Height"]=1,
       ["Name"]="SearchButton",
       ["Type"]="Button",
       ["Text"]="@",
+      ["Toggle"]=false,
       ["BackgroundColour"]=-1 
     },
   },

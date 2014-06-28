@@ -3,6 +3,7 @@ EventQueue = {}
 Timers = {}
 AppRedirect = nil
 Running = true
+Hidden = false
 local _args = {}
 Initialise = function(self, shell, path, title, args)
 	local new = {}    -- the new instance
@@ -13,6 +14,9 @@ Initialise = function(self, shell, path, title, args)
 	new.AppRedirect = AppRedirect:Initialise(new)
 	new.Environment = Environment:Initialise(new, shell, path)
 	new.Running = true
+	if args.isHidden then
+		new.Hidden = true
+	end
 	
 	local executable = function()
 		local _, err = pcall(function()
@@ -81,7 +85,7 @@ Initialise = function(self, shell, path, title, args)
 	else
 		printError('Failed to load program: '..path)
 	end
---	Overlay.UpdateButtons()
+	UpdateOverlay()
 
 	return new
 end
@@ -174,37 +178,26 @@ Close = function(self, force)
 		if self == Current.Program then
 			Current.Program = nil
 		end
-
 		for i, program in ipairs(Current.Programs) do
 			if program == self then
 				table.remove(Current.Programs, i)
-
-				if Current.Programs[i] then
-					--Current.Program = Current.Programs[i]
-					Animation.SwipeProgram(self, Current.Programs[i], 1)
-				elseif Current.Programs[i-1] then
-					--Current.Program = Current.Programs[i-1]
-					Animation.SwipeProgram(self, Current.Programs[i-1], -1)
-				end
 				break
 			end
 		end
 
-		if Desktop then
-			Desktop:RefreshFiles()
-		end
-		Overlay.UpdateButtons()
-		if Current.Program then
-			Drawing.Clear(colours.black)
-			Drawing.DrawBuffer()
-			os.queueEvent('oneos_draw')
-		else
-			if Desktop then
-				--Desktop:Draw()
-			end
-		end
+		Current.ProgramView:ForceDraw()
+		UpdateOverlay()
+		--TODO: switch to another program
 		return true
 	else
 		return false
+	end
+end
+
+SwitchTo = function(self)
+	if Current.Program ~= self then
+		Current.Program = self
+		Current.ProgramView:ForceDraw()
+		UpdateOverlay()
 	end
 end

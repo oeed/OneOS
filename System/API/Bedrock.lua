@@ -10,10 +10,10 @@
 local isDebug = true
 
 local load = os.loadAPI
-local viewPath = '/System/Views/'
+ViewPath = '/System/Views/'
 if OneOS then
 	load = OneOS.LoadAPI
-	viewPath = 'Views/'
+	ViewPath = 'Views/'
 end
 
 local apis = {
@@ -44,11 +44,10 @@ if not isStartup then
 	end
 end
 
-CanDraw = true
-
 AllowTerminate = true
 
 View = nil
+Menu = nil
 
 ActiveObject = nil
 
@@ -91,7 +90,11 @@ function Initialise(self)
 end
 
 function HandleClick(self, event, side, x, y)
-	if self.View then
+	if self.Menu then
+		if not self.View:DoClick(self.Menu, event, side, x, y) then
+			self.Menu:Close()
+		end
+	elseif self.View then
 		if self.View:Click(event, side, x, y) ~= false then
 			--self:Draw()
 		end		
@@ -112,6 +115,25 @@ function HandleKeyChar(self, event, keychar)
 	elseif keychar == keys.down then
 		Scroll('mouse_scroll', 1)
 ]]--
+	end
+end
+
+function ToggleMenu(self, name, owner)
+	if self.Menu then
+		self.Menu:Close()
+		return false
+	else
+		self:SetMenu(name, owner)
+		return true
+	end
+end
+
+function SetMenu(self, menu, owner)
+	if self.Menu then
+		self.Menu:Close()
+	end
+	if menu then
+		self.Menu = self:AddObject(menu, {Owner = owner})
 	end
 end
 
@@ -148,13 +170,13 @@ function GetAbsolutePosition(self, obj)
 end
 _G.RegisterClick = function()end --TODO: remove this from all programs
 
-function LoadView(self, name)
+function LoadView(self, name, draw)
 	if self.View and self.OnViewClose then
 		self.OnViewClose(self.View.Name)
 	end
 	local success = false
 
-	local h = fs.open(viewPath..name..'.view', 'r')
+	local h = fs.open(self.ViewPath..name..'.view', 'r')
 	if h then
 		local view = textutils.unserialize(h.readAll())
 		if view then
@@ -175,27 +197,16 @@ function LoadView(self, name)
 	if success and self.OnViewLoad then
 		self.OnViewLoad(name, success)
 	end
-	self:Draw()
+
+	if draw ~= false then
+		self:Draw()
+	end
+
 	return success
 end
 
-local function findObjectNamed(view, name)
-	if view and view.Children then
-		for i, child in ipairs(view.Children) do
-			if child.Name == name then
-				return child, i, view
-			elseif child.Children then
-				local found, index, foundView = findObjectNamed(child, name)
-				if found then
-					return found, index, foundView
-				end
-			end
-		end
-	end
-end
-
 function InheritFile(self, file, name)
-	local h = fs.open(viewPath..name..'.view', 'r')
+	local h = fs.open(self.ViewPath..name..'.view', 'r')
 	if h then
 		local super = textutils.unserialize(h.readAll())
 		if super then
@@ -252,6 +263,8 @@ function ObjectFromFile(self, file, view)
 			end
 			if k ~= 'Children' then
 				object[k] = v
+			else
+				object[k] = {}
 			end
 		end
 
@@ -270,6 +283,11 @@ function ObjectFromFile(self, file, view)
 
 		object._Click = function(...) self:ClickObject(...) end
 		object._Update = function(...) self:UpdateObject(...) end
+		if object.OnUpdate then
+			for k, v in pairs(object.DrawCache.Evokers) do
+				object:OnUpdate(k)
+			end
+		end
 		if object.OnLoad then
 			object:OnLoad()
 		end
@@ -288,31 +306,24 @@ function ReorderObjects(self)
 	end)
 end
 
-function AddObject(self, info, viewName)
-	local parent = self.View
-	if viewName then
-		parent = findObjectNamed(self.View, name)
-	end
-
-	if parent and parent.Children then
-		local view = self:ObjectFromFile(info, parent)
-		if not view.Z then
-			view.Z = #parent.Children + 1
-		end
-
-		table.insert(parent.Children, view)
-		self:ReorderObjects()
-	end
+function AddObject(self, info, extra)
+	return self.View:AddObject(info, extra)
 end
 
 function GetObject(self, name)
-	local object = findObjectNamed(self.View, name)
-	return object
+	return self.View:GetObject(name)
+end
+
+function GetObjects(self, name)
+	return self.View:GetObjects(name)
 end
 
 function RemoveObject(self, name)
-	local object, index, view = findObjectNamed(self.View, name)
-	table.remove(view.Children, index)
+	return self.View:RemoveObject(name)
+end
+
+function RemoveObjects(self, name)
+	return self.View:RemoveObjects(name)
 end
 
 function RegisterEvent(self, event, func, passSelf)
@@ -324,7 +335,11 @@ function RegisterEvent(self, event, func, passSelf)
 end
 
 function StartRepeatingTimer(self, func, interval)
-	local timer = os.startTimer(interval)
+	local int = interval
+	if type(int) == 'function' then
+		int = int()
+	end
+	local timer = os.startTimer(int)
 	self.Timers[timer] = {func, interval}
 end
 
@@ -375,10 +390,6 @@ local eventFuncs = {
 local drawCalls = 0
 local ignored = 0
 function Draw(self)
-	if not self.CanDraw then
-		return
-	end
-
 	if self.View and self.View:NeedsDraw() then
 		self.View:Draw()
 		Drawing.DrawBuffer()

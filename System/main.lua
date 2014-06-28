@@ -9,37 +9,51 @@ Current = {
 	ProgramView = nil,
 	Programs = {},
 	Program = nil,
+	Desktop = nil,
+	DrawSpeed = 0.35,
+	DefaultDrawSpeed = 0.5
 }
 
 function LaunchProgram(path, args, title)
 	Current.Program = nil
-	Program:Initialise(shell, path, title, args)
+	return Program:Initialise(shell, path, title, args)
 	--bedrock:Draw()
 end
 
-function SwitchToProgram(newProgram, currentIndex, newIndex)
-	if Current.Program and newProgram ~= Current.Program then
-		local direction = 1
-		if newIndex < currentIndex then
-			direction = -1
+--an ever so slightly changed version of the textutils version
+local function getTimeString()
+	local sTOD = nil
+	local nTime = os.time()
+	if not bTwentyFourHour then
+	    if nTime >= 12 then
+	        sTOD = "pm"
+	    else
+	        sTOD = "am"
+	    end
+	    if nTime >= 13 then
+	        nTime = nTime - 12
+	    end
+	end
+
+	local nHour = math.floor(nTime)
+	local nMinute = math.floor((nTime - nHour)*60)
+	if sTOD then
+		if nHour == 0 then
+			nHour = 12
 		end
-		Animation.SwipeProgram(Current.Program, newProgram, direction)
+	    return string.format( "%d:%02d%s", nHour, nMinute, sTOD )
 	else
-		Animation.RectangleSize(Drawing.Screen.Width/2, Drawing.Screen.Height/2, 1, 1, Drawing.Screen.Width, Drawing.Screen.Height, colours.grey, 0.3, function()
-			if Current.Menu then
-				Current.Menu:Close()
-			end
-			Current.CanDraw = true
-			Current.Program = newProgram
-			Overlay.UpdateButtons()
-			Current.Program.AppRedirect:Draw()
-			Drawing.DrawBuffer()
-		end)
+	    return string.format( "%d:%02d", nHour, nMinute )
 	end
 end
 
 function Update()
+	--bedrock:GetObject('TimeLabel').Text = getTimeString()
 	bedrock:Draw()
+end
+
+function UpdateOverlay()
+	bedrock:GetObject('Overlay'):ForceDraw()
 end
 
 bedrock.OnKeyChar = function(event, keychar)
@@ -60,7 +74,7 @@ bedrock.OnTimer = function(event, timer)
 	end
 end
 
-local oldHandle = bedrock.EventHandler
+local oldHandler = bedrock.EventHandler
 bedrock.EventHandler = function(self)
 	for i, program in ipairs(Current.Programs) do
 		for i, event in ipairs(program.EventQueue) do
@@ -68,15 +82,21 @@ bedrock.EventHandler = function(self)
 		end
 		program.EventQueue = {}
 	end
-	oldHandle(self)
+	oldHandler(self)
 end
 
 function Initialise()
 	bedrock:Run(function()
-		bedrock:LoadView('main')
+		bedrock:LoadView('main', false)
 		Current.ProgramView = bedrock:GetObject('ProgramView')
---		LaunchProgram('Programs/Moretest.program/startup', {}, 'Test')
-		LaunchProgram('Programs/Sketch.program/startup', {}, 'Test')
-		bedrock:StartRepeatingTimer(Update, 1)
+		Current.Desktop = LaunchProgram('System/Programs/Desktop.program/startup', {isHidden = true}, 'Desktop')
+		bedrock:StartRepeatingTimer(Update, function()return Current.DrawSpeed end) --TODO: decide on length
+
+		Update()
+
+		--LaunchProgram('Programs/Sketch.program/startup', {}, 'Sketch')
+		--LaunchProgram('Programs/LuaIDE.program/startup', {}, 'LuaIDE')
+		LaunchProgram('Programs/Test.program/startup', {}, 'Test')
+
 	end)
 end
