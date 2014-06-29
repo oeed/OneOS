@@ -89,7 +89,7 @@ function AddObject(self, info, extra)
 	if not view.Z then
 		view.Z = #self.Children + 1
 	end
-
+	view.Parent = self
 	table.insert(self.Children, view)
 	self.Bedrock:ReorderObjects()
 	return view

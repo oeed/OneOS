@@ -13,7 +13,7 @@ end
 
 local function getProgramIndex(program)
 	for i, _program in ipairs(Current.Programs) do
-		if program == _programr then
+		if program == _program then
 			return i
 		end
 	end
@@ -22,6 +22,18 @@ end
 
 OnDraw = function(self, x, y)
 	local currentIndex = getProgramIndex(Current.Program)
+
+	if Current.Program == nil and #Current.Programs > 1 then
+		if Current.Programs[self.CachedIndex] then
+			Current.Program = Current.Programs[self.CachedIndex]
+		elseif Current.Programs[self.CachedIndex-1] then
+			Current.Program = Current.Programs[self.CachedIndex-1]
+		end
+	end
+
+	if not self.Animation then
+		Current.DrawSpeed = Current.DefaultDrawSpeed
+	end
 
 	if self.Animation then
 		self:DrawAnimation()
@@ -40,23 +52,49 @@ OnDraw = function(self, x, y)
 				self:DrawProgram(Current.Desktop, x, y)
 				w = w - deltaW
 				h = h - deltaH
-				Drawing.DrawBlankArea(centerX - (w / 2), centerY - (h / 2), w, h, colours.grey)
+				Drawing.DrawBlankArea(x + centerX - (w / 2), y + centerY - (h / 2), w, h, colours.grey)
 			end
 		}
 		self:DrawAnimation()
 
 		Current.Desktop:SwitchTo()
+	elseif Current.Program and not Current.Program.Hidden and self.CachedProgram.Hidden then
+		--opening a program
+		local centerX = math.ceil(self.Width / 2)
+		local centerY = math.ceil(self.Height / 2)
+
+		local deltaW = self.Width / 5
+		local deltaH = self.Height / 5
+		local w = 0
+		local h = 0
+		self.Animation = {
+			Count = 5,
+			Function = function(i)
+				self:DrawProgram(Current.Desktop, x, y)
+				w = w + deltaW
+				h = h + deltaH
+				Drawing.DrawBlankArea(x + centerX - (w / 2) - 1, y + centerY - (h / 2), w, h, colours.grey)
+			end
+		}
+		self:DrawAnimation()
 	elseif Current.Program and self.CachedProgram and Current.Program ~= self.CachedProgram and not Current.Program.Hidden and not self.CachedProgram.Hidden then
 		--switching program
 		local direction = 1
-		local delta = (self.Width + 4) / 10
+		local isPos = 0
+		local isNeg = 1
+		if getProgramIndex(Current.Program) >= self.CachedIndex then
+			direction = -1
+			isPos = 1
+			isNeg = 0
+		end
+		local delta = (self.Width + 4) / 5
 		self.Animation = {
-			Count = 10,
+			Count = 5,
 			Function = function(i)
-				local offset = x + i * delta * direction
-				self:DrawProgram(self.CachedProgram, offset, y)
-				Drawing.DrawBlankArea(offset, y, 4, self.Height, colours.black)
-				self:DrawProgram(Current.Program, offset - direction * (4 + self.Width), y)
+				local offset = x + ((5-i) * delta * direction)
+				self:DrawProgram(self.CachedProgram, x + offset - 1, y)
+				Drawing.DrawBlankArea(x + offset + isPos * (self.Width) - isNeg * 4 - 1, y, 4, self.Height, colours.black)
+				self:DrawProgram(Current.Program, x + offset - isNeg * 2 - direction * (3 + self.Width), y)
 			end
 		}
 		self:DrawAnimation()
@@ -68,19 +106,16 @@ OnDraw = function(self, x, y)
 		Drawing.DrawBlankArea(x, y, self.Width, self.Height, colours.grey)
 		Drawing.DrawCharactersCenter(nil,-1,nil,nil, 'Something went wrong :(', colours.white, colours.transparent)
 		Drawing.DrawCharactersCenter(nil,1,nil,nil, 'The desktop crashed or something bugged out.', colours.lightGrey, colours.transparent)
-		Drawing.DrawCharactersCenter(nil,2,nil,nil, 'Try rebooting.', colours.lightGrey, colours.transparent)
+		Drawing.DrawCharactersCenter(nil,2,nil,nil, 'Try restarting.', colours.lightGrey, colours.transparent)
 	end
-
-	self:ForceDraw()
 end
 
 DrawAnimation = function(self)
-	Current.DrawSpeed = 0.15
+	Current.DrawSpeed = 0.05
 	self.Animation.Function(self.Animation.Count)
 	self.Animation.Count = self.Animation.Count - 1
 	if self.Animation.Count <= 0 then
 		self.Animation = nil
-		Current.DrawSpeed = Current.DefaultDrawSpeed
 		self.CachedProgram = Current.Program
 		self.CachedIndex = currentIndex
 	end

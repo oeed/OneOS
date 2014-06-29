@@ -1,29 +1,7 @@
-LongestString = function(input, key, isKey)
-	local length = 0
-	if isKey then
-		for k, v in pairs(input) do
-			local titleLength = string.len(k)
-			if titleLength > length then
-				length = titleLength
-			end
-		end
-	else
-		for i = 1, #input do
-			local value = input[i]
-			if key then
-				if value[key] then
-					value = value[key]
-				else
-					value = ''
-				end
-			end
-			local titleLength = string.len(value)
-			if titleLength > length then
-				length = titleLength
-			end
-		end
-	end
-	return length
+local IconCache = {}
+
+local function LaunchProgram(path, args, title)
+	return Program:Initialise(shell, path, title, args)
 end
 
 OpenFile = function(path, args)
@@ -43,12 +21,8 @@ OpenFile = function(path, args)
 			h.close()
 
 			Helpers.OpenFile(shortcutPointer, tArgs)
-		elseif extension == 'program' then
-			if fs.isDir(path) and fs.exists(path..'/startup') then
-				LaunchProgram(path..'/startup', args, Helpers.RemoveExtension(fs.getName(path)))
-			elseif not fs.isDir(path) then
-				LaunchProgram(path, args, Helpers.RemoveExtension(fs.getName(path)))
-			end
+		elseif extension == 'program' and fs.isDir(path) and fs.exists(path..'/startup') then
+			return LaunchProgram(path..'/startup', args, Helpers.RemoveExtension(fs.getName(path)))
 		elseif fs.isDir(path) then
 			LaunchProgram('/System/Programs/Files.program/startup', {path}, 'Files')
 		elseif extension then
@@ -83,10 +57,10 @@ end
 
 ReadIcon = function(path, cacheName)
 	cacheName = cacheName or path
-	if not Current.IconCache[cacheName] then
-		Current.IconCache[cacheName] = Drawing.LoadImage(path, true)
+	if not IconCache[cacheName] then
+		IconCache[cacheName] = Drawing.LoadImage(path, true)
 	end
-	return Current.IconCache[cacheName]
+	return IconCache[cacheName]
 end
 
 Split = function(str,sep)
@@ -148,8 +122,8 @@ end
 IconForFile = function(path)
 	path = TidyPath(path)
 	local extension = Helpers.Extension(path)
-	if extension and Current.IconCache[extension] then
-		return Current.IconCache[extension]
+	if extension and IconCache[extension] then
+		return IconCache[extension]
 	elseif extension and extension == 'shortcut' then
 		h = fs.open(path, 'r')
 		if h then

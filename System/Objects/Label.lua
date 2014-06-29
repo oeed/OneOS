@@ -32,6 +32,8 @@ OnDraw = function(self, x, y)
         local _x = 0
         if self.Align == 'Right' then
             _x = self.Width - #self.Text
+        elseif self.Align == 'Center' then
+            _x = math.floor((self.Width - #self.Text) / 2) - 1
         end
 		Drawing.DrawCharacters(x + _x, y + i - 1, v, self.TextColour, self.BackgroundColour)
 	end

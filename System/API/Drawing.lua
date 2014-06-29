@@ -19,7 +19,9 @@ DrawCharacters = function (x, y, characters, textColour, bgColour)
 end
 
 DrawBlankArea = function (x, y, w, h, colour)
-	Drawing.DrawArea (x, y, w, h, " ", 1, colour)
+	if colour ~= colours.transparent then
+		Drawing.DrawArea (x, y, w, h, " ", 1, colour)
+	end
 end
 
 DrawArea = function (x, y, w, h, character, textColour, bgColour)

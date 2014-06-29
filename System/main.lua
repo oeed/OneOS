@@ -1,5 +1,7 @@
 local bedrock = Bedrock:Initialise()
 
+bedrock.AllowTerminate = false
+
 nativeTerm = term.native
 if type(nativeTerm) == 'function' then
 	nativeTerm = term.current()
@@ -11,46 +13,8 @@ Current = {
 	Program = nil,
 	Desktop = nil,
 	DrawSpeed = 0.35,
-	DefaultDrawSpeed = 0.5
+	DefaultDrawSpeed = 0.35
 }
-
-function LaunchProgram(path, args, title)
-	Current.Program = nil
-	return Program:Initialise(shell, path, title, args)
-	--bedrock:Draw()
-end
-
---an ever so slightly changed version of the textutils version
-local function getTimeString()
-	local sTOD = nil
-	local nTime = os.time()
-	if not bTwentyFourHour then
-	    if nTime >= 12 then
-	        sTOD = "pm"
-	    else
-	        sTOD = "am"
-	    end
-	    if nTime >= 13 then
-	        nTime = nTime - 12
-	    end
-	end
-
-	local nHour = math.floor(nTime)
-	local nMinute = math.floor((nTime - nHour)*60)
-	if sTOD then
-		if nHour == 0 then
-			nHour = 12
-		end
-	    return string.format( "%d:%02d%s", nHour, nMinute, sTOD )
-	else
-	    return string.format( "%d:%02d", nHour, nMinute )
-	end
-end
-
-function Update()
-	--bedrock:GetObject('TimeLabel').Text = getTimeString()
-	bedrock:Draw()
-end
 
 function UpdateOverlay()
 	bedrock:GetObject('Overlay'):ForceDraw()
@@ -89,14 +53,11 @@ function Initialise()
 	bedrock:Run(function()
 		bedrock:LoadView('main', false)
 		Current.ProgramView = bedrock:GetObject('ProgramView')
-		Current.Desktop = LaunchProgram('System/Programs/Desktop.program/startup', {isHidden = true}, 'Desktop')
-		bedrock:StartRepeatingTimer(Update, function()return Current.DrawSpeed end)
+		Current.Desktop = Helpers.OpenFile('System/Programs/Desktop.program', {isHidden = true})
+		bedrock:Draw()
 
-		Update()
-
-		--LaunchProgram('Programs/Sketch.program/startup', {}, 'Sketch')
-		--LaunchProgram('Programs/LuaIDE.program/startup', {}, 'LuaIDE')
-		LaunchProgram('Programs/Test.program/startup', {}, 'Test')
+		--Helpers.OpenFile('Programs/LuaIDE.program')
+		--Helpers.OpenFile('Programs/Test2.program')
 
 	end)
 end

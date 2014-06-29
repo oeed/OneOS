@@ -68,6 +68,7 @@
 			return
 		end
 		
+		--TODO: this isn't skipping when it hasn't changed
 		if Current.Program == self.Program and (not self.Buffer[y] or (self.Buffer[y][x][1] ~= character or self.Buffer[y][x][2] ~= textColour or self.Buffer[y][x][3] ~= backgroundColour)) then
 			Current.ProgramView:ForceDraw()
 		end

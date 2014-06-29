@@ -1,3 +1,81 @@
-term.setBackgroundColour(colours.cyan)
-term.clear()
-os.pullEvent('cat')
+OneOS.LoadAPI('/System/API/Bedrock.lua', false)
+
+local files = {}
+local offset = 0
+
+local program = Bedrock:Initialise()
+
+local function FilesHaveChanged()
+	local list = OneOS.FS.list('Desktop/')
+
+	local count = 0
+	for k, v in pairs(files) do
+		count = count + 1
+	end
+	
+	if #list ~= count then
+		return true
+	else
+		for i, v in ipairs(list) do
+			if not files[v] then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+local function MaxIcons()
+	local y, x = 2, 5
+	local slotHeight = 5
+	local slotWidth = 11
+	local maxX = math.floor((Drawing.Screen.Width - 2) / slotWidth)
+	local maxY = math.floor((Drawing.Screen.Height - 2) / slotHeight)
+	x = 1 + math.floor(((Drawing.Screen.Width - (maxX * slotWidth))) / 2)
+	return x, y, maxX, maxY, maxX * maxY
+end
+
+local function IconLocation(i)
+	local slotHeight = 5
+	local slotWidth = 11
+	local x, y, maxX, maxY, maxPage = MaxIcons()
+	local _i = ((i-1) % maxPage) + 1
+	local rowPos = ((_i - 1) % maxX)
+	local colPos = math.ceil(_i / maxX) - 1
+	local page = math.ceil(i/maxPage)
+	x = x + (slotWidth * rowPos) + offset + 2 + Drawing.Screen.Width * (page - 1)
+	y = y + colPos * slotHeight
+	return x, y
+end
+
+local function ReloadFiles()
+	program:RemoveObjects('DesktopItem')
+
+	local list = OneOS.FS.list('Desktop/')
+	files = {}
+	for i, v in ipairs(list) do
+		local x, y = IconLocation(i)
+		files[v] = program:AddObject({
+			Type = 'DesktopItem',
+			X = x,
+			Y = y,
+			Name = 'DesktopItem',
+			Path = 'Desktop/'..v
+		})
+	end
+end
+
+program.OnDraw = function(self)
+	if FilesHaveChanged() then
+		ReloadFiles()
+	end
+end
+
+program:Run(function()
+	program:LoadView('main')
+	
+	program.DrawSpeed = 5
+	program.DefaultDrawSpeed = 5
+	
+	program:Draw()
+end)

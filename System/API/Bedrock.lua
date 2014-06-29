@@ -9,11 +9,27 @@
 --adds a few debugging things (a draw call counter)
 local isDebug = true
 
-local load = os.loadAPI
+local function loadAPI(path)
+	local name = string.match(fs.getName(path), '(%a+)%.?.-')
+	local env = setmetatable({}, { __index = getfenv() })
+	local func, err = loadfile(path)
+	if not func then
+		return false, printError(err)
+	end
+	setfenv(func, env)
+	func()
+	local api = {}
+	for k,v in pairs(env) do
+		api[k] = v
+	end
+	_G[name] = api
+	return true
+end
+
+local load = loadAPI
 ViewPath = '/System/Views/'
 if OneOS then
 	load = OneOS.LoadAPI
-	ViewPath = 'Views/'
 end
 
 local apis = {
@@ -32,6 +48,7 @@ local objects = {
 
 local env = getfenv()
 if not isStartup then
+	ViewPath = 'Views/'
 	for i, v in ipairs(apis) do
 		load('/System/API/'..v..'.lua', false)
 	end
@@ -41,14 +58,29 @@ if not isStartup then
 			error('Could not find API: '..v)
 		else
 			env[v].__index = Object
-			if env[v].Inheirt then
+			if env[v].Inherit then
 				if not getfenv()[env.Inherit] then
 					--TODO: dynamically get the path
-					load('.System/Objects/'..env.Inherit..'.lua')
+					load('System/Objects/'..env.Inherit..'.lua')
 				end
 				env.__index = getfenv()[env.Inherit]
 			end
 			setmetatable(env[v], env[v])
+		end
+	end
+	if fs.exists('Objects/') and fs.isDir('Objects/') then
+		for i, v in ipairs(fs.list('Objects/')) do
+			local name = string.match(v, '(%a+)%.?.-')
+			loadAPI('Objects/'..v)
+			env[name].__index = Object
+			if env[name].Inherit then
+				if not getfenv()[env[name].Inherit] then
+					--TODO: dynamically get the path
+					load('Objects/'..env[name].Inherit..'.lua')
+				end
+				env[name].__index = getfenv()[env[name].Inherit]
+			end
+			setmetatable(env[name], env[name])
 		end
 	end
 end
@@ -59,6 +91,9 @@ View = nil
 Menu = nil
 
 ActiveObject = nil
+
+DrawSpeed = 0.35
+DefaultDrawSpeed = 0.35
 
 EventHandlers = {
 	
@@ -392,6 +427,7 @@ OnDrag = nil
 OnScroll = nil
 OnViewLoad = nil
 OnViewClose = nil
+OnDraw = nil
 
 local eventFuncs = {
 	OnClick = {{'mouse_click'}},
@@ -406,8 +442,11 @@ local eventFuncs = {
 local drawCalls = 0
 local ignored = 0
 function Draw(self)
-	if self.View and self.View:NeedsDraw() then
+	if self.OnDraw then
+		self:OnDraw()
+	end
 
+	if self.View and self.View:NeedsDraw() then
 		self.View:Draw()
 		Drawing.DrawBuffer()
 		if isDebug then
@@ -429,6 +468,7 @@ function Draw(self)
 		term.setBackgroundColour(colours.black)
 		term.setTextColour(colours.white)
 		term.write(drawCalls.. ":" .. ignored)
+		term.setCursorPos(1, 2)
 	end
 
 	if self:GetActiveObject() and self.CursorPos and type(self.CursorPos[1]) == 'number' and type(self.CursorPos[2]) == 'number' then
@@ -472,8 +512,158 @@ function Run(self, ready)
 	if ready then
 		ready()
 	end
+	
+	self:StartRepeatingTimer(function()self:Draw() end, function()return self.DrawSpeed end)
 
 	while true do
 		self:EventHandler()
 	end
 end
+
+Helpers = {
+	LongestString = function(input, key, isKey)
+		local length = 0
+		if isKey then
+			for k, v in pairs(input) do
+				local titleLength = string.len(k)
+				if titleLength > length then
+					length = titleLength
+				end
+			end
+		else
+			for i = 1, #input do
+				local value = input[i]
+				if key then
+					if value[key] then
+						value = value[key]
+					else
+						value = ''
+					end
+				end
+				local titleLength = string.len(value)
+				if titleLength > length then
+					length = titleLength
+				end
+			end
+		end
+		return length
+	end,
+	
+	Split = function(str,sep)
+	    sep=sep or'/'
+	    return str:match("(.*"..sep..")")
+	end,
+
+	Extension = function(path, addDot)
+		if not path then
+			return nil
+		elseif not string.find(fs.getName(path), '%.') then
+			if not addDot then
+				return fs.getName(path)
+			else
+				return ''
+			end
+		else
+			local _path = path
+			if path:sub(#path) == '/' then
+				_path = path:sub(1,#path-1)
+			end
+			local extension = _path:gmatch('%.[0-9a-z]+$')()
+			if extension then
+				extension = extension:sub(2)
+			else
+				--extension = nil
+				return ''
+			end
+			if addDot then
+				extension = '.'..extension
+			end
+			return extension:lower()
+		end
+	end,
+
+	RemoveExtension = function(path)
+	--local name = string.match(fs.getName(path), '(%a+)%.?.-')
+		if path:sub(1,1) == '.' then
+			return path
+		end
+		local extension = Helpers.Extension(path)
+		if extension == path then
+			return fs.getName(path)
+		end
+		return string.gsub(path, extension, ''):sub(1, -2)
+	end,
+
+	RemoveFileName = function(path)
+		if string.sub(path, -1) == '/' then
+			path = string.sub(path, 1, -2)
+		end
+		local v = string.match(path, "(.-)([^\\/]-%.?([^%.\\/]*))$")
+		if type(v) == 'string' then
+			return v
+		end
+		return v[1]
+	end,
+
+	TruncateString = function(sString, maxLength)
+		if #sString > maxLength then
+			sString = sString:sub(1,maxLength-3)
+			if sString:sub(-1) == ' ' then
+				sString = sString:sub(1,maxLength-4)
+			end
+			sString = sString  .. '...'
+		end
+		return sString
+	end,
+
+	TruncateStringStart = function(sString, maxLength)
+		local len = #sString
+		if #sString > maxLength then
+			sString = sString:sub(len - maxLength, len - 3)
+			if sString:sub(-1) == ' ' then
+				sString = sString:sub(len - maxLength, len - 4)
+			end
+			sString = '...' .. sString
+		end
+		return sString
+	end,
+
+
+	WrapText = function(text, maxWidth)
+		local lines = {''}
+	    for word, space in text:gmatch('(%S+)(%s*)') do
+	            local temp = lines[#lines] .. word .. space:gsub('\n','')
+	            if #temp > maxWidth then
+	                    table.insert(lines, '')
+	            end
+	            if space:find('\n') then
+	                    lines[#lines] = lines[#lines] .. word
+	                    
+	                    space = space:gsub('\n', function()
+	                            table.insert(lines, '')
+	                            return ''
+	                    end)
+	            else
+	                    lines[#lines] = lines[#lines] .. word .. space
+	            end
+	    end
+		return lines
+	end,
+
+	TidyPath = function(path)
+		path = '/'..path
+		if fs.exists(path) and fs.isDir(path) then
+			path = path .. '/'
+		end
+
+		path, n = path:gsub("//", "/")
+		while n > 0 do
+			path, n = path:gsub("//", "/")
+		end
+		return path
+	end,
+
+	Capitalise = function(str)
+		return str:sub(1, 1):upper() .. str:sub(2, -1)
+	end
+}
