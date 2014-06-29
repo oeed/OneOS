@@ -90,7 +90,7 @@ function Initialise()
 		bedrock:LoadView('main', false)
 		Current.ProgramView = bedrock:GetObject('ProgramView')
 		Current.Desktop = LaunchProgram('System/Programs/Desktop.program/startup', {isHidden = true}, 'Desktop')
-		bedrock:StartRepeatingTimer(Update, function()return Current.DrawSpeed end) --TODO: decide on length
+		bedrock:StartRepeatingTimer(Update, function()return Current.DrawSpeed end)
 
 		Update()
 

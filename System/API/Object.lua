@@ -62,6 +62,7 @@ end
 
 UpdateEvokers = function(self)
 	local evokers = {}
+	if not self.DrawCache.Evokers then print('*')  print('*') print(self.DrawCache) print(self.Name) end
 	for k, v in pairs(self.DrawCache.Evokers) do
 		evokers[k] = self[k]
 	end

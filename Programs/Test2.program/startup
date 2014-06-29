@@ -1,0 +1,4 @@
+print('hello')
+while true do
+	print(os.pullEvent())
+end

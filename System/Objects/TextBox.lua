@@ -16,16 +16,8 @@ CursorPos = nil
 Numerical = false
 Bedrock = nil
 
-Draw = function(self)
-	if not self.Visible then
-		if self.Bedrock:GetActiveObject() == self then
-			self.Bedrock:SetActiveObject()
-		end
-		return
-	end
-	local pos = self.Bedrock:GetAbsolutePosition(self)
-
-	Drawing.DrawBlankArea(pos.X, pos.Y, self.Width, self.Height, self.BackgroundColour)
+OnDraw = function(self, x, y)
+	Drawing.DrawBlankArea(x, y, self.Width, self.Height, self.BackgroundColour)
 	if self.CursorPos > #self.Text then
 		self.CursorPos = #self.Text
 	elseif self.CursorPos < 0 then
@@ -35,67 +27,30 @@ Draw = function(self)
 	if self.Bedrock:GetActiveObject() == self then
 		if #text > (self.Width - 2) then
 			text = text:sub(#text-(self.Width - 3))
-			self.Bedrock.CursorPos = {pos.X + 1 + self.Width-2, pos.Y}
+			self.Bedrock.CursorPos = {x + 1 + self.Width-2, y}
 		else
-			self.Bedrock.CursorPos = {pos.X + 1 + self.CursorPos, pos.Y}
+			self.Bedrock.CursorPos = {x + 1 + self.CursorPos, y}
 		end
+		self.Bedrock.CursorColour = self.TextColour
 	end
 
 	if #tostring(text) == 0 then
-		Drawing.DrawCharacters(pos.X + 1, pos.Y, self.Placeholder, self.PlaceholderTextColour, self.BackgroundColour)
+		Drawing.DrawCharacters(x + 1, y, self.Placeholder, self.PlaceholderTextColour, self.BackgroundColour)
 	else
-		Drawing.DrawCharacters(pos.X + 1, pos.Y, text, self.TextColour, self.BackgroundColour)
+		Drawing.DrawCharacters(x + 1, y, text, self.TextColour, self.BackgroundColour)
 	end
-
-
-	self.Bedrock.CursorColour = self.TextColour
-	RegisterClick(self)
 end
 
-Initialise = function(self, x, y, width, height, parent, text, backgroundColour, textColour, change, numerical, placeholder, placeholderColour)
-	local new = {}    -- the new instance
-	setmetatable( new, {__index = self} )
-	height = height or 1
-	new.AutoWidth = not width
-	if text then
-		width = width or #text + 2
-	elseif not width then
-		width = 2
-	end
-	new.Width = width
-	new.Height = height
-	new.Y = y
-	new.X = x
-	new.BackgroundColour = backgroundColour or colours.lightGrey
-	new.TextColour = textColour or colours.black
-	new.Parent = parent
-	new.Placeholder = placeholder or ''
-	new.PlaceholderTextColour = placeholderColour or colours.lightGrey
-
-	new.Text = text or ""
-	new.CursorPos = #new.Text
-	new.Numerical = numerical
-	return new
-end
-
-InitialiseUpdate = function(self)
+OnLoad = function(self)
 	self.CursorPos = #self.Text
 	if self.Active then
 		self.Bedrock:SetActiveObject(self)
 	end
 end
 
-Click = function(self, event, side, x, y)
-	if not self.Visible then
-		return false
-	end
+OnClick = function(self, event, side, x, y)
 	self.Bedrock:SetActiveObject(self)
 	self.CursorPos = x - 2
-end
-
-Register = function(self)
-	RegisterElement(self)
-	return self
 end
 
 OnKeyChar = function(self, event, keychar)

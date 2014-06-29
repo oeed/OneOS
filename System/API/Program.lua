@@ -117,8 +117,8 @@ Resume = function(self, ...)
 				return false
 			end
 			--print('start')
+		
 			term.redirect(self.AppRedirect.Term)
-			--os.reboot()
 			local response = {coroutine.resume(self.Process, unpack(event))}
 			if not response[1] and response[2] then
 				print()
@@ -134,7 +134,9 @@ Resume = function(self, ...)
 		    end
 		    term.restore()
 		    --Drawing.DrawBuffer()
-		    term.setCursorPos(Current.CursorPos[1], Current.CursorPos[2])
+
+		    --TODO: cursor pos
+		    --term.setCursorPos(Current.CursorPos[1], Current.CursorPos[2])
 			term.setCursorBlink(self.AppRedirect.CursorBlink)
 			term.setTextColour(Current.CursorColour)
 		    result = unpack(response)
@@ -158,8 +160,6 @@ end
 Kill = function(self, code)
 	term.setBackgroundColour(colours.black)
 	term.setTextColour(colours.white)
-	Current.CursorPos[1] = 1
-	Current.CursorPos[2] = 1
 	term.setCursorBlink(false)
 	print('Click anywhere to close this program.')
 	for i, program in ipairs(Current.Programs) do

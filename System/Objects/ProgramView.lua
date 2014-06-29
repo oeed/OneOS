@@ -71,6 +71,7 @@ OnDraw = function(self, x, y)
 		Drawing.DrawCharactersCenter(nil,2,nil,nil, 'Try rebooting.', colours.lightGrey, colours.transparent)
 	end
 
+	self:ForceDraw()
 end
 
 DrawAnimation = function(self)

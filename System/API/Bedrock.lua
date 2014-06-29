@@ -18,12 +18,14 @@ end
 
 local apis = {
 	'Drawing',
-	'Object',
+	'Object'
+}
+
+local objects = {
 	'View',
 	'Button',
 	'Label',
 	'Separator',
-	'TextInput',
 	'TextBox',
 	'ImageView'
 }
@@ -32,12 +34,19 @@ local env = getfenv()
 if not isStartup then
 	for i, v in ipairs(apis) do
 		load('/System/API/'..v..'.lua', false)
+	end
+	for i, v in ipairs(objects) do
+		load('/System/Objects/'..v..'.lua', false)
 		if not env[v] then
 			error('Could not find API: '..v)
-		elseif v == 'Separator' or v == 'Label' or v == 'ImageView'  or v == 'Button' then--v ~= 'Object' and v ~= 'Drawing' then
+		else
 			env[v].__index = Object
 			if env[v].Inheirt then
-				env[v].__index = env[v].Inheirt
+				if not getfenv()[env.Inherit] then
+					--TODO: dynamically get the path
+					load('.System/Objects/'..env.Inherit..'.lua')
+				end
+				env.__index = getfenv()[env.Inherit]
 			end
 			setmetatable(env[v], env[v])
 		end
@@ -142,7 +151,12 @@ function ObjectClick(self, name, func)
 end
 
 function ClickObject(self, object, event, side, x, y)
+	if ViewPath == 'Views/' then
+		print(object.Name)
+		sleep(1)
+	end
 	if self.ObjectClickHandlers[object.Name] then
+		print('gii')
 		self.ObjectClickHandlers[object.Name](object, event, side, x, y)
 	end
 end
@@ -281,8 +295,10 @@ function ObjectFromFile(self, file, view)
 
 		object.Bedrock = self
 
-		object._Click = function(...) self:ClickObject(...) end
-		object._Update = function(...) self:UpdateObject(...) end
+		if not object.OnClick then
+			object.OnClick = function(...) self:ClickObject(...) end
+		end
+		--object.OnUpdate = function(...) self:UpdateObject(...) end
 		if object.OnUpdate then
 			for k, v in pairs(object.DrawCache.Evokers) do
 				object:OnUpdate(k)
@@ -391,6 +407,7 @@ local drawCalls = 0
 local ignored = 0
 function Draw(self)
 	if self.View and self.View:NeedsDraw() then
+
 		self.View:Draw()
 		Drawing.DrawBuffer()
 		if isDebug then
@@ -403,7 +420,12 @@ function Draw(self)
 	end
 
 	if isDebug then
-		term.setCursorPos(1, Drawing.Screen.Height-1)
+		local pos = -2
+		if ViewPath == 'Views/' then
+			pos = -4
+		end
+
+		term.setCursorPos(1, Drawing.Screen.Height+pos)
 		term.setBackgroundColour(colours.black)
 		term.setTextColour(colours.white)
 		term.write(drawCalls.. ":" .. ignored)
