@@ -15,7 +15,6 @@ OnUpdate = function(self, value)
 end
 
 OnDraw = function(self, x, y)
-	if name
 	local bg = self.BackgroundColour
 
 	if self.Toggle then

@@ -33,6 +33,6 @@ OnDraw = function(self, x, y)
         if self.Align == 'Right' then
             _x = self.Width - #self.Text
         end
-		Drawing.DrawCharacters(x + _x - 1, y + i - 1, v, self.TextColour, self.BackgroundColour)
+		Drawing.DrawCharacters(x + _x, y + i - 1, v, self.TextColour, self.BackgroundColour)
 	end
 end
