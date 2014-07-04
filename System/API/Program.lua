@@ -134,11 +134,6 @@ Resume = function(self, ...)
 		    end
 		    term.restore()
 		    --Drawing.DrawBuffer()
-
-		    --TODO: cursor pos
-		    --term.setCursorPos(Current.CursorPos[1], Current.CursorPos[2])
-			term.setCursorBlink(self.AppRedirect.CursorBlink)
-			term.setTextColour(Current.CursorColour)
 		    result = unpack(response)
 		end, function(err)
 			if string.find(err, "Too long without yielding") then

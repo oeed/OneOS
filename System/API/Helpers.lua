@@ -142,7 +142,7 @@ IconForFile = function(path)
 		end
 	elseif fs.isDir(path) then
 		return ReadIcon('System/Images/Icons/folder')
-	elseif extension and fs.exists('System/Images/Icons/'..extension) then
+	elseif extension and fs.exists('System/Images/Icons/'..extension) and not fs.isDir('System/Images/Icons/'..extension) then
 		return ReadIcon('System/Images/Icons/'..extension)
 	elseif extension then
 		local _path = Indexer.FindFileInFolder(extension, 'Icons')
@@ -225,3 +225,4 @@ end
 Capitalise = function(str)
 	return str:sub(1, 1):upper() .. str:sub(2, -1)
 end
+

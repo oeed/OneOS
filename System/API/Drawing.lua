@@ -11,6 +11,56 @@ Screen = {
 	Height = _h
 }
 
+Constraints = {
+	
+}
+
+CurrentConstraint = {}
+IgnoreConstraint = false
+
+function AddConstraint(x, y, width, height)
+	local x2 = x + width - 1
+	local y2 = y + height - 1
+	table.insert(Constraints, {x, y, x2, y2})
+	GetConstraint()
+end
+
+function RemoveConstraint()
+	table.remove(Constraints, #Constraints)
+	GetConstraint()
+end
+
+function GetConstraint()
+	local x = 1
+	local y = 1
+	local x2 = Screen.Width
+	local y2 = Screen.Height
+	for i, c in ipairs(Constraints) do
+		if x < c[1] then
+			x = c[1]
+		end
+		if y < c[2] then
+			y = c[2]
+		end
+		if x2 > c[3] then
+			x2 = c[3]
+		end
+		if y2 > c[4] then
+			y2 = c[4]
+		end
+	end
+	CurrentConstraint = {x, y, x2, y2}
+end
+GetConstraint()
+
+function WithinContraint(x, y)
+	return Drawing.IgnoreConstraint or
+		  (x >= CurrentConstraint[1] and
+		   y >= CurrentConstraint[2] and
+		   x <= CurrentConstraint[3] and
+		   y <= CurrentConstraint[4])
+end
+
 colours.transparent = -1
 colors.transparent = -1
 
@@ -204,6 +254,9 @@ WriteStringToBuffer = function (x, y, characters, textColour,bgColour)
 end
 
 WriteToBuffer = function(x, y, character, textColour,bgColour)
+	if not WithinContraint(x, y) then
+		return
+	end
 	x = round(x)
 	y = round(y)
 

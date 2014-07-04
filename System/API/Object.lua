@@ -1,11 +1,12 @@
-X = 1
-Y = 1
+X = 0
+Y = 0
 Width = 1
 Height = 1
 Parent = nil
 OnClick = nil
 Visible = true
 Name = nil 
+ClipDrawing = true
 
 DrawCache = {}
 
@@ -62,7 +63,6 @@ end
 
 UpdateEvokers = function(self)
 	local evokers = {}
-	if not self.DrawCache.Evokers then print('*')  print('*') print(self.DrawCache) print(self.Name) end
 	for k, v in pairs(self.DrawCache.Evokers) do
 		evokers[k] = self[k]
 	end
@@ -82,8 +82,14 @@ Draw = function(self)
 		self.DrawCache.NeedsDraw = false
 		local pos = self:GetPosition()
 		Drawing.StartCopyBuffer()
+		if self.ClipDrawing then
+			Drawing.AddConstraint(pos.X, pos.Y, self.Width, self.Height)
+		end
 		if self.OnDraw then
 			self:OnDraw(pos.X, pos.Y)
+		end
+		if self.ClipDrawing then
+			Drawing.RemoveConstraint()
 		end
 		self.DrawCache.Buffer = Drawing.EndCopyBuffer()
 	else
@@ -99,10 +105,21 @@ Draw = function(self)
 	self:UpdateEvokers()
 end
 
-ForceDraw = function(self)
+ForceDraw = function(self, ignoreChildren, ignoreParent)
 	self.DrawCache.NeedsDraw = true
-	if self.Parent then
-		self.Parent:ForceDraw()
+	if not ignoreParent and self.Parent then
+		self.Parent:ForceDraw(true)
+	end
+	if not ignoreChildren and self.Children then
+		for i, child in ipairs(self.Children) do
+			child:ForceDraw(nil, true)
+		end
+	end
+end
+
+OnRemove = function(self)
+	if self == self.Bedrock:GetActiveObject() then
+		self.Bedrock:SetActiveObject()
 	end
 end
 
@@ -111,6 +128,11 @@ Initialise = function(self)
 	local new = {}    -- the new instance
 	setmetatable( new, {__index = self} )
 	local evokers = {}
+
+	if new.OnInitialise then
+		new:OnInitialise()
+	end
+
 	--TODO: a better way of doing this
 	for k, v in pairs(self) do
 		if type(v) ~= 'function' then
@@ -123,6 +145,7 @@ Initialise = function(self)
 			evokers[k] = false
 		end
 	end
+
 	new.DrawCache = {
 		--any aspects that, if changed, require redrawing
 		Evokers = evokers,
@@ -135,14 +158,19 @@ Initialise = function(self)
 end
 
 Click = function(self, event, side, x, y)
-	if self.Visible and self.OnClick then
-		self:OnClick(event, side, x, y)
-		return true
+	if self.Visible then
+		if event == 'mouse_click' and self.OnClick and self:OnClick(event, side, x, y) ~= false then
+			return true
+		elseif event == 'mouse_drag' and self.OnDrag and self:OnDrag(event, side, x, y) ~= false then
+			return true
+		else
+			return false
+		end
 	else
 		return false
 	end
 end
 
-ToggleMenu = function(self, name)
-	return self.Bedrock:ToggleMenu(name, self)
+ToggleMenu = function(self, name, x, y)
+	return self.Bedrock:ToggleMenu(name, self, x, y)
 end

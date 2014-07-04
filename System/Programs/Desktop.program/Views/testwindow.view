@@ -25,6 +25,6 @@
     },
   },
   ["BackgroundColour"]=1,
-  ["ToolBarColour"] = 128,
-  ["ToolBarTextColour"] = 1
+  ["Width"]=20,
+  ["Height"]=5
 }

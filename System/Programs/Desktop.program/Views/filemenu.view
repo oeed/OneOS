@@ -1,0 +1,47 @@
+{
+  ["Type"]="Menu",
+  ["Children"]={
+    [1]={
+      ["Name"]="OpenMenuItem",
+      ["Type"]="Button",
+      ["Text"]="Open"
+    },
+    [2]={
+      ["Name"]="Separator",
+      ["Type"]="Separator"
+    },
+    [3]={
+      ["Name"]="RenameMenuItem",
+      ["Type"]="Button",
+      ["Text"]="Rename..."
+    },
+    [4]={
+      ["Name"]="DeleteMenuItem",
+      ["Type"]="Button",
+      ["Text"]="Delete..."
+    },
+    [5]={
+      ["Name"]="Separator",
+      ["Type"]="Separator"
+    },
+    [6]={
+      ["Name"]="NewFolderMenuItem",
+      ["Type"]="Button",
+      ["Text"]="New Folder..."
+    },
+    [7]={
+      ["Name"]="NewFileMenuItem",
+      ["Type"]="Button",
+      ["Text"]="New File..."
+    },
+    [8]={
+      ["Name"]="Separator",
+      ["Type"]="Separator"
+    },
+    [8]={
+      ["Name"]="RefreshMenuItem",
+      ["Type"]="Button",
+      ["Text"]="Refresh"
+    },
+  },
+}

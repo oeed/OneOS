@@ -1,4 +1,4 @@
-Image = nil
+Image = false
 
 OnDraw = function(self, x, y)
 	Drawing.DrawImage(x, y, self.Image, self.Width, self.Height)

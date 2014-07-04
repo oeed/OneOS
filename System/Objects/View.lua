@@ -1,10 +1,14 @@
-BackgroundColour = nil
+BackgroundColour = colours.transparent
 Children = {}
 
 OnDraw = function(self, x, y)
 	if self.BackgroundColour then
 		Drawing.DrawBlankArea(x, y, self.Width, self.Height, self.BackgroundColour)
 	end
+end
+
+OnInitialise = function(self)
+	self.Children = {}
 end
 
 InitialiseFile = function(self, bedrock, file, name)
@@ -29,23 +33,48 @@ InitialiseFile = function(self, bedrock, file, name)
 end
 
 function CheckClick(self, object, x, y)
-	local pos = self.Bedrock:GetAbsolutePosition(object)
-	if pos.X <= x and pos.Y <= y and  pos.X + object.Width > x and pos.Y + object.Height > y then
+	if object.X <= x and object.Y <= y and  object.X + object.Width > x and object.Y + object.Height > y then
 		return true
 	end
 end
 
 function DoClick(self, object, event, side, x, y)
-	if object and self:CheckClick(object, x, y) then
-		return object:Click(event, side, x - object.X + 1, y - object.Y + 1)
+	if object then
+		if self:CheckClick(object, x, y) then
+			return object:Click(event, side, x - object.X + 1, y - object.Y + 1)
+		end
 	end	
 end
 
-OnClick = function(self, event, side, x, y)
-	for i, child in ipairs(self.Children) do
-		if self:DoClick(child, event, side, x, y) then
-			child:ForceDraw()
-			return
+Click = function(self, event, side, x, y)
+	if self.Visible then
+		for i, child in ipairs(self.Children) do
+			if self:DoClick(child, event, side, x, y) then
+				child:ForceDraw()
+				if self.OnChildClick then
+					self:OnChildClick(child, event, side, x, y)
+				end
+				return true
+			end
+		end
+		if event == 'mouse_click' and self.OnClick and self:OnClick(event, side, x, y) ~= false then
+			return true
+		elseif event == 'mouse_drag' and self.OnDrag and self:OnDrag(event, side, x, y) ~= false then
+			return true
+		else
+			return false
+		end
+	else
+		return false
+	end
+end
+
+OnRemove = function(self)
+	if self == self.Bedrock:GetActiveObject() then
+		self.Bedrock:SetActiveObject()
+	else
+		for i, child in ipairs(self.Children) do
+			child:OnRemove()
 		end
 	end
 end
@@ -73,7 +102,7 @@ function AddObject(self, info, extra)
 			info = textutils.unserialize(h.readAll())
 			h.close()
 		else
-			error('Error is opening object: '..info)
+			error('Error in opening object: '..info)
 		end
 	end
 
@@ -89,9 +118,9 @@ function AddObject(self, info, extra)
 	if not view.Z then
 		view.Z = #self.Children + 1
 	end
-	view.Parent = self
 	table.insert(self.Children, view)
 	self.Bedrock:ReorderObjects()
+	self:ForceDraw()
 	return view
 end
 
@@ -114,8 +143,33 @@ function GetObjects(self, name)
 end
 
 function RemoveObject(self, name)
-	local object, index = findObjectNamed(self, name)
-	table.remove(self.Children, index)
+	if type(name) == 'string' then
+		local object, index = findObjectNamed(self, name)
+		if index then
+			self.Children[index]:OnRemove()
+			table.remove(self.Children, index)
+			self:ForceDraw()
+			return true
+		else
+			return false
+		end
+	else
+		local found = false
+		for i, child in ipairs(self.Children) do
+			if name == child then
+				child:OnRemove()
+				table.remove(self.Children, i)
+				found = true
+			end
+		end
+
+		if found then
+			self:ForceDraw()
+			return true
+		else
+			return false
+		end
+	end
 end
 
 function RemoveObjects(self, name)
@@ -124,6 +178,8 @@ function RemoveObjects(self, name)
 		if not obj then
 			break
 		end
+		self.Children[index]:OnRemove()
 		table.remove(self.Children, index)
 	end
+	self:ForceDraw()
 end

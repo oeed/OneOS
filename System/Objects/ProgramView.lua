@@ -1,6 +1,6 @@
-CachedProgram = nil
-CachedIndex = nil
-Animation = nil
+CachedProgram = false
+CachedIndex = false
+Animation = false
 
 OnUpdate = function(self, value)
 	--TODO: resize the buffer
@@ -32,7 +32,7 @@ OnDraw = function(self, x, y)
 	end
 
 	if not self.Animation then
-		Current.DrawSpeed = Current.DefaultDrawSpeed
+		self.Bedrock.DrawSpeed = self.Bedrock.DefaultDrawSpeed
 	end
 
 	if self.Animation then
@@ -102,6 +102,14 @@ OnDraw = function(self, x, y)
 		self:DrawProgram(Current.Program, x, y)
 		self.CachedProgram = Current.Program
 		self.CachedIndex = currentIndex
+		if self.Bedrock:GetActiveObject() == self then
+			if Current.Program.AppRedirect.CursorBlink then
+				self.Bedrock.CursorPos = {x + Current.Program.AppRedirect.CursorPos[1] - 1, y + Current.Program.AppRedirect.CursorPos[2] - 1}
+				self.Bedrock.CursorColour = Current.Program.AppRedirect.TextColour
+			else
+				self.Bedrock.CursorPos = nil
+			end
+		end
 	else
 		Drawing.DrawBlankArea(x, y, self.Width, self.Height, colours.grey)
 		Drawing.DrawCharactersCenter(nil,-1,nil,nil, 'Something went wrong :(', colours.white, colours.transparent)
@@ -111,7 +119,7 @@ OnDraw = function(self, x, y)
 end
 
 DrawAnimation = function(self)
-	Current.DrawSpeed = 0.05
+	self.Bedrock.DrawSpeed = 0.05
 	self.Animation.Function(self.Animation.Count)
 	self.Animation.Count = self.Animation.Count - 1
 	if self.Animation.Count <= 0 then
@@ -135,6 +143,8 @@ OnClick = function(self, event, side, x, y)
 		Current.Program:Click(event, side, x, y)
 	end
 end
+
+OnDrag = OnClick
 
 
 --[[

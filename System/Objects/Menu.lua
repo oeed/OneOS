@@ -5,7 +5,9 @@ BackgroundColour = colours.white
 HideTop = false
 
 OnDraw = function(self, x, y)
-	Drawing.DrawBlankArea(x + 1, y + (self.HideTop and 0 or 1), self.Width, self.Height + 1, colours.grey)
+	Drawing.IgnoreConstraint = true
+	Drawing.DrawBlankArea(x + 1, y + (self.HideTop and 0 or 1), self.Width, self.Height + (self.HideTop and 1 or 0), colours.grey)
+	Drawing.IgnoreConstraint = false
 	Drawing.DrawBlankArea(x, y, self.Width, self.Height, self.BackgroundColour)
 end
 
@@ -16,9 +18,11 @@ OnLoad = function(self)
 	end
 
 	if owner then
-		local pos = owner:GetPosition()
-		self.X = pos.X
-		self.Y = pos.Y + owner.Height
+		if self.X == 0 and self.Y == 0 then
+			local pos = owner:GetPosition()
+			self.X = pos.X
+			self.Y = pos.Y + owner.Height
+		end
 		self.Owner = owner
 	else
 		self.Owner = nil
@@ -27,7 +31,7 @@ end
 
 OnUpdate = function(self, value)
 	if value == 'Children' then
-		self.Width = Helpers.LongestString(self.Children, 'Text') + 2
+		self.Width = self.Bedrock.Helpers.LongestString(self.Children, 'Text') + 2
 		self.Height = #self.Children + 1 + (self.HideTop and 0 or 1)
 
 		for i, v in ipairs(self.Children) do
@@ -41,29 +45,34 @@ OnUpdate = function(self, value)
 				v.Colour = colours.lightGrey
 			end
 			v.X = 1
-			v.Y = i
+			v.Y = i + (self.HideTop and 0 or 1)
 			v.Width = self.Width
 			v.Height = 1
 		end
 		return true
 	end
+
+	local pos = self:GetPosition()
+	if pos.Y + self.Height + 1 > Drawing.Screen.Height then
+		self.Y = self.Y - ((self.Height +  pos.Y) - Drawing.Screen.Height)
+	end
+	
+	if pos.X + self.Width > Drawing.Screen.Width then
+		self.X = Drawing.Screen.Width - self.Width
+	end
 end
 
 Close = function(self, isBedrockCall)
 	self.Bedrock.Menu = nil
-	self.Bedrock:RemoveObject(self.Name)
-
+	self.Bedrock:RemoveObject(self)
 	if self.Owner and self.Owner.Toggle then
 		self.Owner.Toggle = false
 		self.Owner:ForceDraw()
+	elseif self.Bedrock then
 	end
 	self = nil
 end
 
-OnClick = function(self, event, side, x, y)
-	--TODO: check if it works with hidetop == true
-	if self.Children[y - (self.HideTop and 0 or 1)] then
-		self.Children[y - (self.HideTop and 0 or 1)]:Click()
-		self:Close()
-	end
+OnChildClick = function(self, child, event, side, x, y)
+	self:Close()
 end

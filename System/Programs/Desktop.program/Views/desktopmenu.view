@@ -1,0 +1,24 @@
+{
+  ["Type"]="Menu",
+  ["Children"]={
+    [1]={
+      ["Name"]="NewFolderMenuItem",
+      ["Type"]="Button",
+      ["Text"]="New Folder..."
+    },
+    [2]={
+      ["Name"]="NewFileMenuItem",
+      ["Type"]="Button",
+      ["Text"]="New File..."
+    },
+    [3]={
+      ["Name"]="Separator",
+      ["Type"]="Separator"
+    },
+    [4]={
+      ["Name"]="RefreshMenuItem",
+      ["Type"]="Button",
+      ["Text"]="Refresh"
+    },
+  },
+}

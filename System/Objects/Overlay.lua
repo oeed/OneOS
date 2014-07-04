@@ -73,10 +73,12 @@ UpdateButtons = function(self)
 			object.Program = program
 
 		    object.OnClick = function(obj, event, side, x, y)
-		    	if button == 'x ' then
+		    	if side == 3 then
+		    		obj.Program:Close()
+		    	elseif button == 'x ' then
 		    		if x == 2 then
 		    			obj.Program:Close()
-		    		end	
+		    		end
 		    	else
 		    		obj.Program:SwitchTo()
 		    	end

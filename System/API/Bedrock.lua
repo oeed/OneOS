@@ -7,7 +7,7 @@
 ]]
 
 --adds a few debugging things (a draw call counter)
-local isDebug = true
+local isDebug = false
 
 local function loadAPI(path)
 	local name = string.match(fs.getName(path), '(%a+)%.?.-')
@@ -43,7 +43,9 @@ local objects = {
 	'Label',
 	'Separator',
 	'TextBox',
-	'ImageView'
+	'ImageView',
+	'Menu',
+	'Window'
 }
 
 local env = getfenv()
@@ -59,11 +61,11 @@ if not isStartup then
 		else
 			env[v].__index = Object
 			if env[v].Inherit then
-				if not getfenv()[env.Inherit] then
+				if not getfenv()[env[v].Inherit] then
 					--TODO: dynamically get the path
-					load('System/Objects/'..env.Inherit..'.lua')
+					load('System/Objects/'..env[v].Inherit..'.lua')
 				end
-				env.__index = getfenv()[env.Inherit]
+				env[v].__index = getfenv()[env[v].Inherit]
 			end
 			setmetatable(env[v], env[v])
 		end
@@ -134,7 +136,13 @@ function Initialise(self)
 end
 
 function HandleClick(self, event, side, x, y)
-	if self.Menu then
+	if self.Window then
+		if not self.View:CheckClick(self.Window, x, y) then
+			self.Window:Flash()
+		else
+			self.View:DoClick(self.Window, event, side, x, y)
+		end
+	elseif self.Menu then
 		if not self.View:DoClick(self.Menu, event, side, x, y) then
 			self.Menu:Close()
 		end
@@ -162,22 +170,25 @@ function HandleKeyChar(self, event, keychar)
 	end
 end
 
-function ToggleMenu(self, name, owner)
+function ToggleMenu(self, name, owner, x, y)
 	if self.Menu then
 		self.Menu:Close()
 		return false
 	else
-		self:SetMenu(name, owner)
+		self:SetMenu(name, owner, x, y)
 		return true
 	end
 end
 
-function SetMenu(self, menu, owner)
+function SetMenu(self, menu, owner, x, y)
+	x = x or 1
+	y = y or 1
 	if self.Menu then
 		self.Menu:Close()
 	end
 	if menu then
-		self.Menu = self:AddObject(menu, {Owner = owner})
+		local pos = owner:GetPosition()
+		self.Menu = self:AddObject(menu, {Owner = owner, X = pos.X + x - 1, Y = pos.Y + y})
 	end
 end
 
@@ -186,14 +197,10 @@ function ObjectClick(self, name, func)
 end
 
 function ClickObject(self, object, event, side, x, y)
-	if ViewPath == 'Views/' then
-		print(object.Name)
-		sleep(1)
-	end
 	if self.ObjectClickHandlers[object.Name] then
-		print('gii')
-		self.ObjectClickHandlers[object.Name](object, event, side, x, y)
+		return self.ObjectClickHandlers[object.Name](object, event, side, x, y)
 	end
+	return false
 end
 
 function ObjectUpdate(self, name, func)
@@ -217,7 +224,6 @@ function GetAbsolutePosition(self, obj)
 		return {X = x, Y = y}
 	end
 end
-_G.RegisterClick = function()end --TODO: remove this from all programs
 
 function LoadView(self, name, draw)
 	if self.View and self.OnViewClose then
@@ -228,6 +234,7 @@ function LoadView(self, name, draw)
 	local h = fs.open(self.ViewPath..name..'.view', 'r')
 	if h then
 		local view = textutils.unserialize(h.readAll())
+		h.close()
 		if view then
 			self.View = View:InitialiseFile(self, view, name)
 			self:ReorderObjects()
@@ -244,7 +251,7 @@ function LoadView(self, name, draw)
 	end
 
 	if success and self.OnViewLoad then
-		self.OnViewLoad(name, success)
+		self.OnViewLoad(name)
 	end
 
 	if draw ~= false then
@@ -319,33 +326,41 @@ function ObjectFromFile(self, file, view)
 
 		if file.Children then
 			for i, obj in ipairs(file.Children) do
-				local view = self:ObjectFromFile(obj, object)
-				if not view.Z then
-					view.Z = i
+				local _view = self:ObjectFromFile(obj, object)
+				if not _view.Z then
+					_view.Z = i
 				end
-				view.Parent = object
-				table.insert(object.Children, view)
+				_view.Parent = object
+				table.insert(object.Children, _view)
 			end
 		end
 
+
+		object.Parent = view
 		object.Bedrock = self
 
 		if not object.OnClick then
-			object.OnClick = function(...) self:ClickObject(...) end
+			object.OnClick = function(...) return self:ClickObject(...) end
 		end
 		--object.OnUpdate = function(...) self:UpdateObject(...) end
+		
+		if object.Active then
+			object.Bedrock:SetActiveObject(object)
+		end
+		if object.OnLoad then
+			object:OnLoad()
+		end
 		if object.OnUpdate then
 			for k, v in pairs(object.DrawCache.Evokers) do
 				object:OnUpdate(k)
 			end
 		end
-		if object.OnLoad then
-			object:OnLoad()
-		end
 		if object.UpdateEvokers then
 			object:UpdateEvokers()
 		end
 		return object
+	elseif not file.Type then
+		error('No object type specified. (e.g. Use Type = "Button")')
 	else
 		error('No Object: '..file.Type..'. The API probably isn\'t loaded')
 	end
@@ -377,6 +392,145 @@ function RemoveObjects(self, name)
 	return self.View:RemoveObjects(name)
 end
 
+function DisplayWindow(self, _view, title, canClose)
+	if canClose == nil then
+		canClose = true
+	end
+	if type(_view) == 'string' then
+		local h = fs.open(self.ViewPath.._view..'.view', 'r')
+		if h then
+			_view = textutils.unserialize(h.readAll())
+			h.close()
+		end
+	end
+
+	self.Window = self:AddObject({Type = 'Window', Z = 999, Title = title, CanClose = canClose})
+	local bg = _view.BackgroundColour or colours.white
+	self.Window:AddObject(_view, {Type = 'View', Name = 'View', BackgroundColour = bg})
+	self.Window:LoadView()
+	self:SetActiveObject(self.Window)
+end
+
+function DisplayAlertWindow(self, title, text, buttons, callback)
+	local func = function(btn)
+		if callback then
+			callback(btn.Text)
+		end
+		self.Window:Close()
+	end
+	local children = {}
+	local usedX = -1
+	if buttons then
+		for i, text in ipairs(buttons) do
+			usedX = usedX + 3 + #text
+			table.insert(children, {
+				["Y"]="100%,-1",
+				["X"]="100%,-"..usedX,
+				["Name"]=text.."Button",
+				["Type"]="Button",
+				["Text"]=text,
+				OnClick = func
+			})
+		end
+	end
+
+	local width = usedX + 2
+	if width < 28 then
+		width = 28
+	end
+
+	local canClose = true
+	if buttons and #buttons~=0 then
+		canClose = false
+	end
+
+	local height = #Helpers.WrapText(text, width - 2)
+	table.insert(children, {
+		["Y"]=2,
+		["X"]=2,
+		["Width"]="100%,-2",
+		["Height"]=height,
+		["Name"]="Label",
+		["Type"]="Label",
+		["Text"]=text
+	})
+	local view = {
+		Children = children,
+		Width=width,
+		Height=3+height+(canClose and 0 or 1),
+	}
+	self:DisplayWindow(view, title, canClose)
+end
+
+function DisplayTextBoxWindow(self, title, text, callback)
+	local func = function(btn)
+		if callback then
+			callback(btn.Text)
+		end
+		self.Window:Close()
+	end
+	local children = {
+		{
+			["Y"]="100%,-1",
+			["X"]="100%,-4",
+			["Name"]="OkButton",
+			["Type"]="Button",
+			["Text"]="Ok",
+			OnClick = function()
+				callback(true, self.Window:GetObject('TextBox').Text)
+				self.Window:Close()
+			end
+		},
+		{
+			["Y"]="100%,-1",
+			["X"]="100%,-13",
+			["Name"]="CancelButton",
+			["Type"]="Button",
+			["Text"]="Cancel",
+			OnClick = function()
+				callback(false)
+				self.Window:Close()
+			end
+		}
+	}
+
+	local height = -1
+	if text and #text ~= 0 then
+		height = #Helpers.WrapText(text, 26)
+		table.insert(children, {
+			["Y"]=2,
+			["X"]=2,
+			["Width"]="100%,-2",
+			["Height"]=height,
+			["Name"]="Label",
+			["Type"]="Label",
+			["Text"]=text
+		})
+	end
+	table.insert(children,
+		{
+			["Y"]=3+height,
+			["X"]=2,
+			["Width"]="100%,-2",
+			["Name"]="TextBox",
+			["Type"]="TextBox",
+		})
+	local view = {
+		Children = children,
+		Width=28,
+		Height=5+height+(canClose and 0 or 1),
+	}
+	self:DisplayWindow(view, title)
+	self.Window:GetObject('TextBox').OnUpdate = function(txtbox, keychar)
+		if keychar == keys.enter then
+			callback(true, txtbox.Text)
+			self.Window:Close()
+		end
+	end
+	self:SetActiveObject(self.Window:GetObject('TextBox'))
+	self.Window.OnCloseButton = function()callback(false)end
+end
+
 function RegisterEvent(self, event, func, passSelf)
 	if not self.EventHandlers[event] then
 		self.EventHandlers[event] = {}
@@ -391,7 +545,12 @@ function StartRepeatingTimer(self, func, interval)
 		int = int()
 	end
 	local timer = os.startTimer(int)
-	self.Timers[timer] = {func, interval}
+	self.Timers[timer] = {func, true, interval}
+end
+
+function StartTimer(self, func, delay)
+	local timer = os.startTimer(delay)
+	self.Timers[timer] = {func, false}
 end
 
 function HandleTimer(self, event, timer)
@@ -399,7 +558,9 @@ function HandleTimer(self, event, timer)
 		local oldTimer = self.Timers[timer]
 		self.Timers[timer] = nil
 		oldTimer[1]()
-		self:StartRepeatingTimer(oldTimer[1], oldTimer[2])
+		if oldTimer[2] then
+			self:StartRepeatingTimer(oldTimer[1], oldTimer[3])
+		end
 	elseif self.OnTimer then
 		self.OnTimer(event, timer)
 	end
@@ -410,10 +571,11 @@ function SetActiveObject(self, object)
 		if object ~= self.ActiveObject then
 			self.ActiveObject = object
 		end
+		object:ForceDraw()
 	else
-		self.CursorPos = {}
+		self.CursorPos = nil
+		self.View:ForceDraw()
 	end
-	self:Draw()
 end
 
 function GetActiveObject(self)
@@ -434,7 +596,7 @@ local eventFuncs = {
 	OnKeyChar = {{'key', 'char'}},
 	OnDrag = {{'mouse_drag'}},
 	OnScroll = {{'mouse_scroll'}},
-	HandleClick = {{'mouse_click'}, true},
+	HandleClick = {{'mouse_click', 'mouse_drag'}, true},
 	HandleKeyChar = {{'key', 'char'}, true},
 	HandleTimer = {{'timer'}, true}
 }
@@ -468,7 +630,6 @@ function Draw(self)
 		term.setBackgroundColour(colours.black)
 		term.setTextColour(colours.white)
 		term.write(drawCalls.. ":" .. ignored)
-		term.setCursorPos(1, 2)
 	end
 
 	if self:GetActiveObject() and self.CursorPos and type(self.CursorPos[1]) == 'number' and type(self.CursorPos[2]) == 'number' then
@@ -513,6 +674,8 @@ function Run(self, ready)
 		ready()
 	end
 	
+	self:Draw()
+
 	self:StartRepeatingTimer(function()self:Draw() end, function()return self.DrawSpeed end)
 
 	while true do
@@ -627,7 +790,6 @@ Helpers = {
 		end
 		return sString
 	end,
-
 
 	WrapText = function(text, maxWidth)
 		local lines = {''}

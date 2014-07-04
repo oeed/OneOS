@@ -6,7 +6,8 @@
       ["Width"]="100%",
       ["Height"]="100%,-1",
       ["Name"]="ProgramView",
-      ["Type"]="ProgramView"
+      ["Type"]="ProgramView",
+      ["Active"]=true
     },
     [2]={
       ["Name"]="Overlay",

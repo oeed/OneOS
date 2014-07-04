@@ -11,9 +11,7 @@ Current = {
 	ProgramView = nil,
 	Programs = {},
 	Program = nil,
-	Desktop = nil,
-	DrawSpeed = 0.35,
-	DefaultDrawSpeed = 0.35
+	Desktop = nil
 }
 
 function UpdateOverlay()
@@ -54,8 +52,7 @@ function Initialise()
 		bedrock:LoadView('main', false)
 		Current.ProgramView = bedrock:GetObject('ProgramView')
 		Current.Desktop = Helpers.OpenFile('System/Programs/Desktop.program', {isHidden = true})
-		bedrock:Draw()
-
+		bedrock.DrawSpeed = 0.2
 		--Helpers.OpenFile('Programs/LuaIDE.program')
 		--Helpers.OpenFile('Programs/Test2.program')
 

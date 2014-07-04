@@ -1,9 +1,13 @@
 OneOS.LoadAPI('/System/API/Bedrock.lua', false)
+--do return end
+local program = Bedrock:Initialise()
 
 local files = {}
 local offset = 0
+local dragRelPos = nil
+local currentPage = 1
+local totalPages = 1
 
-local program = Bedrock:Initialise()
 
 local function FilesHaveChanged()
 	local list = OneOS.FS.list('Desktop/')
@@ -48,6 +52,17 @@ local function IconLocation(i)
 	return x, y
 end
 
+local function RecalculateLocations()
+	local i = 1
+	for k, v in pairs(files) do
+		local x, y = IconLocation(i)
+		v.X = x
+		v.Y = y
+		v:ForceDraw()
+		i = i + 1
+	end
+end
+
 local function ReloadFiles()
 	program:RemoveObjects('DesktopItem')
 
@@ -65,17 +80,59 @@ local function ReloadFiles()
 	end
 end
 
-program.OnDraw = function(self)
-	if FilesHaveChanged() then
-		ReloadFiles()
+local function viewClick(self, event, side, x, y)
+	if side == 1 then
+		dragRelPos = x
+	elseif side == 2 then
+		if program.View:ToggleMenu('desktopmenu', x, y) then
+			program:GetObject('NewFolderMenuItem').OnClick = function(itm)
+				--TODO: new folder
+			end
+
+			program:GetObject('NewFileMenuItem').OnClick = function(itm)
+				--TODO: new file
+			end
+
+			program:GetObject('RefreshMenuItem').OnClick = function(itm)
+				--TODO: refresh
+			end
+		end
+	end
+end
+
+local function viewDrag(self, event, side, x, y)
+	if dragRelPos then	
+		offset = (x - dragRelPos) - Drawing.Screen.Width * (currentPage - 1)
+		RecalculateLocations()
 	end
 end
 
 program:Run(function()
 	program:LoadView('main')
+	ReloadFiles()
+	program.DrawSpeed = 0.2
+	program.DefaultDrawSpeed = 0.2
+	program:StartRepeatingTimer(function()
+		if FilesHaveChanged() then
+			ReloadFiles()
+		end
+	end, 5)
+
+	program:DisplayAlertWindow('Self Destruct?', 'Are you sure you want to blow up everything?', {'Yes', 'No'}, function(text)
+		if text == 'Yes' then
+			blowUp()
+		end
+	end)
+
+	--[[
+
+	program:DisplayTextBoxWindow('Uh oh...', 'You broke it!', function(success, txt)
+
+	end)
 	
-	program.DrawSpeed = 5
-	program.DefaultDrawSpeed = 5
-	
+	]]--
+
 	program:Draw()
+	program.View.OnClick = viewClick
+	program.View.OnDrag = viewDrag
 end)

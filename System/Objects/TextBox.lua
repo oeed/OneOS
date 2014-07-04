@@ -1,20 +1,11 @@
-X = 1
-Y = 1
-Width = 0
-Height = 0
 BackgroundColour = colours.lightGrey
 TextColour = colours.black
 PlaceholderTextColour = colours.lightGrey
-Parent = nil
-Visible = true
 Placeholder = ''
-Name = nil
 AutoWidth = false
 Text = ""
-Change = nil
 CursorPos = nil
 Numerical = false
-Bedrock = nil
 
 OnDraw = function(self, x, y)
 	Drawing.DrawBlankArea(x, y, self.Width, self.Height, self.BackgroundColour)
@@ -43,9 +34,6 @@ end
 
 OnLoad = function(self)
 	self.CursorPos = #self.Text
-	if self.Active then
-		self.Bedrock:SetActiveObject(self)
-	end
 end
 
 OnClick = function(self, event, side, x, y)
@@ -70,11 +58,15 @@ OnKeyChar = function(self, event, keychar)
 		end
 		
 		self.CursorPos = self.CursorPos + 1
-		self:_Update(keychar)
+		if self.OnUpdate then
+			self:OnUpdate(keychar)
+		end
 		return false
 	elseif event == 'key' then
 		if keychar == keys.enter then
-			self:_Update(true)		
+			if self.OnUpdate then
+				self:OnUpdate(keychar)
+			end
 		elseif keychar == keys.left then
 			--[[
 TODO: behaves odly when the text is too long and arrow keys are pushed
@@ -82,14 +74,18 @@ TODO: behaves odly when the text is too long and arrow keys are pushed
 			-- Left
 			if self.CursorPos > 0 then
 				self.CursorPos = self.CursorPos - 1
-				self:_Update(keychar)
+				if self.OnUpdate then
+					self:OnUpdate(keychar)
+				end
 			end
 			
 		elseif keychar == keys.right then
 			-- Right				
 			if self.CursorPos < string.len(self.Text) then
 				self.CursorPos = self.CursorPos + 1
-				self:_Update(keychar)
+				if self.OnUpdate then
+					self:OnUpdate(keychar)
+				end
 			end
 		
 		elseif keychar == keys.backspace then
@@ -103,12 +99,16 @@ TODO: behaves odly when the text is too long and arrow keys are pushed
 						self.Text = '1'
 					end
 				end
-				self:_Update(keychar)
+				if self.OnUpdate then
+					self:OnUpdate(keychar)
+				end
 			end
 		elseif keychar == keys.home then
 			-- Home
 			self.CursorPos = 0
-			self:_Update()
+			if self.OnUpdate then
+				self:OnUpdate(keychar)
+			end
 		elseif keychar == keys.delete then
 			if self.CursorPos < string.len(self.Text) then
 				self.Text = string.sub( self.Text, 1, self.CursorPos ) .. string.sub( self.Text, self.CursorPos + 2 )		
@@ -118,12 +118,16 @@ TODO: behaves odly when the text is too long and arrow keys are pushed
 						self.Text = '1'
 					end
 				end
-				self:_Update(keychar)
+				if self.OnUpdate then
+					self:OnUpdate(keychar)
+				end
 			end
 		elseif keychar == keys["end"] then
 			-- End
 			self.CursorPos = string.len(self.Text)
-			self:_Update(keychar)
+			if self.OnUpdate then
+				self:OnUpdate(keychar)
+			end
 		end
 		return false
 	end
