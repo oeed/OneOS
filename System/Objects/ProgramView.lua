@@ -58,7 +58,7 @@ OnDraw = function(self, x, y)
 		self:DrawAnimation()
 
 		Current.Desktop:SwitchTo()
-	elseif Current.Program and not Current.Program.Hidden and self.CachedProgram.Hidden then
+	elseif Current.Program and not Current.Program.Hidden and self.CachedProgram and self.CachedProgram.Hidden then
 		--opening a program
 		local centerX = math.ceil(self.Width / 2)
 		local centerY = math.ceil(self.Height / 2)

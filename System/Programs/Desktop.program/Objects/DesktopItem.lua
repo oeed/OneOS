@@ -25,6 +25,18 @@ OnLoad = function(self)
 		Name = 'Label'..fs.getName(self.Path)
 	})
 
+	if self.Bedrock.Helpers.Extension(self.Path) == 'shortcut' then
+		self:AddObject({
+			Type = 'Label',
+			X = 7,
+			Y = 3,
+			Width = 1,
+			Text = '>',
+			BackgroundColour=colours.white,
+			Name = 'ShortcutLabel'
+		})
+	end
+
 	local function click(obj, event, side, x, y)
 		if side == 1 then
 			OneOS.Helpers.OpenFile(self.Path)
@@ -36,23 +48,23 @@ OnLoad = function(self)
 				end
 
 				self.Bedrock:GetObject('RenameMenuItem').OnClick = function(itm)
-					--TODO: rename
+					OneOS.Helpers.RenameFile(self.Path, ReloadFiles, self.Bedrock)
 				end
 
 				self.Bedrock:GetObject('DeleteMenuItem').OnClick = function(itm)
-					--TODO: delete
+					OneOS.Helpers.DeleteFile(self.Path, ReloadFiles, self.Bedrock)
 				end
 
 				self.Bedrock:GetObject('NewFolderMenuItem').OnClick = function(itm)
-					--TODO: new folder
+					OneOS.Helpers.NewFolder('/Desktop/', ReloadFiles, self.Bedrock)
 				end
 
 				self.Bedrock:GetObject('NewFileMenuItem').OnClick = function(itm)
-					--TODO: new file
+					OneOS.Helpers.NewFile('/Desktop/', ReloadFiles, self.Bedrock)
 				end
 
 				self.Bedrock:GetObject('RefreshMenuItem').OnClick = function(itm)
-					--TODO: refresh
+					ReloadFiles()
 				end
 			end
 		end

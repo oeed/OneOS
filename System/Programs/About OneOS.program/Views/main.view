@@ -1,0 +1,67 @@
+{
+  ["Children"]={
+    [1]={
+      ["Y"]=2,
+      ["X"]=2,
+      ["Width"]=6,
+      ["Height"]=4,
+      ["Name"]="LogoImageView",
+      ["Type"]="ImageView",
+      ["Path"]="logo"
+    },
+    [2]={
+      ["Y"]=2,
+      ["X"]=10,
+      ["Width"]=13,
+      ["Name"]="VersionLabel",
+      ["Type"]="Label",
+      ["Text"]="OneOS v1.2.0",
+      ["TextColour"]=128,
+    },
+    [3]={
+      ["Y"]=3,
+      ["X"]=10,
+      ["Width"]=32,
+      ["Name"]="CopyrightLabel",
+      ["Type"]="Label",
+      ["Text"]="(c) Oliver 'oeed' Cooper 2013-14",
+      ["TextColour"]=256,
+    },
+    [4]={
+      ["Y"]=4,
+      ["X"]=10,
+      ["Width"]=29,
+      ["Name"]="LicenseLabel",
+      ["Type"]="Label",
+      ["Text"]="Under CC BY-NC-ND 4.0 License",
+      ["TextColour"]=256,
+    },
+    [5]={
+      ["Y"]=5,
+      ["X"]=10,
+      ["Width"]=40,
+      ["Name"]="LicenseInfoLabel",
+      ["Type"]="Label",
+      ["Text"]="Read the forum post for license details.",
+      ["TextColour"]=256,
+    },
+    [6]={
+      ["Y"]=7,
+      ["X"]=2,
+      ["Width"]="100%,-2",
+      ["Height"]="100%,-13",
+      ["Name"]="ThanksLabel",
+      ["Type"]="Label",
+      ["Text"]="Thanks to GravityScore, NitrogenFingers, Symmetryc, superaxander, Jesusthekiller, RamiLego4Game and Vilsol for their programs or help. Most of all, thank you using OneOS!",
+      ["TextColour"]=128,
+    },
+    [7]={
+      ["Y"]="100%,-5",
+      ["X"]=1,
+      ["Name"]="StorageView",
+      ["Type"]="View",
+      ["InheritView"]="storage"
+    },
+  },
+  ["BackgroundColour"]=1
+}

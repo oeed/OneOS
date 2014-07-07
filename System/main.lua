@@ -11,7 +11,8 @@ Current = {
 	ProgramView = nil,
 	Programs = {},
 	Program = nil,
-	Desktop = nil
+	Desktop = nil,
+	Bedrock = bedrock
 }
 
 function UpdateOverlay()
@@ -53,6 +54,10 @@ function Initialise()
 		Current.ProgramView = bedrock:GetObject('ProgramView')
 		Current.Desktop = Helpers.OpenFile('System/Programs/Desktop.program', {isHidden = true})
 		bedrock.DrawSpeed = 0.2
+		bedrock.DefaultDrawSpeed = 0.2
+		Indexer.RefreshIndex() --TODO: finish the search
+
+		Helpers.OpenFile('System/Programs/Settings.program')
 		--Helpers.OpenFile('Programs/LuaIDE.program')
 		--Helpers.OpenFile('Programs/Test2.program')
 

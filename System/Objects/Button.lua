@@ -10,7 +10,7 @@ AutoWidth = true
 OnUpdate = function(self, value)
 	if value == 'Text' and self.AutoWidth then
 		self.Width = #self.Text + 2
-		return true
+		return true --TODO: remove the need for the return value
 	end
 end
 

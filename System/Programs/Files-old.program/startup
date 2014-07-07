@@ -1,0 +1,1068 @@
+tArgs = {...}
+
+OneOS.LoadAPI('/System/API/Drawing.lua')
+OneOS.LoadAPI('/System/API/Button.lua')
+--OneOS.LoadAPI('/System/API/Helpers.lua')
+OneOS.LoadAPI('/System/API/Menu.lua')
+OneOS.LoadAPI('/System/API/Peripheral.lua')
+OneOS.LoadAPI('/System/API/TextInput.lua')
+OneOS.LoadAPI('/System/API/ListView.lua')
+OneOS.LoadAPI('/System/API/TextDialogueWindow.lua')
+OneOS.LoadAPI('/System/API/ButtonDialogueWindow.lua')
+OneOS.LoadAPI('/System/API/OpenWithDialougeWindow.lua')
+
+Helpers = OneOS.Helpers
+
+local startPath = tArgs[1] or '/Desktop/'
+local dragRelPos = nil
+local lastClick = nil
+
+--if running on small screens (e.g. pocket computers)
+local isCompressed = false
+
+Current = {
+	Clicks = {},
+	History = {},
+	HistoryItem = 0,
+	FileList = {},
+	Path = startPath,
+	FileScroll = 0,
+	MaxFileScroll = 0,
+	SidebarScroll = 0,
+	SelectedFile = nil,
+	SidebarWidth = 12,
+	SidebarList = {
+		Favourites = {
+			{'Desktop', '/Desktop/'},
+			{'Programs', '/Programs/'},
+			{'Computer', '/'},
+			{'Documents', '/Desktop/Documents/'}
+		},
+		Peripherals = {}
+	},
+	Menu = nil,
+	Window = nil,
+	IconCache = {},
+	Clipboard = OneOS.Clipboard,
+	ScrollBarDragStartY = nil,
+	CursorPos = {1,1},
+	CursorColour = colours.black,
+	Peripheral = {}
+}
+
+if Drawing.Screen.Width <= 30 then
+	isCompressed = true
+	Current.SidebarWidth = 1
+end
+
+if tArgs[2] then
+	Current.Path = Helpers.TidyPath(Helpers.ParentFolder(startPath))
+	Current.SelectedFile = fs.getName(tArgs[1])
+end
+
+Events = {
+	
+}
+
+InterfaceElements = {
+	
+}
+
+Settings = {
+	ShowHidden = false,
+	ListMode = false,
+}
+
+function WriteSettings()
+	local h = fs.open('.Files.settings', 'w')
+	h.write(textutils.serialize(Settings))
+	h.close()
+end
+
+function ReadSettings()
+	local h = fs.open('.Files.settings', 'r')
+	if h then
+		Settings = textutils.unserialize(h.readAll())
+		h.close()
+	else
+		WriteSettings()
+	end
+end
+
+function Initialise()
+	ReadSettings()
+	EventRegister('mouse_click', TryClick)
+	EventRegister('mouse_drag', TryClick)
+	EventRegister('monitor_touch', TryClick)
+	EventRegister('mouse_scroll', Scroll)
+	EventRegister('key', HandleKey)
+	EventRegister('char', HandleKey)
+	EventRegister('timer', Update)
+
+	OneOS.ToolBarColour = colours.lightGrey
+	OneOS.ToolBarTextColour = colours.white
+	local xPos = 9
+	if not isCompressed then
+		BackButton = Button:Initialise(2, 2, nil, 1, colours.white, colours.lightGrey, colours.lightBlue, colours.white, nil, function(self)
+			if Current.History[Current.HistoryItem-1] then
+				GoBack()
+			else
+				self.Toggle = true
+			end
+			os.startTimer(0.5)
+		end, '<', 3):Register()
+		
+		ForwardButton = Button:Initialise(5, 2, nil, 1, colours.white, colours.lightGrey, colours.lightBlue, colours.white, nil, function(self)
+			if Current.History[Current.HistoryItem+1] then
+				GoForward()
+			else
+				self.Toggle = true
+			end
+			os.startTimer(0.5)
+		end, '>', 3):Register()
+	else
+		BackButton = Button:Initialise(2, 2, nil, 1, colours.white, colours.lightGrey, colours.lightBlue, colours.white, nil, function(self)
+			if Current.Path ~= '/' then
+				GoToPath(Helpers.ParentFolder(Current.Path))
+			else
+				self.Toggle = true
+			end
+			os.startTimer(0.5)
+		end, 'Up', 3):Register()
+		xPos = 7
+	end
+
+	ListToggleButton = Button:Initialise(xPos, 2, nil, 1, colours.white, colours.black, colours.lightBlue, colours.white, nil, function(self)
+		Settings.ListMode = not Settings.ListMode
+		if Settings.ListMode then
+			self.Text = 'Icon'
+		else
+			self.Text = 'List'
+		end
+		WriteSettings()
+		Current.FileScroll = 0
+		os.startTimer(0.5)
+	end, 'List', 3):Register()
+	xPos = xPos + 7
+	local title = 16
+
+	if Settings.ShowHidden then
+		if not isCompressed then
+			title = 'Hide Hidden'
+		else
+			title = 'Hide Hiddn'
+		end
+	else
+		if not isCompressed then
+			title = 'Show Hidden'
+		else
+			title = 'Show Hiddn'
+		end
+	end
+
+	HiddenToggleButton = Button:Initialise(xPos, 2, nil, 1, colours.white, colours.black, colours.lightBlue, colours.white, nil, function(self)
+		Settings.ShowHidden = not Settings.ShowHidden
+		if Settings.ShowHidden then
+			if not isCompressed then
+				self.Text = 'Hide Hidden'
+			else
+				self.Text = 'Hide Hiddn'
+			end
+		else
+			if not isCompressed then
+				self.Text = 'Show Hidden'
+			else
+				self.Text = 'Show Hiddn'
+			end
+		end
+		WriteSettings()
+		Update()
+		os.startTimer(0.5)
+	end, title, 3):Register()
+
+	if Settings.ListMode then
+		ListToggleButton.Text = 'Icon'
+	else
+		ListToggleButton.Text = 'List'
+	end
+
+	Update()
+	EventHandler()
+end
+
+function DrawSidebar()
+	if not isCompressed then
+		Drawing.DrawArea(Current.SidebarWidth, 4, 1, Drawing.Screen.Height-3, '|', colours.lightGrey, colours.white)
+		local scroll = Current.SidebarScroll
+		local y = 5
+
+		for groupName, items in pairs(Current.SidebarList) do
+			Drawing.DrawCharacters(1, y + scroll, groupName, colours.lightGrey, colours.white)
+			y = y + 1
+			for i, name in ipairs(items) do
+				local _name = name[1] or name.Name
+				Drawing.DrawCharacters(2, y + scroll, _name, colours.grey, colours.white)
+				y = y + 1
+			end
+			y = y + 1
+		end
+	end
+end
+
+function DrawScrollBar(x, current, max)
+	local fullHeight = Drawing.Screen.Height - 3
+	local barHeight = (fullHeight - max)
+	if barHeight < 5 then
+		barHeight = 5
+	end
+	Drawing.DrawBlankArea(x, 4, 1, fullHeight, colours.grey)
+	Drawing.DrawBlankArea(x, 4+current, 1, barHeight, colours.lightBlue)
+end
+
+local diskOpenButton = nil
+
+function DrawPeripheral()
+	Drawing.DrawCharacters(Current.SidebarWidth+10, 6, Current.Peripheral.Type, colours.black, colours.white)
+	Drawing.DrawCharacters(Current.SidebarWidth+10, 7, Current.Peripheral.Side, colours.grey, colours.white)
+	Drawing.DrawImage(Current.SidebarWidth+3, 6, Current.Peripheral.Image, 5, 4)
+	local y = 11
+	local x = Helpers.LongestString(Current.Peripheral.Info, nil, true) + 5
+	for k, v in pairs(Current.Peripheral.Info) do
+		Drawing.DrawCharacters(Current.SidebarWidth+3, y, k, colours.grey, colours.white)
+		Drawing.DrawCharacters(Current.SidebarWidth+x, y, v, colours.black, colours.white)
+		y = y + 1
+	end
+	if diskOpenButton then
+		diskOpenButton:Draw()
+	end
+end
+
+function DrawFiles()
+	local y = 5
+	Drawing.DrawCharacters(Current.SidebarWidth+1, y-1, Helpers.TidyPath(Current.Path), colours.lightGrey, colours.white)
+	if Current.Path:sub(1,13) == '/Peripherals/' then
+		DrawPeripheral()
+		return 
+	end
+	if Settings.ListMode then
+
+		for i, v in ipairs(Current.FileList) do
+			if i > Current.FileScroll then
+				local backgroundColour = colours.white
+
+				local textColour = colours.black
+				if i%2 == 1 then
+					textColour = colours.grey
+				end
+
+				if Current.SelectedFile and v.name == Current.SelectedFile then
+					backgroundColour = colours.lightBlue
+					textColour = colours.white
+				end
+
+				Drawing.DrawBlankArea(Current.SidebarWidth+1, y , Drawing.Screen.Width-Current.SidebarWidth, 1, backgroundColour)
+				Drawing.DrawCharacters(Current.SidebarWidth+2, y, v.name, textColour, backgroundColour)
+
+				y = y + 1
+			end
+		end
+	else
+		if #Current.FileList == 0 then
+			local title = 'This folder is empty'
+			Drawing.DrawCharacters(((Drawing.Screen.Width - Current.SidebarWidth)-#title)/2 + Current.SidebarWidth, (Drawing.Screen.Height - 3)/2 + 2, title, colours.grey, colours.white)
+		else
+			local slotWidth = 10
+			local scrollN = Current.FileScroll * math.floor((Drawing.Screen.Width - Current.SidebarWidth + 1) / slotWidth)
+			for i, file in ipairs(Current.FileList) do
+				if i > scrollN then
+					local backgroundColour = colours.white
+					local textColour = colours.black
+					if Current.SelectedFile and Current.SelectedFile == file.name then
+						backgroundColour = colours.blue
+						textColour = colours.white
+					end
+
+					local shortenedName = Helpers.TruncateString(file.shortName, 9)
+					local x, y = IconLocation(i)
+					x = x + Current.SidebarWidth
+					y = y + 3
+					y = y - Current.FileScroll * 5
+					Drawing.DrawImage(x, y, Helpers.IconForFile(file.path), 4, 3)
+					Drawing.DrawCharacters(math.floor(x+2-(#shortenedName/2)), y+3, shortenedName, textColour, backgroundColour)
+					if Helpers.Extension(file.name) == 'shortcut' then
+						Drawing.WriteToBuffer(x+3, y+2, '>', colours.black, colours.white)
+					end
+				end
+			end
+		end
+	end
+
+	if Current.MaxFileScroll ~= 0 then
+		DrawScrollBar(Drawing.Screen.Width, Current.FileScroll, Current.MaxFileScroll)
+	end
+end
+
+function IconLocation(i)
+	local y, x = 2, 4
+	local slotHeight = 5
+	local slotWidth = 10
+	local maxColl = math.floor((Drawing.Screen.Width - Current.SidebarWidth + 1) / slotWidth)
+	i = i - 1
+	local row = math.ceil((i / maxColl)+0.1) - 1
+	y = y + (slotHeight * row)
+	x = x + (i % maxColl) * slotWidth
+	return x, y
+end
+
+function RefreshFiles()
+	diskOpenButton = nil
+	Current.FileList = {}
+	if Current.Path:sub(1,13) == '/Peripherals/' then
+		if peripheral.isPresent(Current.Peripheral.Side:lower()) then
+			if Current.Peripheral.Type == 'wireless_modem' then
+				Current.Peripheral.Type = 'Wireless Modem'
+			end
+			Current.Peripheral.Type = Helpers.Capitalise(Current.Peripheral.Type)
+			Current.Peripheral.Side = Helpers.Capitalise(Current.Peripheral.Side)
+
+			Current.Peripheral.Image = Drawing.LoadImage('/System/Programs/Files.program/images/'..Current.Peripheral.Type)
+			if not Current.Peripheral.Image then
+				Current.Peripheral.Image = Drawing.LoadImage('/System/Programs/Files.program/images/Unknown')
+			end
+
+			Current.Peripheral.Info = {}
+
+			if Current.Peripheral.Type == 'Computer' then
+				local id = peripheral.call(Current.Peripheral.Side:lower(),'getID')
+				if id then
+					Current.Peripheral.Info = {
+						ID = tostring(id)
+					}
+				else
+					Current.Peripheral.Info = {}
+				end
+			elseif Current.Peripheral.Type == 'Drive' then
+				local discType = 'No Disc'
+				local discID = nil
+				local mountPath = nil
+				local discLabel = nil
+				local songName = nil
+				if peripheral.call(Current.Peripheral.Side:lower(), 'isDiskPresent') then
+					if peripheral.call(Current.Peripheral.Side:lower(), 'hasData') then
+						discType = 'Data'
+						discID = peripheral.call(Current.Peripheral.Side:lower(), 'getDiskID')
+						if discID then
+							discID = tostring(discID)
+						else
+							discID = 'None'
+						end
+						mountPath = '/'..peripheral.call(Current.Peripheral.Side:lower(), 'getMountPath')..'/'
+						discLabel = peripheral.call(Current.Peripheral.Side:lower(), 'getDiskLabel')
+					else
+						discType = 'Audio'
+						songName = peripheral.call(Current.Peripheral.Side:lower(), 'getAudioTitle')
+					end
+				end
+				if mountPath then
+					diskOpenButton = Button:Initialise(Current.SidebarWidth+10, 9, nil, nil, colours.lightGrey, nil, nil, nil, nil, function()GoToPath(mountPath)end, 'View Files')
+				elseif discType == 'Audio' then
+					diskOpenButton = Button:Initialise(Current.SidebarWidth+10, 9, nil, nil, colours.lightGrey, nil, nil, nil, nil, function()disk.playAudio(Current.Peripheral.Side:lower()) end, 'Play')
+				else
+					diskOpenButton = nil
+				end
+
+				Current.Peripheral.Info = {
+					['Disc Type'] = discType,
+					['Disc Label'] = discLabel,
+					['Song Title'] = songName,
+					['Disc ID'] = discID,
+					['Mount Path'] = mountPath
+				}
+			elseif Current.Peripheral.Type == 'Printer' then
+				local pageSize = 'No Loaded Page'
+				local _, err = pcall(function() return tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getPgaeSize')) end)
+				if not err then
+					pageSize = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getPageSize'))
+				end
+				Current.Peripheral.Info = {
+					['Paper Level'] = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getPaperLevel')),
+					['Paper Size'] = pageSize,
+					['Ink Level'] = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getInkLevel'))
+				}
+			elseif Current.Peripheral.Type == 'Modem' then
+				Current.Peripheral.Info = {
+					['Connected Peripherals'] = tostring(#peripheral.call(Current.Peripheral.Side:lower(), 'getNamesRemote'))
+				}
+			elseif Current.Peripheral.Type == 'Monitor' then
+				local w, h = peripheral.call(Current.Peripheral.Side:lower(), 'getSize')
+				local screenType = 'Black and White'
+				if peripheral.call(Current.Peripheral.Side:lower(), 'isColour') then
+					screenType = 'Colour'
+				end
+				local buttonTitle = 'Use as Screen'
+				if OneOS.Settings:GetValues()['Monitor'] == Current.Peripheral.Side:lower() then
+					buttonTitle = 'Use Computer Screen'
+				end
+				diskOpenButton = Button:Initialise(Current.SidebarWidth+10, 9, nil, nil, colours.lightGrey, nil, nil, nil, nil, function() 
+					ButtonDialogueWindow:Initialise("Reboot Required", "To change screen you'll need to reboot your computer.", 'Reboot', 'Cancel', function(self, success)
+						if success then
+							if buttonTitle == 'Use Computer Screen' then
+								OneOS.Settings:SetValue('Monitor', nil)
+							else
+								OneOS.Settings:SetValue('Monitor', Current.Peripheral.Side:lower())
+							end
+							OneOS.Reboot()
+						end
+					end):Show()
+				end, buttonTitle)
+				Current.Peripheral.Info = {
+					['Type'] = screenType,
+					['Width'] = tostring(w),
+					['Height'] = tostring(h),
+				}
+			end
+			return
+		else
+			Current.Path = '/Desktop/'
+		end
+	end
+	for i, v in ipairs(OneOS.FS.list(Current.Path)) do
+		Current.Peripheral = nil
+		if Settings.ShowHidden or string.sub( v, 1, 1 ) ~= '.' then
+			local path = Current.Path .. '/' .. v
+			if Helpers.TidyPath(path) == '/rom/' then
+				break
+			end
+			table.insert(Current.FileList,{
+				name = OneOS.FS.getName(path),
+				shortName = Helpers.RemoveExtension(OneOS.FS.getName(path)),
+				size = OneOS.FS.getSize(path),
+				isDirectory = OneOS.FS.isDir(path),
+				path = Helpers.TidyPath(path)
+			})
+		end
+	end
+	Current.SidebarList.Peripherals = Peripheral.GetPeripherals()
+end
+
+function GoToPath(path, history)
+	history = history or false
+	local path = Helpers.TidyPath(path)
+
+	if not history then
+		for i, v in ipairs(Current.History) do
+			if i >= Current.HistoryItem then
+				Current.History[i] = nil
+ 			end
+		end
+		table.insert(Current.History, Current.Path)
+		Current.HistoryItem = #Current.History + 1
+	end
+	Current.FileScroll = 0
+	Current.Path = Helpers.TidyPath(path)
+	Update()
+end
+
+function UpdateScroll()
+	if Settings.ListMode then
+		Current.MaxFileScroll = #Current.FileList - (Drawing.Screen.Height - 4)
+		if Current.MaxFileScroll < 0 then
+			Current.MaxFileScroll = 0
+		end
+	else
+		local slotWidth = 10
+		local slotHeight = 5
+		local collCount = math.floor((Drawing.Screen.Width - Current.SidebarWidth + 1) / slotWidth)
+		Current.MaxFileScroll = math.floor((math.ceil(#Current.FileList / collCount)*slotHeight  - (Drawing.Screen.Height - 4))/slotHeight)
+		if Current.MaxFileScroll < 0 then
+			Current.MaxFileScroll = 0
+		end
+
+--		Current.MaxFileScroll = Current.MaxFileScroll / math.ceil()
+	end
+
+end
+
+function GoBack()
+	if Current.History[Current.HistoryItem-1] then
+		table.insert(Current.History, Current.Path)
+		GoToPath(Current.History[Current.HistoryItem-1], true)
+		Current.HistoryItem = Current.HistoryItem - 1
+	end
+end
+
+function GoForward()
+	if Current.History[Current.HistoryItem+1] then
+		GoToPath(Current.History[Current.HistoryItem+1], true)
+		Current.HistoryItem = Current.HistoryItem + 1
+	end
+end
+
+function Update()
+	RefreshFiles()
+	UpdateScroll()
+	Draw()
+end
+
+function Draw()
+	Current.Clicks = {}
+	Drawing.DrawBlankArea(1, 1, Drawing.Screen.Width, 3, colours.lightGrey)
+	Drawing.DrawBlankArea(1, 4, Drawing.Screen.Width, Drawing.Screen.Height-3, colours.white)
+	if not isCompressed then
+		if Current.History[Current.HistoryItem-1] then
+			BackButton.TextColour = colours.black
+		else
+			BackButton.TextColour = colours.lightGrey
+		end
+	else
+		if Current.Path ~= '/' then
+			BackButton.TextColour = colours.black
+		else
+			BackButton.TextColour = colours.lightGrey
+		end
+	end
+
+	if ForwardButton and Current.History[Current.HistoryItem+1] then
+		ForwardButton.TextColour = colours.black
+	elseif  ForwardButton then
+		ForwardButton.TextColour = colours.lightGrey
+	end
+
+	DrawSidebar()
+	DrawFiles()
+	for i, elem in ipairs(InterfaceElements) do
+		if elem.Draw then
+			elem:Draw()
+		end
+	end
+
+	if Current.Window then
+		Current.Window:Draw()
+	end
+
+	UpdateCursor()
+
+	Drawing.DrawBuffer()
+end
+
+function UpdateCursor()
+	if Current.Input then
+		term.setCursorPos(Current.CursorPos[1], Current.CursorPos[2])
+		term.setCursorBlink(true)
+		term.setTextColour(Current.CursorColour)
+	else
+		term.setCursorBlink(false)
+	end
+end
+
+MainDraw = Draw
+
+function OpenFile(file, ignoreProgram)
+	local extension = Helpers.Extension(file.path)
+	if extension == 'shortcut' then
+		h = OneOS.FS.open(file.path, 'r')
+		local shortcutPointer = h.readLine()
+		h.close()
+		if OneOS.FS.isDir(shortcutPointer) then
+			OpenFile({path = shortcutPointer, isDirectory = true}, ignoreProgram)
+			return
+		end
+	end
+	if file.isDirectory and (ignoreProgram or extension ~= 'program') then
+		GoToPath(file.path)
+	elseif not ignoreProgram and extension == 'program' then
+		if OneOS.FS.isDir(file.path) and OneOS.FS.exists(file.path..'/startup') then
+			OneOS.OpenFile(file.path)
+		elseif not OneOS.FS.isDir(file.path) or (OneOS.FS.isDir(file.path) and OneOS.FS.exists(file.path..'/startup')) then
+			OneOS.OpenFile(file.path)
+		else
+			GoToPath(file.path)
+		end
+	else
+		if Current.SelectedFile == file.name then
+			if Helpers.IconForFile(file.path) == Helpers.ReadIcon('System/Images/Icons/unknown') then
+				OpenWithDialougeWindow:Initialise("Select Program", "Choose a program to open the file with.", "Ok", "Cancel", function(success, value)
+					if success and #value ~= 0 then
+						OneOS.Run(value, file.path)
+					end
+				end):Show()
+			else
+				OneOS.OpenFile(file.path)
+			end
+			Current.SelectedFile = nil
+		else
+			Current.SelectedFile = file.name
+			Draw()
+		end
+	end
+end
+
+function ScrollBarDrag(event, x, y)
+	Scroll('mouse_scroll', y-Current.ScrollBarDragStartY)
+	Current.ScrollBarDragStartY = y
+end
+
+function FilesClick(event, x, y, side)
+	if event == 'mouse_drag' and x == Drawing.Screen.Width - Current.SidebarWidth and Current.MaxFileScroll ~= 0 then
+		ScrollBarDrag(event, x, y)
+	elseif event == 'mouse_click' and x == Drawing.Screen.Width - Current.SidebarWidth and Current.MaxFileScroll ~= 0 then
+		Current.ScrollBarDragStartY = y
+	elseif Settings.ListMode then
+		if Current.FileList[y+Current.FileScroll] then
+			if side == 1 then
+				if Current.SelectedFile == Current.FileList[y+Current.FileScroll].name and lastClick and (os.clock() - lastClick) < 0.5 then
+					OpenFile(Current.FileList[y+Current.FileScroll])
+				else
+					Current.SelectedFile = Current.FileList[y+Current.FileScroll].name
+				end
+
+				lastClick = os.clock()
+				Draw()
+			elseif side == 2 then
+				RightClickFile(Current.FileList[y+Current.FileScroll], x + Current.SidebarWidth, y + 3)
+			end
+		end
+	else
+		local found = false
+		y = y + Current.FileScroll * 5
+		for i, file in ipairs(Current.FileList) do
+			
+			if event == 'mouse_click' and FileHitTest(i, file, x, y) then
+				found = true
+				if side == 1 then
+					local fX, fY = IconLocation(i)
+					dragRelPos = {x = fX - x,  y = fY - y}
+					
+
+					if Current.SelectedFile == file.name and lastClick and (os.clock() - lastClick) < 0.5 then
+						OpenFile(Current.FileList[i])
+					end
+
+					lastClick = os.clock()
+					Current.SelectedFile = file.name
+					Draw()
+				elseif side == 2 then
+					RightClickFile(file, x + Current.SidebarWidth + 1, y + 4)
+				end
+			end
+		end
+
+		if not found and Current.Path:sub(1,13) ~= '/Peripherals/' then
+			if side == 1 then
+				Current.SelectedFile = nil
+			elseif side == 2 then
+				local items = { 
+					{
+						Title = 'New Folder',
+						Click = function()
+							TextDialogueWindow:Initialise("Create a Folder", function(success, value)
+								if success then
+									OneOS.FS.makeDir(Current.Path..'/'..value)
+									Update()
+								end
+							end):Show()
+						end
+					},
+					{
+						Title = 'New File...',
+						Click = function()
+							TextDialogueWindow:Initialise("Create a File", function(success, value)
+								if success then
+									local h = OneOS.FS.open(Current.Path..'/'..value, 'w')
+									h.close()
+									RefreshFiles()
+								end
+							end):Show()
+						end
+					},
+					{
+						Separator = true
+					},
+					{
+						Title = 'Paste',
+						Click = function()							
+							local destName = OneOS.FS.getName(Current.Clipboard.Content)
+							local copyNumber = 1
+							while OneOS.FS.exists(Current.Path..'/'..destName) do
+								destName = Helpers.RemoveExtension(OneOS.FS.getName(Current.Clipboard.Content)).. ' ' .. copyNumber .. Helpers.Extension(OneOS.FS.getName(Current.Clipboard.Content), true)
+								copyNumber = copyNumber + 1
+							end
+							local destPath = Helpers.TidyPath(Current.Path..'/'..destName)
+
+							if not Current.Clipboard.IsCut then
+								OneOS.FS.copy(Current.Clipboard.Content, destPath)
+								Update()
+							elseif Current.Clipboard.IsCut then
+								local content = Current.Clipboard.Paste()
+								OneOS.FS.move(content, destPath)
+								Update()
+							end
+						end
+					},
+				}
+				if not Current.Clipboard.Content then
+					table.remove(items, 4)
+					table.remove(items, 3)
+				end
+				Menu:Initialise(x + Current.SidebarWidth + 1, y + 4, nil, nil, nil, items):Show()
+				Draw()
+			end
+		end
+	end
+end
+
+function RightClickFile(file, absX, absY)
+	local openContent = {
+			Title = 'View Program Content',
+			Click = function()
+				OpenFile(file, true)
+			end
+		}
+	local runWithArgs = {
+		Title = 'Open With Arguments...',
+		Click = function()
+			TextDialogueWindow:Initialise("Arguments", function(success, value)
+				if success and #value ~= 0 then
+					local tWords = {}
+					for match in string.gmatch( value, "[^ \t]+" ) do
+						table.insert( tWords, match )
+					end
+					OneOS.Run(file.path, unpack(tWords))
+				end
+			end):Show()
+		end
+	}
+	local openWith = {
+			Title = 'Open With...',
+			Click = function()
+				OpenWithDialougeWindow:Initialise("Select Program", "Choose a program to open the file with.", "Ok", "Cancel", function(success, value)
+					if success and #value ~= 0 then
+						OneOS.Run(value, file.path)
+					end
+				end):Show()
+			end
+		}
+
+	local extension = Helpers.Extension(file.path)
+	if not extension == 'program' or not OneOS.FS.isDir(file.path) then
+		openContent = nil
+	else
+		openWith = nil
+	end
+
+	Current.SelectedFile = file.name
+	local items = { 
+		{
+			Title = 'Open',
+			Click = function()
+				OpenFile(file)
+			end
+		}, 
+		{
+			Separator = true
+		},
+		{
+			Title = 'Rename...',
+			Click = function()
+				if file.path == '/Desktop/Documents/' or file.path == '/Programs/' or file.path == '/System/' then
+					ButtonDialogueWindow:Initialise("Unable to rename!", 'You can not rename that folder.', 'Ok', nil, function()end):Show()
+				else
+					local tdw = TextDialogueWindow:Initialise("Rename '"..Helpers.TruncateString(file.name, 17).."'", function(success, value)
+						if success and #value ~= 0 then
+							OneOS.FS.move(file.path, Helpers.RemoveFileName(file.path)..value)
+							Update()
+						end
+					end):Show()
+				end
+			end
+		},
+		{
+			Title = 'Delete...',
+			Click = function()
+				if file.path == '/Desktop/Documents/' then
+					ButtonDialogueWindow:Initialise("Unable to delete!", 'You can not delete the Documents folder.', 'Ok', nil, function()end):Show()
+				else
+					ButtonDialogueWindow:Initialise("Delete '"..Helpers.TruncateString(Helpers.RemoveExtension(file.name), 16).."'?", "Are you sure you want to delete '"..file.name.."'?", 'Yes', 'Cancel', function(success)
+						if success then
+							OneOS.FS.delete(file.path)
+							Update()
+						end
+					end):Show()
+				end
+			end
+		},
+		{
+			Title = 'Make Desktop Shortcut',
+			Click = function()
+				Helpers.MakeShortcut(file.path)
+			end
+		},
+		{
+			Separator = true
+		},
+		{
+			Title = 'Copy',
+			Click = function()
+				Current.Clipboard.Copy(file.path, 'filepath')
+			end
+		},
+		{
+			Title = 'Cut',
+			Click = function()
+				Current.Clipboard.Cut(file.path, 'filepath')
+			end
+		},
+		{
+			Separator = true
+		},
+		{
+			Title = 'New Folder...',
+			Click = function()
+				TextDialogueWindow:Initialise("Create a folder", function(success, value)
+					if success then
+						OneOS.FS.makeDir('Desktop/'..value)
+						RefreshFiles()
+					end
+				end):Show()
+			end
+		},
+		{
+			Title = 'New File...',
+			Click = function()
+				TextDialogueWindow:Initialise("Create a Folder", function(success, value)
+					if success then
+						local h = OneOS.FS.open(Current.Path..'/'..value, 'w')
+						h.close()
+						RefreshFiles()
+					end
+				end):Show()
+			end
+		}
+	}
+	if file.isDirectory then
+		table.insert(items, 3,
+		{
+			Title = 'Create Package',
+			Click = function()
+				local packrun = loadfile('pkgmake')
+				local env = getfenv()
+				setfenv( packrun, env)
+				local path = file.path:sub(1,#file.path-1)
+				packrun(file.path, Helpers.RemoveFileName(path)..Helpers.RemoveExtension(OneOS.FS.getName(path))..'.pkg')
+				Update()
+			end
+		})
+
+		table.insert(items, 4,
+		{
+			Separator = true
+		})
+	else
+		table.insert(items, 3,
+		{
+			Title = 'Transmit',
+			Click = function()
+				OneOS.Run('/Programs/Transmit.program/',file.path)
+			end
+		})
+
+		table.insert(items, 4,
+		{
+			Separator = true
+		})
+	end
+	if openContent then
+		table.insert(items, 2, openContent)
+		table.insert(items, 3, runWithArgs)
+	elseif openWith then
+		table.insert(items, 2, openWith)
+	end
+	Menu:Initialise(absX, absY, nil, nil, nil, items):Show()
+	Draw()
+end
+
+function Scroll(event, direction, x, y)
+	Current.FileScroll = Current.FileScroll + direction
+	if Current.FileScroll < 0 then
+		Current.FileScroll = 0
+	elseif Current.FileScroll > Current.MaxFileScroll then
+		Current.FileScroll = Current.MaxFileScroll
+	end
+	Draw()
+end
+
+function FileHitTest(i, file, x, y)
+	local fX, fY = IconLocation(i)
+	fY = fY - 1
+	local shortenedName = Helpers.TruncateString(file.name, 9)
+	return (y >= fY and y <= fY + 2 and x >= fX and x <= fX + 3) or (y == fY + 3 and x >= math.floor(fX+2-(#shortenedName/2)) and x <= math.floor(fX+1+(#shortenedName/2)))
+end
+
+function SidebarClick(x, y, side)
+	local pastHeight = 0
+	for k, items in pairs(Current.SidebarList) do
+		if y <= pastHeight + 2 + #items and items[y-pastHeight-1] then
+			if k == 'Favourites' then
+				GoToPath(items[y-pastHeight-1][2])
+			else
+				Current.Peripheral = items[y-pastHeight-1]
+				GoToPath('/Peripherals/'..Helpers.Capitalise(items[y-pastHeight-1].Side))
+			end
+			return
+		end
+		pastHeight = pastHeight + 2 + #items
+	end
+end
+
+function RegisterElement(elem)
+	table.insert(InterfaceElements, elem)
+end
+
+function UnregisterElement(elem)
+	for i, e in ipairs(InterfaceElements) do
+		if elem == e then
+			InterfaceElements[i] = nil
+		end
+	end
+end
+
+function RegisterClick(elem)
+	table.insert(Current.Clicks, elem)
+end
+
+function CheckClick(object, x, y)
+	local pos = GetAbsolutePosition(object)
+	if pos.X <= x and pos.Y <= y and  pos.X + object.Width > x and pos.Y + object.Height > y then
+		return true
+	end
+end
+
+function DoClick(event, object, side, x, y)
+	if object and CheckClick(object, x, y) then
+		return object:Click(side, x - object.X + 1, y - object.Y + 1)
+	end	
+end
+
+function TryClick(event, side, x, y)
+	if Current.Menu and DoClick(event, Current.Menu, side, x, y) then
+		Draw()
+		return
+	elseif Current.Window then
+		if DoClick(event, Current.Window, side, x, y) then
+			Draw()
+			return
+		else
+			Current.Window:Flash()
+		end
+	else
+		if Current.Menu then
+			Current.Menu:Close()
+			Draw()
+		end
+
+		for i, object in ipairs(Current.Clicks) do
+			if DoClick(event, object, side, x, y) then
+				Draw()
+				return
+			end		
+		end
+
+		if 1 <= x and 5 <= y and  Current.SidebarWidth + 1 > x then
+			SidebarClick(x, y - 4, side)
+		elseif 5 <= y then
+			FilesClick(event, x - Current.SidebarWidth, y - 4, side)
+		end
+	end
+end
+
+function HandleKey(...)
+	local args = {...}
+	local event = args[1]
+	local keychar = args[2]
+	if Current.Window then
+		if event == 'key' then
+			if keychar == keys.enter then
+				if Current.Window.OkButton then
+					Current.Window.OkButton:Click(1,1,1)
+					Draw()
+				end
+			end
+		end
+		if Current.Input then
+			if event == 'char' then
+				Current.Input:Char(keychar)
+			elseif event == 'key' then
+				Current.Input:Key(keychar)
+			end
+			UpdateCursor()
+		end
+	elseif Current.SelectedFile then
+		if event == 'key' then
+			if keychar == keys.enter then
+				local file = nil
+				for i, f in ipairs(Current.FileList) do
+					if f.name == Current.SelectedFile then
+						file = f
+					end
+				end
+				if file then
+					OpenFile(file)
+				end
+			elseif keychar == keys.delete or keychar == keys.backspace then
+				local file = nil
+				for i, f in ipairs(Current.FileList) do
+					if f.name == Current.SelectedFile then
+						file = f
+					end
+				end
+				if file then
+					ButtonDialogueWindow:Initialise("Delete '"..Helpers.TruncateString(Helpers.RemoveExtension(file.name), 16).."'?", "Are you sure you want to delete '"..file.name.."'?", 'Yes', 'Cancel', function(success)
+						if success then
+							OneOS.FS.delete(file.path)
+							Update()
+						end
+					end):Show()
+					Draw()
+				end
+			end
+		end
+	end
+
+	if keychar == keys.up then
+		Scroll('mouse_scroll', -1)
+	elseif keychar == keys.down then
+		Scroll('mouse_scroll', 1)
+	end
+end
+
+function GetAbsolutePosition(obj)
+	if not obj.Parent then
+		return {X = obj.X, Y = obj.Y}
+	else
+		local pos = GetAbsolutePosition(obj.Parent)
+		local x = pos.X + obj.X - 1
+		local y = pos.Y + obj.Y - 1
+		return {X = x, Y = y}
+	end
+end
+
+function EventRegister(event, func)
+	if not Events[event] then
+		Events[event] = {}
+	end
+
+	table.insert(Events[event], func)
+end
+
+function EventHandler()
+	while true do
+		local event = { coroutine.yield() }
+		if Events[event[1]] then
+			for i, e in ipairs(Events[event[1]]) do
+				e(event[1], event[2], event[3], event[4], event[5])
+			end
+		end
+	end
+end
+
+Initialise()

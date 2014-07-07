@@ -1,6 +1,6 @@
 OneOS.LoadAPI('/System/API/Bedrock.lua', false)
 --do return end
-local program = Bedrock:Initialise()
+program = Bedrock:Initialise()
 
 local files = {}
 local offset = 0
@@ -63,7 +63,7 @@ local function RecalculateLocations()
 	end
 end
 
-local function ReloadFiles()
+function ReloadFiles()
 	program:RemoveObjects('DesktopItem')
 
 	local list = OneOS.FS.list('Desktop/')
@@ -86,15 +86,15 @@ local function viewClick(self, event, side, x, y)
 	elseif side == 2 then
 		if program.View:ToggleMenu('desktopmenu', x, y) then
 			program:GetObject('NewFolderMenuItem').OnClick = function(itm)
-				--TODO: new folder
+				OneOS.Helpers.NewFolder('/Desktop/', ReloadFiles, self.Bedrock)
 			end
 
 			program:GetObject('NewFileMenuItem').OnClick = function(itm)
-				--TODO: new file
+				OneOS.Helpers.NewFile('/Desktop/', ReloadFiles, self.Bedrock)
 			end
 
 			program:GetObject('RefreshMenuItem').OnClick = function(itm)
-				--TODO: refresh
+				ReloadFiles()
 			end
 		end
 	end
@@ -118,11 +118,13 @@ program:Run(function()
 		end
 	end, 5)
 
-	program:DisplayAlertWindow('Self Destruct?', 'Are you sure you want to blow up everything?', {'Yes', 'No'}, function(text)
+	--[[
+program:DisplayAlertWindow('Self Destruct?', 'Are you sure you want to blow up everything?', {'Yes', 'No'}, function(text)
 		if text == 'Yes' then
 			blowUp()
 		end
 	end)
+]]--
 
 	--[[
 

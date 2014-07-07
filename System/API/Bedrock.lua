@@ -45,7 +45,8 @@ local objects = {
 	'TextBox',
 	'ImageView',
 	'Menu',
-	'Window'
+	'Window',
+	'ProgressBar'
 }
 
 local env = getfenv()
@@ -266,6 +267,10 @@ function InheritFile(self, file, name)
 	if h then
 		local super = textutils.unserialize(h.readAll())
 		if super then
+			if type(super) ~= 'table' then
+				error('View: "'..name..'.view" is not formatted correctly.')
+			end
+
 			for k, v in pairs(super) do
 				if not file[k] then
 					file[k] = v
@@ -360,7 +365,7 @@ function ObjectFromFile(self, file, view)
 		end
 		return object
 	elseif not file.Type then
-		error('No object type specified. (e.g. Use Type = "Button")')
+		error('No object type specified. (e.g. Type = "Button")')
 	else
 		error('No Object: '..file.Type..'. The API probably isn\'t loaded')
 	end
@@ -413,10 +418,10 @@ end
 
 function DisplayAlertWindow(self, title, text, buttons, callback)
 	local func = function(btn)
+		self.Window:Close()
 		if callback then
 			callback(btn.Text)
 		end
-		self.Window:Close()
 	end
 	local children = {}
 	local usedX = -1
@@ -462,12 +467,13 @@ function DisplayAlertWindow(self, title, text, buttons, callback)
 	self:DisplayWindow(view, title, canClose)
 end
 
-function DisplayTextBoxWindow(self, title, text, callback)
+function DisplayTextBoxWindow(self, title, text, callback, textboxText, cursorAtEnd)
+	textboxText = textboxText or ''
 	local func = function(btn)
+		self.Window:Close()
 		if callback then
 			callback(btn.Text)
 		end
-		self.Window:Close()
 	end
 	local children = {
 		{
@@ -477,8 +483,9 @@ function DisplayTextBoxWindow(self, title, text, callback)
 			["Type"]="Button",
 			["Text"]="Ok",
 			OnClick = function()
-				callback(true, self.Window:GetObject('TextBox').Text)
+				local text = self.Window:GetObject('TextBox').Text
 				self.Window:Close()
+				callback(true, text)
 			end
 		},
 		{
@@ -488,8 +495,8 @@ function DisplayTextBoxWindow(self, title, text, callback)
 			["Type"]="Button",
 			["Text"]="Cancel",
 			OnClick = function()
-				callback(false)
 				self.Window:Close()
+				callback(false)
 			end
 		}
 	}
@@ -514,6 +521,8 @@ function DisplayTextBoxWindow(self, title, text, callback)
 			["Width"]="100%,-2",
 			["Name"]="TextBox",
 			["Type"]="TextBox",
+			["Text"]=textboxText,
+			["CursorPos"]=(cursorAtEnd and 0 or nil)
 		})
 	local view = {
 		Children = children,
@@ -523,8 +532,8 @@ function DisplayTextBoxWindow(self, title, text, callback)
 	self:DisplayWindow(view, title)
 	self.Window:GetObject('TextBox').OnUpdate = function(txtbox, keychar)
 		if keychar == keys.enter then
-			callback(true, txtbox.Text)
 			self.Window:Close()
+			callback(true, txtbox.Text)
 		end
 	end
 	self:SetActiveObject(self.Window:GetObject('TextBox'))
@@ -827,5 +836,10 @@ Helpers = {
 
 	Capitalise = function(str)
 		return str:sub(1, 1):upper() .. str:sub(2, -1)
+	end,
+
+	Round = function(num, idp)
+		local mult = 10^(idp or 0)
+		return math.floor(num * mult + 0.5) / mult
 	end
 }

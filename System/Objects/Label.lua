@@ -3,6 +3,13 @@ BackgroundColour = colours.transparent
 Text = ""
 AutoWidth = false
 
+OnUpdate = function(self, value)
+    if value == 'Text' and self.AutoWidth then
+        self.Width = #self.Text
+        return true --TODO: remove the need for the return value
+    end
+end
+
 local wrapText = function(text, maxWidth)
 	local lines = {''}
     for word, space in text:gmatch('(%S+)(%s*)') do

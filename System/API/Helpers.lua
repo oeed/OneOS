@@ -226,3 +226,92 @@ Capitalise = function(str)
 	return str:sub(1, 1):upper() .. str:sub(2, -1)
 end
 
+RenameFile = function(path, done, bedrock)
+	bedrock = bedrock or Current.Bedrock
+	path = TidyPath(path)
+	local function showRename()
+		local ext = ''
+		if fs.getName(path):find('%.') then
+			ext = '.'..Extension(path)
+		end
+		bedrock:DisplayTextBoxWindow('Rename '..fs.getName(path), "Enter the new file name.", function(success, value)
+			if success and #value ~= 0 then
+				--TODO: doIndex()
+				local _, err = pcall(function()fs.move(path, RemoveFileName(path)..value) if done then done() end end)
+				if err then
+					bedrock:DisplayAlertWindow('Rename Failed!', 'Error: '..err, {'Ok'})
+				end
+			end
+		end, ext, true)
+	end
+	
+	if path == '/startup' or path:find('/System/') or path == '/Desktop/Documents/' or path == '/Desktop/' then
+		bedrock:DisplayAlertWindow('Important File!', 'Renaming this file might cause your computer to stop working. Are you sure you want to rename it?', {'Rename', 'Cancel'}, function(text)
+			if text == 'Rename' then
+				showRename()
+			end
+		end)
+	else
+		showRename()
+	end
+end
+
+DeleteFile = function(path, done, bedrock)
+	bedrock = bedrock or Current.Bedrock
+	path = TidyPath(path)
+	local function doDelete()
+		local _, err = pcall(function()fs.delete(path) if done then done() end end)
+		if err then
+			bedrock:DisplayAlertWindow('Delete Failed!', 'Error: '..err, {'Ok'})
+		end
+	end
+	
+	if path == '/startup' or path:find('/System/') or path == '/Desktop/Documents/' or path == '/Desktop/' then
+		bedrock:DisplayAlertWindow('Important File!', 'Deleting this file might cause your computer to stop working. Are you sure you want to delete it?', {'Delete', 'Cancel'}, function(text)
+			if text == 'Delete' then
+				doDelete()
+			end
+		end)
+	else
+		bedrock:DisplayAlertWindow('Delete File?', 'Are you sure you want to permanently delete this file?', {'Delete', 'Cancel'}, function(text)
+			if text == 'Delete' then
+				doDelete()
+			end
+		end)
+	end
+end
+
+NewFile = function(basePath, done, bedrock)
+	bedrock = bedrock or Current.Bedrock
+	basePath = TidyPath(basePath)
+	bedrock:DisplayTextBoxWindow('Create New File', "Enter the new file name.", function(success, value)
+		if success and #value ~= 0 then
+			--TODO: doIndex()
+			local _, err = pcall(function()
+				local h = fs.open(basePath..value, 'w')
+				h.close()
+				if done then done() end
+			end)
+			if err then
+				bedrock:DisplayAlertWindow('File Creation Failed!', 'Error: '..err, {'Ok'})
+			end
+		end
+	end)
+end
+
+NewFolder = function(basePath, done, bedrock)
+	bedrock = bedrock or Current.Bedrock
+	basePath = TidyPath(basePath)
+	bedrock:DisplayTextBoxWindow('Create New Folder', "Enter the new folder name.", function(success, value)
+		if success and #value ~= 0 then
+			--TODO: doIndex()
+			local _, err = pcall(function()
+				fs.makeDir(basePath..value)
+				if done then done() end
+			end)
+			if err then
+				bedrock:DisplayAlertWindow('File Creation Failed!', 'Error: '..err, {'Ok'})
+			end
+		end
+	end)
+end

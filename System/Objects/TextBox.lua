@@ -33,7 +33,9 @@ OnDraw = function(self, x, y)
 end
 
 OnLoad = function(self)
-	self.CursorPos = #self.Text
+	if not self.CursorPos then
+		self.CursorPos = #self.Text
+	end
 end
 
 OnClick = function(self, event, side, x, y)

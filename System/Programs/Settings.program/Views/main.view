@@ -1,0 +1,14 @@
+{
+  ["Children"]={
+    [1]={
+      ["Y"]=1,
+      ["X"]=1,
+      ["Name"]="Toolbar",
+      ["Type"]="View",
+      ["InheritView"]="toolbar"
+    },
+  },
+  ["BackgroundColour"]=1,
+  ["ToolBarColour"]=128,
+  ["ToolBarTextColour"]=1
+}

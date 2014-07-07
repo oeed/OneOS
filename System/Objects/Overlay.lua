@@ -14,8 +14,17 @@ end
 OnLoad = function(self)
 	self:GetObject('OneButton').OnClick = function(btn)
 		if btn:ToggleMenu('onemenu') then
+
 			self.Bedrock:GetObject('DesktopMenuItem').OnClick = function(itm)
 				Current.Desktop:SwitchTo()
+			end
+
+			self.Bedrock:GetObject('AboutMenuItem').OnClick = function(itm)
+				Helpers.OpenFile('System/Programs/About OneOS.program')
+			end
+
+			self.Bedrock:GetObject('SettingsMenuItem').OnClick = function(itm)
+				Helpers.OpenFile('System/Programs/Settings.program')
 			end
 		end
 	end

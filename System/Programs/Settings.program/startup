@@ -1,0 +1,171 @@
+OneOS.LoadAPI('/System/API/Bedrock.lua', false)
+
+local program = Bedrock:Initialise()
+
+--TODO: monitor side setting
+
+program:Run(function()
+	program:LoadView('main')
+	local startX = 2
+	local startY = 5
+	local controlX = startX + 16
+	local settings = OneOS.Settings.Defaults
+
+	local values = OneOS.Settings:GetValues()
+	for k, v in pairs(settings) do
+		program:AddObject({
+			Type = 'Label',
+			X = startX,
+			Y = startY,
+			Text = v.Label
+		})
+		local value = values[k]
+		if v.Type == 'Bool' then
+			settings[k].Control = program:AddObject({
+				Type = 'Button',
+				X = controlX,
+				Y = startY,
+				Width = (value and 5 or 4),
+				BackgroundColour = colours.red,
+				ActiveBackgroundColour = colours.green,
+				TextColour = colours.white,
+				Text = (value and 'Yes' or 'No'),
+				Toggle = value,
+				OnClick = function(self)
+					if not self.Toggle then
+						self.Text = 'Yes'
+						self.Width = 5
+					else
+						self.Text = 'No'
+						self.Width = 4
+					end
+					OneOS.Settings:SetValue(k, not self.Toggle)
+				end
+			})
+		elseif v.Type == 'Colour' then
+			local x = controlX
+			_colours = {
+				colours.brown,
+				colours.yellow,
+				colours.orange,
+				colours.red,
+				colours.green,
+				colours.lime,
+				colours.magenta,
+				colours.pink,
+				colours.purple,
+				colours.blue,
+				colours.cyan,
+				colours.lightBlue,
+				colours.lightGrey,
+				colours.grey,
+				colours.black,
+				colours.white
+			}
+			for i, c in ipairs(_colours) do
+				local txt = ''
+				if c == colours.white then
+					txt = '##'
+				end
+				settings[k].Controls[i] = program:AddObject({
+					Type = 'Button',
+					X = x,
+					Y = startY,
+					Width = 2,
+					BackgroundColour = c,
+					TextColour = colours.lightGrey,
+					Text = txt,
+					OnClick = function(self)
+						OneOS.Settings:SetValue(k, c)
+					end
+				})
+				x = x + 2
+			end
+				
+
+		elseif v.Type == 'Text' then
+			settings[k].Control = program:AddObject({
+				Type = 'TextBox',
+				X = controlX,
+				Y = startY,
+				Width = 23,
+				Text = value,
+				OnClick = function(self)
+					OneOS.Settings:SetValue(k, self.TextInput.Value)
+				end
+			})
+		elseif v.Type == 'Program' then
+			local txt = value
+			if not value then
+				txt = 'None'
+			else
+				txt = program.Helpers.RemoveExtension(txt)
+			end
+
+			settings[k].Control = program:AddObject({
+				Type = 'Button',
+				X = controlX,
+				Y = startY,
+				BackgroundColour = colours.grey,
+				TextColour = colours.white,
+				Text = txt,
+				OnClick = function(self)
+					local items = {
+						{
+					    	["Name"]="MenuItem",
+					    	["Type"]="Button",
+					    	["Text"]="None",
+					    	OnClick = function()
+					    		OneOS.Settings:SetValue(k, nil)
+								self.Text = "None"
+					    	end
+					    }
+					}
+					self:ToggleMenu({
+						["Type"]="Menu",
+						["HideTop"] = true,
+						["Owner"]="OneButton",
+						["Children"]=items
+					})
+
+
+					OneOS.Settings:SetValue(k, self.TextInput.Value)
+				end
+			})
+
+			settings[k].Control = Button:Initialise(controlX, startY, nil, nil, colours.grey, colours.white, nil, nil, nil, function(self, x, y)
+				local items = { 
+					{
+						Title = 'None',
+						Click = function()
+								OneOS.Settings:SetValue(k, nil)
+								self.Text = "None"
+								self.Width = #self.Text + 2
+						end
+					},
+					{
+						Separator = true
+					}
+				}
+
+				for i, _v in ipairs(OneOS.FS.list('/Programs/')) do
+					if Helpers.Extension(_v) == 'program' then
+						table.insert(items, 
+						{
+							Title = Helpers.RemoveExtension(_v),
+							Click = function()
+								OneOS.Settings:SetValue(k, _v)
+								self.Text = Helpers.RemoveExtension(_v)
+								self.Width = #self.Text + 2
+							end
+						})
+					end
+				end
+
+				Current.Menu = Menu:Initialise(x, y+1, nil, nil, self, items, true)
+				return true
+			end, txt)
+		end
+		startY = startY + 2
+	end
+end)

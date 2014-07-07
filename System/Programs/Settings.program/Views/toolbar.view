@@ -1,0 +1,24 @@
+{
+  ["Width"]="100%",
+  ["Height"]=3,
+  ["Type"]="View",
+  ["BackgroundColour"] = 128,
+  ["Children"]={
+    [1]={
+      ["Y"]=2,
+      ["X"]=2,
+      ["Name"]="SettingsLabel",
+      ["Type"]="Label",
+      ["Text"]="Settings",
+      ["TextColour"]=1
+    },
+    [2]={
+      ["Y"]=2,
+      ["X"]=11,
+      ["Name"]="OneOSLabel",
+      ["Type"]="Label",
+      ["Text"]="OneOS",
+      ["TextColour"]=256
+    },
+  },
+}
