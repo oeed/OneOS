@@ -81,7 +81,7 @@ Initialise = function(self, shell, path, title, args)
 	if executable then
 		setfenv(executable, new.Environment)
 		new.Process = coroutine.create(executable)
-		new:Resume()
+		new:Resume()		
 	else
 		printError('Failed to load program: '..path)
 	end
@@ -94,7 +94,7 @@ Restart = function(self)
 	local path = self.Path
 	local title = self.Title
 	self:Close()
-	LaunchProgram(path, {}, title)
+	LaunchProgram(path, {}, title) --TODO: this probably wont' work
 end
 
 QueueEvent = function(self, ...)
@@ -116,8 +116,7 @@ Resume = function(self, ...)
 			if not self.Process or coroutine.status(self.Process) == "dead" then
 				return false
 			end
-			--print('start')
-		
+			
 			term.redirect(self.AppRedirect.Term)
 			local response = {coroutine.resume(self.Process, unpack(event))}
 			if not response[1] and response[2] then
@@ -132,7 +131,7 @@ Resume = function(self, ...)
 		    	print('The program has finished.')
 		    	self:Kill(0)
 		    end
-		    term.restore()
+		    restoreTerm()
 		    --Drawing.DrawBuffer()
 		    result = unpack(response)
 		end, function(err)
@@ -142,7 +141,7 @@ Resume = function(self, ...)
 		    	term.setTextColour(colours.red)
 		    	print('Too long without yielding')
 		    	self:Kill(0)
-		    	term.restore()
+		    	restoreTerm()
 		    else
 		    	error(err)
 			end

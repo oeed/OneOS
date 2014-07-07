@@ -2,9 +2,11 @@ local bedrock = Bedrock:Initialise()
 
 bedrock.AllowTerminate = false
 
-nativeTerm = term.native
-if type(nativeTerm) == 'function' then
-	nativeTerm = term.current()
+if type(term.native) == 'function' then
+	local cur = term.current()
+	restoreTerm = function()term.redirect(cur)end
+else
+	restoreTerm = function()term.restore()end
 end
 
 Current = {
@@ -51,12 +53,13 @@ end
 function Initialise()
 	bedrock:Run(function()
 		bedrock:LoadView('main', false)
+		
 		Current.ProgramView = bedrock:GetObject('ProgramView')
 		Current.Desktop = Helpers.OpenFile('System/Programs/Desktop.program', {isHidden = true})
-		bedrock.DrawSpeed = 0.1
-		bedrock.DefaultDrawSpeed = 0.1
-		Indexer.RefreshIndex() --TODO: finish the search
 
+		--bedrock:StartRepeatingTimer(function()Current.ProgramView:ForceDraw() end, 0.25)
+
+		Indexer.RefreshIndex() --TODO: finish the search
 		--Helpers.OpenFile('System/Programs/Settings.program')
 		--Helpers.OpenFile('Programs/LuaIDE.program')
 		--Helpers.OpenFile('Programs/Test2.program')

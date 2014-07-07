@@ -6,10 +6,9 @@ local files = {}
 local offset = 0
 local dragRelPos = nil
 local currentPage = 1
-local totalPages = 2
+local totalPages = 1
 local dragLock = false
 local dragTimer = nil
-
 
 local function FilesHaveChanged()
 	local list = OneOS.FS.list('Desktop/')
@@ -54,24 +53,12 @@ local function IconLocation(i)
 	return x, y
 end
 
-local function RecalculateLocations()
-	local i = 1
-	for k, v in pairs(files) do
-		local x, y = IconLocation(i)
-		v.X = x
-		v.Y = y
-		v:ForceDraw()
-		i = i + 1
-	end
-	--program:Draw()
-end
-
 local function AddOffset()
 	for k, v in pairs(files) do
 		v.X = v.BaseX + offset
-		v:ForceDraw()
+		v:ForceDraw(nil,nil,true)
 	end
-	--program:Draw()
+	program:Draw()
 end
 
 function ReloadIndicators()
@@ -102,6 +89,7 @@ function ReloadFiles()
 
 	local list = OneOS.FS.list('Desktop/')
 	files = {}
+	local count = 0
 	for i, v in ipairs(list) do
 		local x, y = IconLocation(i)
 		files[v] = program:AddObject({
@@ -112,7 +100,12 @@ function ReloadFiles()
 			Name = 'DesktopItem',
 			Path = 'Desktop/'..v
 		})
+		count = i
 	end
+
+	local x, y, maxX, maxY, maxPage = MaxIcons()
+	totalPages = math.ceil(count/maxPage)
+
 	ReloadIndicators()
 end
 
@@ -155,7 +148,7 @@ function AnimatePageChange(from, to)
 			if speed > relOffset and relOffset > -1*speed then
 				offset = max
 			end
-			AddOffset()
+			AddOffset()			
 			sleep(0.1)
 		end
 	end
@@ -183,7 +176,6 @@ local function viewClick(self, event, side, x, y)
 			end
 		end
 	end
-	--program:Draw()
 end
 
 local function viewDrag(self, event, side, x, y)
@@ -204,6 +196,8 @@ local function viewDrag(self, event, side, x, y)
 end
 
 program.OnKeyChar = function(self, event, key)
+	--program:ForceDraw()
+
 	if key == keys.enter then
 		Desktop.OpenSelected()
 	elseif key == keys.delete or key == keys.backspace then
@@ -216,33 +210,14 @@ program.OnKeyChar = function(self, event, key)
 end
 
 program:Run(function()
-	program:LoadView('main')
+	program:LoadView('main', false)
 	ReloadFiles()
-	program.DrawSpeed = 0
-	program.DefaultDrawSpeed = 0
 	program:StartRepeatingTimer(function()
 		if FilesHaveChanged() then
 			ReloadFiles()
 		end
 	end, 5)
 
-	--[[
-program:DisplayAlertWindow('Self Destruct?', 'Are you sure you want to blow up everything?', {'Yes', 'No'}, function(text)
-		if text == 'Yes' then
-			blowUp()
-		end
-	end)
-]]--
-
-	--[[
-
-	program:DisplayTextBoxWindow('Uh oh...', 'You broke it!', function(success, txt)
-
-	end)
-	
-	]]--
-
-	--program:Draw()
 	program.View.OnClick = viewClick
 	program.View.OnDrag = viewDrag
 end)

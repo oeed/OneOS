@@ -99,7 +99,6 @@ function LoadAPI(_sPath)
 	getfenv()[sName] = tAPI
 
 	--tAPIsLoading[sName] = nil
-sleep(1)
 	return true
 end
 

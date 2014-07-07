@@ -39,6 +39,7 @@ OnDraw = function(self, x, y)
 		self:DrawAnimation()
 	elseif (#Current.Programs == 1 or (Current.Program and Current.Program.Hidden)) and self.CachedProgram and not self.CachedProgram.Hidden then
 		--closing a program
+		UpdateOverlay()
 		local centerX = math.ceil(self.Width / 2)
 		local centerY = math.ceil(self.Height / 2)
 
@@ -46,13 +47,21 @@ OnDraw = function(self, x, y)
 		local h = self.Height
 		local deltaW = w / 5
 		local deltaH = h / 5
+
+		local colour = colours.white
+		if self.CachedProgram.Environment.OneOS.ToolBarColor ~= colours.white then
+			colour = self.CachedProgram.Environment.OneOS.ToolBarColor
+		elseif self.CachedProgram.Environment.OneOS.ToolBarColour then
+			colour = self.CachedProgram.Environment.OneOS.ToolBarColour
+		end
+
 		self.Animation = {
 			Count = 5,
 			Function = function(i)
 				self:DrawProgram(Current.Desktop, x, y)
 				w = w - deltaW
 				h = h - deltaH
-				Drawing.DrawBlankArea(x + centerX - (w / 2), y + centerY - (h / 2), w, h, colours.grey)
+				Drawing.DrawBlankArea(x + centerX - (w / 2), y + centerY - (h / 2), w, h, colour)
 			end
 		}
 		self:DrawAnimation()
@@ -60,6 +69,7 @@ OnDraw = function(self, x, y)
 		Current.Desktop:SwitchTo()
 	elseif Current.Program and not Current.Program.Hidden and self.CachedProgram and self.CachedProgram.Hidden then
 		--opening a program
+		UpdateOverlay()
 		local centerX = math.ceil(self.Width / 2)
 		local centerY = math.ceil(self.Height / 2)
 
@@ -67,18 +77,26 @@ OnDraw = function(self, x, y)
 		local deltaH = self.Height / 5
 		local w = 0
 		local h = 0
+		local colour = colours.white
+		if Current.Program.Environment.OneOS.ToolBarColor ~= colours.white then
+			colour = Current.Program.Environment.OneOS.ToolBarColor
+		elseif Current.Program.Environment.OneOS.ToolBarColour then
+			colour = Current.Program.Environment.OneOS.ToolBarColour
+		end
+
 		self.Animation = {
 			Count = 5,
 			Function = function(i)
 				self:DrawProgram(Current.Desktop, x, y)
 				w = w + deltaW
 				h = h + deltaH
-				Drawing.DrawBlankArea(x + centerX - (w / 2) - 2, y + centerY - (h / 2), w, h, colours.grey)
+				Drawing.DrawBlankArea(x + centerX - (w / 2) - 2, y + centerY - (h / 2), w, h, colour)
 			end
 		}
 		self:DrawAnimation()
 	elseif Current.Program and self.CachedProgram and Current.Program ~= self.CachedProgram and not Current.Program.Hidden and not self.CachedProgram.Hidden then
 		--switching program
+		UpdateOverlay()
 		local direction = 1
 		local isPos = 0
 		local isNeg = 1
@@ -99,9 +117,6 @@ OnDraw = function(self, x, y)
 		}
 		self:DrawAnimation()
 	elseif Current.Program then
-		if Current.Program ~= self.CachedProgram then
-			UpdateOverlay()
-		end
 		self:DrawProgram(Current.Program, x, y)
 		self.CachedProgram = Current.Program
 		self.CachedIndex = currentIndex

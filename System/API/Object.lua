@@ -106,15 +106,17 @@ Draw = function(self)
 	self:UpdateEvokers()
 end
 
-ForceDraw = function(self, ignoreChildren, ignoreParent)
-	self.Bedrock:ForceDraw()
+ForceDraw = function(self, ignoreChildren, ignoreParent, ignoreBedrock)
+	if not ignoreBedrock then
+		self.Bedrock:ForceDraw()
+	end
 	self.DrawCache.NeedsDraw = true
 	if not ignoreParent and self.Parent then
-		self.Parent:ForceDraw(true)
+		self.Parent:ForceDraw(true, nil, ignoreBedrock)
 	end
 	if not ignoreChildren and self.Children then
 		for i, child in ipairs(self.Children) do
-			child:ForceDraw(nil, true)
+			child:ForceDraw(nil, true, ignoreBedrock)
 		end
 	end
 end

@@ -7,7 +7,7 @@
 ]]
 
 --adds a few debugging things (a draw call counter)
-local isDebug = true
+local isDebug = false
 
 local function loadAPI(path)
 	local name = string.match(fs.getName(path), '(%a+)%.?.-')
@@ -150,7 +150,6 @@ function HandleClick(self, event, side, x, y)
 		end
 	elseif self.View then
 		if self.View:Click(event, side, x, y) ~= false then
-			--self:Draw()
 		end		
 	end
 end
@@ -400,7 +399,7 @@ end
 
 function ForceDraw(self)
 	if not self.DrawTimer then
-		self.DrawTimer = self:StartTimer(function()self:Draw()end, 0.05)
+		self.DrawTimer = self:StartTimer(function()self.DrawTimer = nil self:Draw()end, 0.05)
 	end
 end
 
@@ -596,9 +595,10 @@ function SetActiveObject(self, object)
 	if object then
 		if object ~= self.ActiveObject then
 			self.ActiveObject = object
+			object:ForceDraw()
 		end
-		object:ForceDraw()
-	else
+	elseif self.ActiveObject ~= nil then
+		self.ActiveObject = nil
 		self.CursorPos = nil
 		self.View:ForceDraw()
 	end
@@ -647,7 +647,6 @@ function Draw(self)
 	elseif isDebug then
 		ignored = ignored + 1
 	end
-
 	if isDebug then
 		local pos = -2
 		if ViewPath == 'Views/' then

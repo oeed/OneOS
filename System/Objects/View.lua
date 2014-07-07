@@ -50,7 +50,7 @@ Click = function(self, event, side, x, y)
 	if self.Visible then
 		for i, child in ipairs(self.Children) do
 			if self:DoClick(child, event, side, x, y) then
-				child:ForceDraw()
+				--child:ForceDraw() --TODO: might be able to remove this
 				if self.OnChildClick then
 					self:OnChildClick(child, event, side, x, y)
 				end
