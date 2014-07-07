@@ -16,10 +16,10 @@ Current = {
 }
 
 function UpdateOverlay()
-	bedrock:GetObject('Overlay'):ForceDraw()
+	bedrock:GetObject('Overlay'):UpdateButtons()
 end
 
-bedrock.OnKeyChar = function(event, keychar)
+bedrock.OnKeyChar = function(self, event, keychar)
 	if keychar == '\\' then
 		os.reboot()
 	elseif Current.Program then
@@ -27,7 +27,7 @@ bedrock.OnKeyChar = function(event, keychar)
 	end
 end
 
-bedrock.OnTimer = function(event, timer)
+bedrock.OnTimer = function(self, event, timer)
 	for i, program in ipairs(Current.Programs) do
 		for i2, _timer in ipairs(program.Timers) do
 			if _timer == timer then
@@ -53,11 +53,11 @@ function Initialise()
 		bedrock:LoadView('main', false)
 		Current.ProgramView = bedrock:GetObject('ProgramView')
 		Current.Desktop = Helpers.OpenFile('System/Programs/Desktop.program', {isHidden = true})
-		bedrock.DrawSpeed = 0.2
-		bedrock.DefaultDrawSpeed = 0.2
+		bedrock.DrawSpeed = 0.1
+		bedrock.DefaultDrawSpeed = 0.1
 		Indexer.RefreshIndex() --TODO: finish the search
 
-		Helpers.OpenFile('System/Programs/Settings.program')
+		--Helpers.OpenFile('System/Programs/Settings.program')
 		--Helpers.OpenFile('Programs/LuaIDE.program')
 		--Helpers.OpenFile('Programs/Test2.program')
 

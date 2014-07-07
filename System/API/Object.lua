@@ -78,7 +78,8 @@ Draw = function(self)
 		return
 	end
 
-	if self:NeedsDraw() then
+	if self.X > Drawing.Screen.Width or self.Y > Drawing.Screen.Height or self.X + self.Width < 1 or self.Y + self.Height < 1 then
+	elseif self:NeedsDraw() then
 		self.DrawCache.NeedsDraw = false
 		local pos = self:GetPosition()
 		Drawing.StartCopyBuffer()
@@ -106,6 +107,7 @@ Draw = function(self)
 end
 
 ForceDraw = function(self, ignoreChildren, ignoreParent)
+	self.Bedrock:ForceDraw()
 	self.DrawCache.NeedsDraw = true
 	if not ignoreParent and self.Parent then
 		self.Parent:ForceDraw(true)

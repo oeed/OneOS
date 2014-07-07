@@ -9,7 +9,7 @@ Current = {
 	AnimationsEnabled = nil
 }
 
-program.OnKeyChar = function(event, keychar)
+program.OnKeyChar = function(self, event, keychar)
 	if keychar == '\\' then
 		os.reboot()
 	end

@@ -73,7 +73,7 @@ OnDraw = function(self, x, y)
 				self:DrawProgram(Current.Desktop, x, y)
 				w = w + deltaW
 				h = h + deltaH
-				Drawing.DrawBlankArea(x + centerX - (w / 2) - 1, y + centerY - (h / 2), w, h, colours.grey)
+				Drawing.DrawBlankArea(x + centerX - (w / 2) - 2, y + centerY - (h / 2), w, h, colours.grey)
 			end
 		}
 		self:DrawAnimation()
@@ -99,6 +99,9 @@ OnDraw = function(self, x, y)
 		}
 		self:DrawAnimation()
 	elseif Current.Program then
+		if Current.Program ~= self.CachedProgram then
+			UpdateOverlay()
+		end
 		self:DrawProgram(Current.Program, x, y)
 		self.CachedProgram = Current.Program
 		self.CachedIndex = currentIndex
@@ -119,7 +122,6 @@ OnDraw = function(self, x, y)
 end
 
 DrawAnimation = function(self)
-	self.Bedrock.DrawSpeed = 0.05
 	self.Animation.Function(self.Animation.Count)
 	self.Animation.Count = self.Animation.Count - 1
 	if self.Animation.Count <= 0 then
@@ -128,6 +130,7 @@ DrawAnimation = function(self)
 		self.CachedIndex = currentIndex
 	end
 	self:ForceDraw()
+	--self.Bedrock:Draw()
 end
 
 DrawProgram = function(self, program, x, y)

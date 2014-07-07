@@ -7,7 +7,7 @@
 ]]
 
 --adds a few debugging things (a draw call counter)
-local isDebug = false
+local isDebug = true
 
 local function loadAPI(path)
 	local name = string.match(fs.getName(path), '(%a+)%.?.-')
@@ -95,8 +95,9 @@ Menu = nil
 
 ActiveObject = nil
 
-DrawSpeed = 0.35
-DefaultDrawSpeed = 0.35
+DrawTimer = nil
+
+IsDrawing = false
 
 EventHandlers = {
 	
@@ -189,7 +190,7 @@ function SetMenu(self, menu, owner, x, y)
 	end
 	if menu then
 		local pos = owner:GetPosition()
-		self.Menu = self:AddObject(menu, {Owner = owner, X = pos.X + x - 1, Y = pos.Y + y})
+		self.Menu = self:AddObject(menu, {Type = 'Menu', Owner = owner, X = pos.X + x - 1, Y = pos.Y + y})
 	end
 end
 
@@ -397,6 +398,12 @@ function RemoveObjects(self, name)
 	return self.View:RemoveObjects(name)
 end
 
+function ForceDraw(self)
+	if not self.DrawTimer then
+		self.DrawTimer = self:StartTimer(function()self:Draw()end, 0.05)
+	end
+end
+
 function DisplayWindow(self, _view, title, canClose)
 	if canClose == nil then
 		canClose = true
@@ -540,12 +547,11 @@ function DisplayTextBoxWindow(self, title, text, callback, textboxText, cursorAt
 	self.Window.OnCloseButton = function()callback(false)end
 end
 
-function RegisterEvent(self, event, func, passSelf)
+function RegisterEvent(self, event, func)
 	if not self.EventHandlers[event] then
 		self.EventHandlers[event] = {}
 	end
-
-	table.insert(self.EventHandlers[event], {func, passSelf})
+	table.insert(self.EventHandlers[event], func)
 end
 
 function StartRepeatingTimer(self, func, interval)
@@ -553,13 +559,24 @@ function StartRepeatingTimer(self, func, interval)
 	if type(int) == 'function' then
 		int = int()
 	end
+	if not int or int <= 0 then
+		return
+	end
 	local timer = os.startTimer(int)
 	self.Timers[timer] = {func, true, interval}
+	return timer
 end
 
 function StartTimer(self, func, delay)
 	local timer = os.startTimer(delay)
 	self.Timers[timer] = {func, false}
+	return timer
+end
+
+function StopTimer(self, timer)
+	if self.Timers[timer] then
+		self.Timers[timer] = nil
+	end
 end
 
 function HandleTimer(self, event, timer)
@@ -571,7 +588,7 @@ function HandleTimer(self, event, timer)
 			self:StartRepeatingTimer(oldTimer[1], oldTimer[3])
 		end
 	elseif self.OnTimer then
-		self.OnTimer(event, timer)
+		self.OnTimer(self, event, timer)
 	end
 end
 
@@ -601,18 +618,20 @@ OnViewClose = nil
 OnDraw = nil
 
 local eventFuncs = {
-	OnClick = {{'mouse_click'}},
-	OnKeyChar = {{'key', 'char'}},
-	OnDrag = {{'mouse_drag'}},
-	OnScroll = {{'mouse_scroll'}},
-	HandleClick = {{'mouse_click', 'mouse_drag'}, true},
-	HandleKeyChar = {{'key', 'char'}, true},
-	HandleTimer = {{'timer'}, true}
+	OnClick = {'mouse_click'},
+	OnKeyChar = {'key', 'char'},
+	OnDrag = {'mouse_drag'},
+	OnScroll = {'mouse_scroll'},
+	HandleClick = {'mouse_click', 'mouse_drag'},
+	HandleKeyChar = {'key', 'char'},
+	HandleTimer = {'timer'}
 }
 
 local drawCalls = 0
 local ignored = 0
 function Draw(self)
+	self.IsDrawing = true
+	self.DrawTimer = nil
 	if self.OnDraw then
 		self:OnDraw()
 	end
@@ -648,6 +667,7 @@ function Draw(self)
 	else
 		term.setCursorBlink(false)
 	end
+	self.IsDrawing = false
 end
 
 function EventHandler(self)
@@ -655,11 +675,7 @@ function EventHandler(self)
 
 	if self.EventHandlers[event[1]] then
 		for i, e in ipairs(self.EventHandlers[event[1]]) do
-			if e[2] then
-				e[1](self, unpack(event))
-			else
-				e[1](unpack(event))
-			end
+			e(self, unpack(event))
 		end
 	end
 end
@@ -668,8 +684,8 @@ function Run(self, ready)
 
 	for name, events in pairs(eventFuncs) do
 		if self[name] then
-			for i, event in ipairs(events[1]) do
-				self:RegisterEvent(event, self[name], events[2])
+			for i, event in ipairs(events) do
+				self:RegisterEvent(event, self[name])
 			end
 		end
 	end
@@ -685,7 +701,7 @@ function Run(self, ready)
 	
 	self:Draw()
 
-	self:StartRepeatingTimer(function()self:Draw() end, function()return self.DrawSpeed end)
+	--self:StartRepeatingTimer(function()self:Draw() end, function()return self.DrawSpeed end)
 
 	while true do
 		self:EventHandler()

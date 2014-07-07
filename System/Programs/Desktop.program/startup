@@ -6,7 +6,9 @@ local files = {}
 local offset = 0
 local dragRelPos = nil
 local currentPage = 1
-local totalPages = 1
+local totalPages = 2
+local dragLock = false
+local dragTimer = nil
 
 
 local function FilesHaveChanged()
@@ -61,6 +63,38 @@ local function RecalculateLocations()
 		v:ForceDraw()
 		i = i + 1
 	end
+	--program:Draw()
+end
+
+local function AddOffset()
+	for k, v in pairs(files) do
+		v.X = v.BaseX + offset
+		v:ForceDraw()
+	end
+	--program:Draw()
+end
+
+function ReloadIndicators()
+	local indicatorWidth = (totalPages * 2) - 2
+	local indicatorPos = math.ceil((Drawing.Screen.Width/2)) - totalPages - 1
+	program:RemoveObjects('IndicatorButton')
+	for i = 1, totalPages do
+		local col = colours.grey
+		if currentPage == i then
+			col = colours.white
+		end
+		program:AddObject({
+			Type = 'Button',
+			X = indicatorPos + i * 2,
+			Y = Drawing.Screen.Height - 1,
+			Text = ' ',
+			Width = 1,
+			BackgroundColour = col,
+			OnClick = function(self)
+				GoToPage(i)
+			end
+		})
+	end
 end
 
 function ReloadFiles()
@@ -73,11 +107,62 @@ function ReloadFiles()
 		files[v] = program:AddObject({
 			Type = 'DesktopItem',
 			X = x,
+			BaseX = x,
 			Y = y,
 			Name = 'DesktopItem',
 			Path = 'Desktop/'..v
 		})
 	end
+	ReloadIndicators()
+end
+
+function GoToPage(i)
+	if i > 0 and i <= totalPages then
+		selectedFile = nil
+		local old = currentPage
+		currentPage = i
+		--Desktop.dragTimeout = nil
+		AnimatePageChange(old, currentPage)
+	end
+end
+
+function DragTimeout()
+	local relOffset = (offset + Drawing.Screen.Width * (currentPage - 1))
+	local fakeOld = currentPage + 1
+	if relOffset > 0 then
+		fakeOld = currentPage - 1
+	end
+	AnimatePageChange(currentPage, currentPage)
+end
+
+function AnimatePageChange(from, to)
+	dragLock = true
+	dragRelPos = nil
+	local max = -1*Drawing.Screen.Width * (to - 1)
+	local relOffset = (offset + Drawing.Screen.Width * (to - 1))
+	local direction = -1
+	if relOffset < 0 then
+		direction = 1
+	end
+	if OneOS.Settings:GetValues()['UseAnimations'] then
+		if relOffset < 0 then
+			relOffset = relOffset * -1
+		end
+		local speed = math.ceil(relOffset / Drawing.Screen.Width * 12)
+		while ((max < offset) and direction == -1) or ((max > offset) and direction == 1) do
+			offset = offset + direction * speed
+			relOffset = (offset + Drawing.Screen.Width * (to - 1))
+			if speed > relOffset and relOffset > -1*speed then
+				offset = max
+			end
+			AddOffset()
+			sleep(0.1)
+		end
+	end
+	offset = max
+	ReloadIndicators()
+	AddOffset()
+	dragLock = false
 end
 
 local function viewClick(self, event, side, x, y)
@@ -98,20 +183,43 @@ local function viewClick(self, event, side, x, y)
 			end
 		end
 	end
+	--program:Draw()
 end
 
 local function viewDrag(self, event, side, x, y)
 	if dragRelPos then	
 		offset = (x - dragRelPos) - Drawing.Screen.Width * (currentPage - 1)
-		RecalculateLocations()
+		AddOffset()
+	end
+	if not dragLock then
+		program:StopTimer(dragTimer)
+		dragTimer = program:StartTimer(DragTimeout, 1)
+		local relOffset = (offset + Drawing.Screen.Width * (currentPage - 1))
+		if relOffset < 0 and relOffset < -1*Drawing.Screen.Width/4 then
+			GoToPage(currentPage + 1)
+		elseif relOffset > 0 and relOffset > Drawing.Screen.Width/4 then
+			GoToPage(currentPage - 1)
+		end
+	end
+end
+
+program.OnKeyChar = function(self, event, key)
+	if key == keys.enter then
+		Desktop.OpenSelected()
+	elseif key == keys.delete or key == keys.backspace then
+		Desktop.DeleteSelected()
+	elseif key == keys.right then
+		GoToPage(currentPage + 1)
+	elseif key == keys.left then
+		GoToPage(currentPage - 1)
 	end
 end
 
 program:Run(function()
 	program:LoadView('main')
 	ReloadFiles()
-	program.DrawSpeed = 0.2
-	program.DefaultDrawSpeed = 0.2
+	program.DrawSpeed = 0
+	program.DefaultDrawSpeed = 0
 	program:StartRepeatingTimer(function()
 		if FilesHaveChanged() then
 			ReloadFiles()
@@ -134,7 +242,7 @@ program:DisplayAlertWindow('Self Destruct?', 'Are you sure you want to blow up e
 	
 	]]--
 
-	program:Draw()
+	--program:Draw()
 	program.View.OnClick = viewClick
 	program.View.OnDrag = viewDrag
 end)

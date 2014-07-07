@@ -4,8 +4,6 @@ TextColour = colours.black
 BackgroundColour = colours.white
 
 OnDraw = function(self, x, y)
-	self:UpdateButtons()
-
 	if self.BackgroundColour then
 		Drawing.DrawBlankArea(x, y, self.Width, self.Height, self.BackgroundColour)
 	end
@@ -28,6 +26,7 @@ OnLoad = function(self)
 			end
 		end
 	end
+	self:UpdateButtons()
 end
 
 UpdateButtons = function(self)
@@ -54,6 +53,7 @@ UpdateButtons = function(self)
 		end
 	end
 
+	--TODO: make this more efficient
 	self:RemoveObjects('ProgramButton')
 
 	local x = 6
@@ -93,5 +93,8 @@ UpdateButtons = function(self)
 		    	end
 		   	end
 		end
+	end
+	if not self.Bedrock.IsDrawing then
+		self:ForceDraw()
 	end
 end

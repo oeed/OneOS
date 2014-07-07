@@ -118,6 +118,7 @@ function AddObject(self, info, extra)
 	if not view.Z then
 		view.Z = #self.Children + 1
 	end
+	
 	table.insert(self.Children, view)
 	self.Bedrock:ReorderObjects()
 	self:ForceDraw()
@@ -181,5 +182,6 @@ function RemoveObjects(self, name)
 		self.Children[index]:OnRemove()
 		table.remove(self.Children, index)
 	end
-	self:ForceDraw()
+		self:ForceDraw()
+	
 end

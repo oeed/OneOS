@@ -85,7 +85,7 @@ Initialise = function(self, shell, path, title, args)
 	else
 		printError('Failed to load program: '..path)
 	end
-	UpdateOverlay()
+	Current.ProgramView:ForceDraw()
 
 	return new
 end
@@ -181,7 +181,6 @@ Close = function(self, force)
 		end
 
 		Current.ProgramView:ForceDraw()
-		UpdateOverlay()
 		--TODO: switch to another program
 		return true
 	else
@@ -193,6 +192,5 @@ SwitchTo = function(self)
 	if Current.Program ~= self then
 		Current.Program = self
 		Current.ProgramView:ForceDraw()
-		UpdateOverlay()
 	end
 end
