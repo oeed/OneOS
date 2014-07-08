@@ -15,7 +15,7 @@ Late last year I looked at PearOS and a few other ComputerCraft OSs and tried to
 
 So, anyway, enough history. I present you the 21 thousand plus line monstrosity that is OneOS.
 
-I've compiled and fairly compact (trust me, a lot of features aren't listed) list of the main ones:
+I've compiled a fairly compact (trust me, a lot of features aren't listed) list of the main ones:
 - The ability to run any ComputerCraft program
 - Multitasking (not windowed, this was intentional)
 - A desktop interface
