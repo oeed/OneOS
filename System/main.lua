@@ -24,9 +24,15 @@ end
 
 bedrock.OnKeyChar = function(self, event, keychar)
 	if keychar == '\\' then
-		os.reboot()
-	elseif keychar == ']' then
+		--Restart()
+		AnimateShutdown(true)
+	elseif keychar == ']z' then
 		Current.ProgramView:ForceDraw()
+	elseif keychar == '[z' then
+		for i, program in ipairs(Current.Programs) do
+			print(i)
+			print(program.Title)
+		end
 	elseif Current.Program then
 		Current.Program:QueueEvent(event, keychar)
 	end
@@ -51,6 +57,82 @@ bedrock.EventHandler = function(self)
 		program.EventQueue = {}
 	end
 	oldHandler(self)
+end
+
+function Shutdown(force, restart)
+	local success = true
+	if not force then
+		for i, program in ipairs(Current.Programs) do
+			if not program.Hidden and not program:Close() then
+				success = false
+			end
+		end
+	end
+
+	if success then
+		AnimateShutdown(restart)
+	else
+		Current.Desktop:SwitchTo()
+		local shutdownLabel = (restart and 'restart' or 'shutdown')
+		local shutdownLabelCaptital = (restart and 'Restart' or 'Shutdown')
+
+		bedrock:DisplayAlertWindow("Programs Still Open", "You have unsaved work. Save your work and close the program or click 'Force "..shutdownLabelCaptital.."'.", {'Force '..shutdownLabelCaptital, 'Cancel'}, function(value)
+			if value ~= 'Cancel' then
+				AnimateShutdown(restart)
+			end
+		end)
+	end
+end
+
+function AnimateShutdown(restart)
+	if not Settings:GetValues()['UseAnimations'] then
+		return
+	end
+
+	Drawing.Clear(colours.white)
+	Drawing.DrawBuffer()
+	sleep(0)
+	local x = 0
+	local y = 0
+	local w = 0
+	local h = 0
+	for i = 1, 8 do
+		local percent = (i * 0.05)
+		Drawing.Clear(colours.black)
+		x = Drawing.Screen.Width * (i * 0.01)
+		y = math.floor(Drawing.Screen.Height * (i * 0.05)) + 3
+		w = Drawing.Screen.Width - (2 * x) + 1
+		h = Drawing.Screen.Height - (2 * y) + 1
+
+		if h < 1 then
+			h = 1
+		end
+
+		Drawing.DrawBlankArea(x + 1, y, w, h, colours.white)
+		Drawing.DrawBuffer()
+		sleep(0)
+	end
+
+	Drawing.DrawBlankArea(x + 1, y, w, h, colours.lightGrey)
+	Drawing.DrawBuffer()
+	sleep(0)
+
+	Drawing.DrawBlankArea(x + 1, y, w, h, colours.grey)
+	Drawing.DrawBuffer()
+	sleep(0)
+
+	term.setBackgroundColour(colours.black)
+	term.clear()
+	if restart then
+		sleep(0.2)
+		os.reboot()
+	else
+		os.shutdown()
+	end
+end
+
+function Restart(force)
+	Shutdown(force, true)
 end
 
 function Initialise()

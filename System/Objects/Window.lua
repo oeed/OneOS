@@ -41,7 +41,7 @@ end
 Flash = function(self)
 	self.Flashing = true
 	self:ForceDraw()
-	self.Bedrock:StartTimer(function()self.Flashing = false self:ForceDraw()end, self.Bedrock.DrawSpeed * 2)
+	self.Bedrock:StartTimer(function()self.Flashing = false end, 0.4)
 end
 
 OnDraw = function(self, x, y)

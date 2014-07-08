@@ -7,7 +7,7 @@
 ]]
 
 --adds a few debugging things (a draw call counter)
-local isDebug = true
+local isDebug = false
 
 local function loadAPI(path)
 	local name = string.match(fs.getName(path), '(%a+)%.?.-')

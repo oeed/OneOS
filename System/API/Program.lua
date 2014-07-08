@@ -174,13 +174,11 @@ Close = function(self, force)
 		end
 		for i, program in ipairs(Current.Programs) do
 			if program == self then
-				table.remove(Current.Programs, i)
+				Current.Programs[i] = nil
 				break
 			end
 		end
-
 		Current.ProgramView:ForceDraw()
-		--TODO: switch to another program
 		return true
 	else
 		return false

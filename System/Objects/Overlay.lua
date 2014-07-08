@@ -11,7 +11,7 @@ end
 
 OnLoad = function(self)
 	self:GetObject('OneButton').OnClick = function(btn)
-		if btn:ToggleMenu('onemenu') and false then
+		if btn:ToggleMenu('onemenu') then
 
 			self.Bedrock:GetObject('DesktopMenuItem').OnClick = function(itm)
 				Current.Desktop:SwitchTo()
@@ -23,6 +23,14 @@ OnLoad = function(self)
 
 			self.Bedrock:GetObject('SettingsMenuItem').OnClick = function(itm)
 				Helpers.OpenFile('System/Programs/Settings.program')
+			end
+
+			self.Bedrock:GetObject('RestartMenuItem').OnClick = function(itm)
+				Restart()
+			end
+
+			self.Bedrock:GetObject('ShutdownMenuItem').OnClick = function(itm)
+				Shutdown()
 			end
 		end
 	end
@@ -58,7 +66,7 @@ UpdateButtons = function(self)
 
 	local x = 6
 	for i, program in ipairs(Current.Programs) do
-		if not program.Hidden then
+		if program and not program.Hidden then
 			local bg = self.BackgroundColour
 			local tc = self.TextColour
 			local button = ''
@@ -84,15 +92,14 @@ UpdateButtons = function(self)
 		    object.OnClick = function(obj, event, side, x, y)
 		    	if side == 3 then
 		    		obj.Program:Close()
-					self:UpdateButtons()
 		    	elseif button == 'x ' then
 		    		if x == 2 then
 		    			obj.Program:Close()
-						self:UpdateButtons()
 		    		end
 		    	else
 		    		obj.Program:SwitchTo()
 		    	end
+				self:UpdateButtons()
 		   	end
 		end
 	end
