@@ -4,7 +4,6 @@ ToolBarColour = colours.lightGrey
 ToolBarTextColour = colours.black
 ShadowColour = colours.grey
 Title = ''
-View = false
 Flashing = false
 CanClose = true
 OnCloseButton = nil
@@ -25,10 +24,11 @@ LoadView = function(self)
 	view.Y = 2
 
 	view:ForceDraw()
-
+	self:OnUpdate('View')
 	if self.OnViewLoad then
 		self.OnViewLoad(view)
 	end
+	self.Bedrock:SetActiveObject(view)
 end
 
 SetView = function(self, view)

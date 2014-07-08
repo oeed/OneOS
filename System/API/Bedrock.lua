@@ -419,10 +419,10 @@ function DisplayWindow(self, _view, title, canClose)
 	end
 
 	self.Window = self:AddObject({Type = 'Window', Z = 999, Title = title, CanClose = canClose})
-	local bg = _view.BackgroundColour or colours.white
-	self.Window:AddObject(_view, {Type = 'View', Name = 'View', BackgroundColour = bg})
-	self.Window:LoadView()
-	self:SetActiveObject(self.Window)
+	_view.Type = 'View'
+	_view.Name = 'View'
+	_view.BackgroundColour = _view.BackgroundColour or colours.white
+	self.Window:SetView(self:ObjectFromFile(_view, self.Window))
 end
 
 function DisplayAlertWindow(self, title, text, buttons, callback)
@@ -472,6 +472,9 @@ function DisplayAlertWindow(self, title, text, buttons, callback)
 		Children = children,
 		Width=width,
 		Height=3+height+(canClose and 0 or 1),
+		OnKeyChar = function(_view, keychar)
+			func({Text=buttons[1]})
+		end
 	}
 	self:DisplayWindow(view, title, canClose)
 end
