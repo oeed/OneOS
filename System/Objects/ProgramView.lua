@@ -1,3 +1,4 @@
+UpdateDrawBlacklist = {['CachedProgram']=true, ['CachedIndex']=true}
 CachedProgram = false
 CachedIndex = false
 Animation = false
@@ -5,9 +6,6 @@ Animation = false
 OnUpdate = function(self, value)
 	--TODO: resize the buffer
 	if value == 'Width' then
-		--self.Width = #self.Text + 2
-		--self:UpdateEvokers()
-		--return true
 	end
 end
 
@@ -117,6 +115,10 @@ OnDraw = function(self, x, y)
 		}
 		self:DrawAnimation()
 	elseif Current.Program then
+		if self.CachedProgram and self.CachedProgram.Environment and (Current.Program.Environment.OneOS.ToolBarColor ~= Current.Overlay.BackgroundColour or Current.Program.Environment.OneOS.ToolBarColour ~= Current.Overlay.BackgroundColour  or Current.Program.Environment.OneOS.ToolBarTextColor ~= Current.Overlay.TextColour  or Current.Program.Environment.OneOS.ToolBarTextColour ~= Current.Overlay.TextColour) then
+			UpdateOverlay()
+		end
+
 		self:DrawProgram(Current.Program, x, y)
 		self.CachedProgram = Current.Program
 		self.CachedIndex = currentIndex

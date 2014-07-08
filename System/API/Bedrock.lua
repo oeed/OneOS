@@ -7,7 +7,7 @@
 ]]
 
 --adds a few debugging things (a draw call counter)
-local isDebug = false
+local isDebug = true
 
 local function loadAPI(path)
 	local name = string.match(fs.getName(path), '(%a+)%.?.-')
@@ -186,7 +186,7 @@ function SetMenu(self, menu, owner, x, y)
 	y = y or 1
 	if self.Menu then
 		self.Menu:Close()
-	end
+	end	
 	if menu then
 		local pos = owner:GetPosition()
 		self.Menu = self:AddObject(menu, {Type = 'Menu', Owner = owner, X = pos.X + x - 1, Y = pos.Y + y})
@@ -288,7 +288,7 @@ function ObjectFromFile(self, file, view)
 		if not env[file.Type].Initialise then
 			error('Malformed Object: '..file.Type)
 		end
-		local object = env[file.Type]:Initialise()
+		local object = {}
 
 		if file.InheritView then
 			file = self:InheritFile(file, file.InheritView)
@@ -329,6 +329,11 @@ function ObjectFromFile(self, file, view)
 			end
 		end
 
+		object.Parent = view
+		object.Bedrock = self
+
+		object = env[file.Type]:Initialise(object)
+
 		if file.Children then
 			for i, obj in ipairs(file.Children) do
 				local _view = self:ObjectFromFile(obj, object)
@@ -340,28 +345,26 @@ function ObjectFromFile(self, file, view)
 			end
 		end
 
-
-		object.Parent = view
-		object.Bedrock = self
-
 		if not object.OnClick then
 			object.OnClick = function(...) return self:ClickObject(...) end
 		end
 		--object.OnUpdate = function(...) self:UpdateObject(...) end
 		
+		if object.OnUpdate then
+			for k, v in pairs(env[file.Type]) do
+				object:OnUpdate(k)
+			end
+
+			for k, v in pairs(object.__index) do
+				object:OnUpdate(k)
+			end
+		end
+
 		if object.Active then
 			object.Bedrock:SetActiveObject(object)
 		end
 		if object.OnLoad then
 			object:OnLoad()
-		end
-		if object.OnUpdate then
-			for k, v in pairs(object.DrawCache.Evokers) do
-				object:OnUpdate(k)
-			end
-		end
-		if object.UpdateEvokers then
-			object:UpdateEvokers()
 		end
 		return object
 	elseif not file.Type then
@@ -647,6 +650,7 @@ function Draw(self)
 	elseif isDebug then
 		ignored = ignored + 1
 	end
+
 	if isDebug then
 		local pos = -2
 		if ViewPath == 'Views/' then

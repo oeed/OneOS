@@ -12,15 +12,16 @@ OnInitialise = function(self)
 end
 
 InitialiseFile = function(self, bedrock, file, name)
-	local new = self:Initialise()
-	new.X = 1
-	new.Y = 1
-	new.Width = Drawing.Screen.Width
-	new.Height = Drawing.Screen.Height
-	new.BackgroundColour = file.BackgroundColour
-	new.Name = name
-	new.Children = {}
-	new.Bedrock = bedrock
+	local _new = {}
+	_new.X = 1
+	_new.Y = 1
+	_new.Width = Drawing.Screen.Width
+	_new.Height = Drawing.Screen.Height
+	_new.BackgroundColour = file.BackgroundColour
+	_new.Name = name
+	_new.Children = {}
+	_new.Bedrock = bedrock
+	local new = self:Initialise(_new)
 	for i, obj in ipairs(file.Children) do
 		local view = bedrock:ObjectFromFile(obj, new)
 		if not view.Z then
@@ -50,7 +51,6 @@ Click = function(self, event, side, x, y)
 	if self.Visible then
 		for i, child in ipairs(self.Children) do
 			if self:DoClick(child, event, side, x, y) then
-				--child:ForceDraw() --TODO: might be able to remove this
 				if self.OnChildClick then
 					self:OnChildClick(child, event, side, x, y)
 				end

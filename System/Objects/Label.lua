@@ -2,6 +2,7 @@ TextColour = colours.black
 BackgroundColour = colours.transparent
 Text = ""
 AutoWidth = false
+Align = 'Left'
 
 OnUpdate = function(self, value)
     if value == 'Text' and self.AutoWidth then

@@ -6,11 +6,11 @@ Text = ""
 Toggle = nil
 Momentary = true
 AutoWidth = true
+Align = 'Center'
 
 OnUpdate = function(self, value)
 	if value == 'Text' and self.AutoWidth then
 		self.Width = #self.Text + 2
-		return true --TODO: remove the need for the return value
 	end
 end
 
@@ -26,9 +26,16 @@ OnDraw = function(self, x, y)
 		txt = self.ActiveTextColour
 	end
 	Drawing.DrawBlankArea(x, y, self.Width, self.Height, bg)
-	Drawing.DrawCharactersCenter(x, y, self.Width, self.Height, self.Text, txt, bg)
 
-	if self.Momentary then
+	local _x = 1
+    if self.Align == 'Right' then
+        _x = self.Width - #self.Text - 1
+    elseif self.Align == 'Center' then
+        _x = math.floor((self.Width - #self.Text) / 2)
+    end
+	Drawing.DrawCharacters(x + _x, y, self.Text, txt, bg)
+
+	if self.Momentary and self.Toggle ~= false then
 		self.Toggle = false
 	end
 end

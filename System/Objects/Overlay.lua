@@ -11,7 +11,7 @@ end
 
 OnLoad = function(self)
 	self:GetObject('OneButton').OnClick = function(btn)
-		if btn:ToggleMenu('onemenu') then
+		if btn:ToggleMenu('onemenu') and false then
 
 			self.Bedrock:GetObject('DesktopMenuItem').OnClick = function(itm)
 				Current.Desktop:SwitchTo()
@@ -84,9 +84,11 @@ UpdateButtons = function(self)
 		    object.OnClick = function(obj, event, side, x, y)
 		    	if side == 3 then
 		    		obj.Program:Close()
+					self:UpdateButtons()
 		    	elseif button == 'x ' then
 		    		if x == 2 then
 		    			obj.Program:Close()
+						self:UpdateButtons()
 		    		end
 		    	else
 		    		obj.Program:SwitchTo()

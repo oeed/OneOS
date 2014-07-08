@@ -11,6 +11,7 @@ end
 
 Current = {
 	ProgramView = nil,
+	Overlay = nil,
 	Programs = {},
 	Program = nil,
 	Desktop = nil,
@@ -24,6 +25,8 @@ end
 bedrock.OnKeyChar = function(self, event, keychar)
 	if keychar == '\\' then
 		os.reboot()
+	elseif keychar == ']' then
+		Current.ProgramView:ForceDraw()
 	elseif Current.Program then
 		Current.Program:QueueEvent(event, keychar)
 	end
@@ -55,6 +58,7 @@ function Initialise()
 		bedrock:LoadView('main', false)
 		
 		Current.ProgramView = bedrock:GetObject('ProgramView')
+		Current.Overlay = bedrock:GetObject('Overlay')
 		Current.Desktop = Helpers.OpenFile('System/Programs/Desktop.program', {isHidden = true})
 
 		--bedrock:StartRepeatingTimer(function()Current.ProgramView:ForceDraw() end, 0.25)

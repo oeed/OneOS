@@ -44,21 +44,21 @@ OnUpdate = function(self, value)
 			if v.Colour then
 				v.Colour = colours.lightGrey
 			end
+			v.Align = 'Left'
 			v.X = 1
 			v.Y = i + (self.HideTop and 0 or 1)
 			v.Width = self.Width
 			v.Height = 1
 		end
-		return true
-	end
 
-	local pos = self:GetPosition()
-	if pos.Y + self.Height + 1 > Drawing.Screen.Height then
-		self.Y = self.Y - ((self.Height +  pos.Y) - Drawing.Screen.Height)
-	end
-	
-	if pos.X + self.Width > Drawing.Screen.Width then
-		self.X = Drawing.Screen.Width - self.Width
+		local pos = self:GetPosition()
+		if pos.Y + self.Height + 1 > Drawing.Screen.Height then
+			self.Y = self.Y - ((self.Height +  pos.Y) - Drawing.Screen.Height)
+		end
+		
+		if pos.X + self.Width > Drawing.Screen.Width then
+			self.X = Drawing.Screen.Width - self.Width
+		end
 	end
 end
 
@@ -67,7 +67,6 @@ Close = function(self, isBedrockCall)
 	self.Bedrock:RemoveObject(self)
 	if self.Owner and self.Owner.Toggle then
 		self.Owner.Toggle = false
-		self.Owner:ForceDraw()
 	elseif self.Bedrock then
 	end
 	self = nil
