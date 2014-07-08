@@ -6,6 +6,9 @@ Path = ''
 OnLoad = function(self)
 	self.Width = 10
 	self.Height = 4
+	print(self.Path)
+	print(OneOS.Helpers.IconForFile(self.Path))
+	--sleep(6)
 	local image = self:AddObject({
 		Type = 'ImageView',
 		X = 4,

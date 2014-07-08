@@ -56,6 +56,7 @@ ListPrograms = function()
 end
 
 ReadIcon = function(path, cacheName)
+	print(path)
 	cacheName = cacheName or path
 	if not IconCache[cacheName] then
 		IconCache[cacheName] = Drawing.LoadImage(path, true)
@@ -97,7 +98,7 @@ Extension = function(path, addDot)
 end
 
 RemoveExtension = function(path)
---local name = string.match(fs.getName(path), '(%a+)%.?.-')
+	--local name = string.match(fs.getName(path), '(%a+)%.?.-')
 	if path:sub(1,1) == '.' then
 		return path
 	end
@@ -147,6 +148,7 @@ IconForFile = function(path)
 	elseif extension then
 		local _path = Indexer.FindFileInFolder(extension, 'Icons')
 		if _path then
+			print(extension)
 			return ReadIcon(_path, extension)
 		else
 			return ReadIcon('System/Images/Icons/unknown')
