@@ -5,6 +5,7 @@ Height = 1
 Parent = nil
 OnClick = nil
 Visible = true
+IgnoreClick = false
 Name = nil 
 ClipDrawing = true
 UpdateDrawBlacklist = {}
@@ -125,7 +126,7 @@ Initialise = function(self, values)
 end
 
 Click = function(self, event, side, x, y)
-	if self.Visible then
+	if self.Visible and not self.IgnoreClick then
 		if event == 'mouse_click' and self.OnClick and self:OnClick(event, side, x, y) ~= false then
 			return true
 		elseif event == 'mouse_drag' and self.OnDrag and self:OnDrag(event, side, x, y) ~= false then
@@ -136,6 +137,7 @@ Click = function(self, event, side, x, y)
 	else
 		return false
 	end
+
 end
 
 ToggleMenu = function(self, name, x, y)

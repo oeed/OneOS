@@ -48,7 +48,7 @@ function DoClick(self, object, event, side, x, y)
 end
 
 Click = function(self, event, side, x, y)
-	if self.Visible then
+	if self.Visible and not self.IgnoreClick then
 		for i, child in ipairs(self.Children) do
 			if self:DoClick(child, event, side, x, y) then
 				if self.OnChildClick then
@@ -120,7 +120,9 @@ function AddObject(self, info, extra)
 	end
 	
 	table.insert(self.Children, view)
-	self.Bedrock:ReorderObjects()
+	if self.Bedrock.View then
+		self.Bedrock:ReorderObjects()
+	end
 	self:ForceDraw()
 	return view
 end
@@ -184,4 +186,12 @@ function RemoveObjects(self, name)
 	end
 		self:ForceDraw()
 	
+end
+
+function RemoveAllObjects(self)
+	for i, child in ipairs(self.Children) do
+		child:OnRemove()
+		self.Children[i] = nil
+	end
+	self:ForceDraw()
 end

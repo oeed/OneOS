@@ -7,6 +7,31 @@
       ["Type"]="View",
       ["InheritView"]="toolbar"
     },
+    [2]={
+      ["Y"]=4,
+      ["X"]=1,
+      ["Height"]="100%,-3",
+      ["Width"]=11,
+      ["Name"]="Sidebar",
+      ["Type"]="ListView",
+      ["TextColour"]=128,
+      ["Items"]={
+        ["Favourites"]={
+          {["Text"] = 'Desktop', ["Path"] = '/Desktop/'},
+          {["Text"] = 'Documents', ["Path"] = '/Desktop/Documents/'},
+          {["Text"] = 'Programs', ["Path"] = '/Programs/'},
+          {["Text"] = 'Computer', ["Path"] = '/'},
+        }
+      }
+    },
+    [3]={
+      ["Y"]=4,
+      ["X"]=12,
+      ["Height"]="100%,-3",
+      ["Name"]="Separator",
+      ["Type"]="Separator",
+      ["Colour"]=256
+    },
   },
   ["BackgroundColour"]=1,
   ["ToolBarColour"]=256,

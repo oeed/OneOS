@@ -1,0 +1,16 @@
+{
+  ["Type"]="Menu",
+  ["Owner"]="OptionsButton",
+  ["Children"]={
+    [1]={
+      ["Name"]="ViewModeMenuItem",
+      ["Type"]="Button",
+      ["Text"]="List View"
+    },
+    [2]={
+      ["Name"]="HiddenFilesMenuItem",
+      ["Type"]="Button",
+      ["Text"]="Show Hidden"
+    }
+  },
+}

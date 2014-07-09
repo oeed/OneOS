@@ -7,7 +7,7 @@
 ]]
 
 --adds a few debugging things (a draw call counter)
-local isDebug = false
+local isDebug = true
 
 local function loadAPI(path)
 	local name = string.match(fs.getName(path), '(%a+)%.?.-')
@@ -46,7 +46,8 @@ local objects = {
 	'ImageView',
 	'Menu',
 	'Window',
-	'ProgressBar'
+	'ProgressBar',
+	'ListView'
 }
 
 local env = getfenv()
@@ -649,7 +650,7 @@ function Draw(self)
 			drawCalls = drawCalls + 1
 		end
 	elseif not self.View then
-		print('No loaded view.')
+		print('No loaded view. You need to do program:LoadView first.')
 	elseif isDebug then
 		ignored = ignored + 1
 	end
@@ -673,6 +674,10 @@ function Draw(self)
 	else
 		term.setCursorBlink(false)
 	end
+	if ViewPath == 'Views/' then
+		term.setCursorPos(1, 6)
+	end
+
 	self.IsDrawing = false
 end
 

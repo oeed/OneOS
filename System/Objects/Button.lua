@@ -47,7 +47,7 @@ OnLoad = function(self)
 end
 
 Click = function(self, event, side, x, y)
-	if self.Visible then
+	if self.Visible and not self.IgnoreClick then
 		if self.OnClick then
 			local newToggle = not self.Toggle
 			if self:OnClick(event, side, x, y, not self.Toggle) ~= false and self.Toggle ~= nil then

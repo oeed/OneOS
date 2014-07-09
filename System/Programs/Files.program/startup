@@ -1,7 +1,30 @@
 OneOS.LoadAPI('/System/API/Bedrock.lua', false)
 
 local program = Bedrock:Initialise()
-print('hi')
+
+function OptionsButtonClick(self, event, side, x, y)
+	if self:ToggleMenu('optionsmenu') then
+		if not listmode then
+			program:GetObject('ViewModeMenuItem').Text = 'Icon View'
+		end
+
+		if showhidden then
+			program:GetObject('HiddenFilesMenuItem').Text = 'Hide Hidden Files'
+		end
+	end
+end
+
+function SidebarClick(self, item, event, side, x, y)
+	--term.setTextColour(colours.black)
+	
+	print(item.Text)
+end
+
 program:Run(function()
 	program:LoadView('main')
+
+	program:GetObject('OptionsButton').OnClick = OptionsButtonClick
+	program:GetObject('Sidebar').OnChildClick = SidebarClick
+
 end)
+
