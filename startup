@@ -1,4 +1,3 @@
---
 isDebug = true
 
 oldTerm = term
@@ -139,24 +138,30 @@ end
 
 function LoadingScreen()
 	if fs.getFreeSpace and fs.getFreeSpace('/') < 51200 then
-		term.setBackgroundColor(colours.grey)
-		term.setTextColor(colours.white)
-		term.clear()
+		if not isDebug then
+			term.setBackgroundColor(colours.grey)
+			term.setTextColor(colours.white)
+			term.clear()
 
-		PrintCentered('You have less than 50KB of free space remaining!', 6)
-		PrintCentered('You may encounter crashes due to this.' , 7)
-		term.setTextColor(colours.lightGrey)
+			PrintCentered('You have less than 50KB of free space remaining!', 6)
+			PrintCentered('You may encounter crashes due to this.' , 7)
+			term.setTextColor(colours.lightGrey)
 
-		PrintCentered('Try to free up some space, open \'About OneOS\'' , 9)
-		PrintCentered('in the One menu for more information.' , 10)
-		term.setTextColor(colours.white)
+			PrintCentered('Try to free up some space, open \'About OneOS\'' , 9)
+			PrintCentered('in the One menu for more information.' , 10)
+			term.setTextColor(colours.white)
 
-		PrintCentered('Click anywhere to continue.', 12)
+			PrintCentered('Click anywhere to continue.', 12)
 
-		os.pullEvent('mouse_click')
+			os.pullEvent('mouse_click')
+		else
+			log('WARNING! Less than 50KB disk space available.')
+			sleep(1)
+		end
 	end
-
+	
 	local x, y = nil
+	
 	if not isDebug then
 		term.setBackgroundColour(colours.black)	
 		term.clear()
@@ -171,19 +176,19 @@ function LoadingScreen()
 		local screenWidth, screenHeight = term.getSize()
 		term.setBackgroundColour(colours.white)	
 		term.clear()
-		x = math.ceil((screenWidth - 14) / 2) + 1
-		y = (screenHeight - 9) / 2
+		x = math.ceil((screenWidth - 24) / 2) + 1
+		y = (screenHeight - 8) / 2 + 1
 
 		local text = 'OneOS by oeed'
-		term.setCursorPos(math.ceil((screenWidth - #text) / 2) + 1, y + 13)
-		term.setTextColour(colours.blue)
+		term.setCursorPos(math.ceil((screenWidth - #text) / 2) + 1, y + 5)
+		term.setTextColour(colours.grey)
 		term.write(text)
-	else
-		term.setBackgroundColour(colours.black)
-		term.setTextColor(colours.white)
-		term.clear()
-		print('Starting OneOS [Debug Mode]')
+
+		term.setTextColour(colours.lightGrey)
+		PrintCentered('Hold ALT for boot options', screenHeight)
+
 	end
+		
 	local currentImage = -1
 	local totalAPIs = #fs.list(root .. 'System/API/') + #fs.list(root .. 'System/Objects/')
 	local apis = {}
@@ -199,40 +204,26 @@ function LoadingScreen()
 	end
 
 	for _, file in pairs(apis) do
-		
-		--print('Loading: ' .. file)
 		if not isDebug then
 			if math.floor(_*(8/#apis)) ~= currentImage then
 				currentImage = math.floor(_*(8/#apis))
 				local image = paintutils.loadImage('System/Images/Boot/boot'..currentImage)
 				paintutils.drawImage(image, x, y)
-			end
-			term.setBackgroundColor(colours.white)
-			term.setCursorPos(1, y + 11)
-			
-			term.clearLine()
-			if pocket then
-				PrintCentered(fs.getName(file), y + 11)
-			else
-				PrintCentered(fs.getName(file), y + 11)
+				sleep(0)
 			end
 		end
-		if not isDebug then
-			sleep(0)
-		end
+
 		if not LoadAPI(root .. file) then
 			if not isDebug then
 				term.setTextColour(colours.red)
 				PrintCentered('Error While Loading API '..file, y + 11)
 				term.setCursorPos(1, 1)
 				sleep(3)
-				return false
-			else
-				error('Error While Loading API '..file)
 			end
+			return false
 		end
 	end
-	sleep(0.1)
+	sleep(0.3)
 	return true
 end
 

@@ -9,6 +9,6 @@
     },
   },
   ["BackgroundColour"]=1,
-  ["ToolBarColour"] = 128,
+  ["ToolBarColour"]=256,
   ["ToolBarTextColour"] = 1
 }

@@ -12,7 +12,7 @@ end
 OnLoad = function(self)
 	self:GetObject('OneButton').OnClick = function(btn)
 		if btn:ToggleMenu('onemenu') then
-
+			--TODO: updating
 			self.Bedrock:GetObject('DesktopMenuItem').OnClick = function(itm)
 				Current.Desktop:SwitchTo()
 			end
@@ -34,6 +34,13 @@ OnLoad = function(self)
 			end
 		end
 	end
+
+	self:GetObject('SearchButton').OnClick = function(btn, event, side, x, y, toggle)
+		if toggle then
+			Search.Activate()
+		end
+	end
+
 	self:UpdateButtons()
 end
 

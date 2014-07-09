@@ -230,6 +230,7 @@ OneOS = function(env, program, path)
 					end
 				end
 			end
+			--TODO: replace this window
 			if not settings['StartupProgram'] or not Helpers.TidyPath('/Programs/'..settings['StartupProgram']..'/startup') == Helpers.TidyPath(path) then
 				ButtonDialogueWindow:Initialise("Run at startup?", "Would you like run "..Helpers.RemoveExtension(fs.getName(Helpers.RemoveFileName(path))).." when you turn your computer on?", 'Yes', 'No', function(success, button)
 					if success then

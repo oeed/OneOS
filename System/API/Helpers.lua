@@ -148,7 +148,6 @@ IconForFile = function(path)
 	elseif extension then
 		local _path = Indexer.FindFileInFolder(extension, 'Icons')
 		if _path then
-			print(extension)
 			return ReadIcon(_path, extension)
 		else
 			return ReadIcon('System/Images/Icons/unknown')

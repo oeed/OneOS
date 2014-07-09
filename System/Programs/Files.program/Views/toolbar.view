@@ -1,1 +1,32 @@
-toolbar.view
+{
+  ["Width"]="100%",
+  ["Height"]=3,
+  ["Type"]="View",
+  ["BackgroundColour"]=256,
+  ["Children"]={
+    [1]={
+      ["Y"]=2,
+      ["X"]=2,
+      ["Name"]="BackButton",
+      ["Type"]="Button",
+      ["Text"]="<",
+      ["BackgroundColour"]=1
+    },
+    [2]={
+      ["Y"]=2,
+      ["X"]=6,
+      ["Name"]="ForwardButton",
+      ["Type"]="Button",
+      ["Text"]=">",
+      ["BackgroundColour"]=1
+    },
+    [3]={
+      ["Y"]=2,
+      ["X"]="100%,-3",
+      ["Name"]="OptionsButton",
+      ["Type"]="Button",
+      ["Text"]="#",
+      ["BackgroundColour"]=1
+    },
+  },
+}

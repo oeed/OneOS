@@ -189,6 +189,13 @@ local function viewDrag(self, event, side, x, y)
 	end
 end
 
+function UpdateBackground()
+	local colour = OneOS.Settings:GetValues()['DesktopColour']
+	if colour then
+		program.View.BackgroundColour = colour
+	end
+end
+
 program.OnKeyChar = function(self, event, key)
 	if not program:GetActiveObject() then
 		if key == keys.right then
@@ -201,6 +208,8 @@ end
 
 program:Run(function()
 	program:LoadView('main', false)
+	UpdateBackground()
+	OneOS.Settings.SetDesktopColourChange(UpdateBackground)
 	ReloadFiles()
 	program:StartRepeatingTimer(function()
 		if FilesHaveChanged() then

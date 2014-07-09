@@ -293,7 +293,7 @@ function Activate()
 		Current.Menu:Close()
 	end
 	Current.SearchActive = true
-	Overlay.UpdateButtons()
+	Overlay:UpdateButtons()
 	MainDraw()
 	Current.CanDraw = false
 	Search.Buffer = Drawing.BackBuffer

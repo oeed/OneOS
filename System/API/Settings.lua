@@ -68,10 +68,15 @@ function GetValues(self)
 	return values
 end
 
+DesktopColourChange = false
+function SetDesktopColourChange(func)
+	DesktopColourChange = func
+end
+
 function UpdateInterfaceForKey(key, value)
 	if key == 'DesktopColour' then
-		if Desktop then
-			Desktop.RefreshFiles() --TODO: this will cause a crash
+		if DesktopColourChange then
+			DesktopColourChange(value)
 		end
 	elseif key == 'ComputerName' then
 		os.setComputerLabel(value)

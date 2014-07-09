@@ -26,13 +26,6 @@ bedrock.OnKeyChar = function(self, event, keychar)
 	if keychar == '\\' then
 		--Restart()
 		AnimateShutdown(true)
-	elseif keychar == ']z' then
-		Current.ProgramView:ForceDraw()
-	elseif keychar == '[z' then
-		for i, program in ipairs(Current.Programs) do
-			print(i)
-			print(program.Title)
-		end
 	elseif Current.Program then
 		Current.Program:QueueEvent(event, keychar)
 	end
@@ -144,11 +137,14 @@ function Initialise()
 		Indexer.RefreshIndex() --TODO: finish the search. this needs to be done before starting the desktop
 		Current.Desktop = Helpers.OpenFile('System/Programs/Desktop.program', {isHidden = true})
 
-		--bedrock:StartRepeatingTimer(function()Current.ProgramView:ForceDraw() end, 0.25)
+		if Settings:GetValues()['StartupProgram'] then
+			Helpers.OpenFile('Programs/'..Settings:GetValues()['StartupProgram'])
+			UpdateOverlay()
+		end
 
-		--Helpers.OpenFile('System/Programs/Settings.program')
+		Helpers.OpenFile('System/Programs/Files.program')
 		--Helpers.OpenFile('Programs/LuaIDE.program')
 		--Helpers.OpenFile('Programs/Test2.program')
-
+		UpdateOverlay()
 	end)
 end
