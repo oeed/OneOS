@@ -50,25 +50,37 @@ Draw = function(self)
 		self.DrawCache.NeedsDraw = false
 		local pos = self:GetPosition()
 		Drawing.StartCopyBuffer()
+
 		if self.ClipDrawing then
 			Drawing.AddConstraint(pos.X, pos.Y, self.Width, self.Height)
 		end
+
 		if self.OnDraw then
 			self:OnDraw(pos.X, pos.Y)
 		end
+
+		self.DrawCache.Buffer = Drawing.EndCopyBuffer()
+		
+		if self.Children then
+			for i, child in ipairs(self.Children) do
+				child:Draw()
+			end
+		end
+
 		if self.ClipDrawing then
 			Drawing.RemoveConstraint()
 		end
-		self.DrawCache.Buffer = Drawing.EndCopyBuffer()
+
 	else
 		Drawing.DrawCachedBuffer(self.DrawCache.Buffer)
-	end
-
-	if self.Children then
-		for i, child in ipairs(self.Children) do
-			child:Draw()
+		if self.Children then
+			for i, child in ipairs(self.Children) do
+				child:Draw()
+			end
 		end
 	end
+
+	
 end
 
 ForceDraw = function(self, ignoreChildren, ignoreParent, ignoreBedrock)

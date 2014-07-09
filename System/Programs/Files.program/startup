@@ -16,8 +16,6 @@ end
 
 function SidebarClick(self, item, event, side, x, y)
 	--term.setTextColour(colours.black)
-	
-	print(item.Text)
 end
 
 program:Run(function()

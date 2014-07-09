@@ -47,7 +47,8 @@ local objects = {
 	'Menu',
 	'Window',
 	'ProgressBar',
-	'ListView'
+	'ListView',
+	'FileView'
 }
 
 local env = getfenv()
@@ -223,6 +224,10 @@ function GetAbsolutePosition(self, obj)
 		local pos = self:GetAbsolutePosition(obj.Parent)
 		local x = pos.X + obj.X - 1
 		local y = pos.Y + obj.Y - 1
+		if obj.Parent.ChildOffset then
+			x = x + obj.Parent.ChildOffset[1]
+			y = y + obj.Parent.ChildOffset[2]
+		end
 		return {X = x, Y = y}
 	end
 end

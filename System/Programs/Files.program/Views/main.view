@@ -21,16 +21,40 @@
           {["Text"] = 'Documents', ["Path"] = '/Desktop/Documents/'},
           {["Text"] = 'Programs', ["Path"] = '/Programs/'},
           {["Text"] = 'Computer', ["Path"] = '/'},
+        },
+        ["Peripherals"]={
         }
       }
     },
     [3]={
       ["Y"]=4,
-      ["X"]=12,
+      ["X"]=13,
       ["Height"]="100%,-3",
       ["Name"]="Separator",
       ["Type"]="Separator",
       ["Colour"]=256
+    },
+    [4]={
+      ["Y"]=5,
+      ["X"]=15,
+      ["Height"]=8,
+      ["Width"]=11,
+      ["Name"]="Sidebar",
+      ["Type"]="ListView",
+      ["TextColour"]=128,
+      ["BackgroundColour"]=256,
+      ["Items"]={
+        'Cat',
+        'Dog',
+        'Fish',
+        'Frog',
+        'Bird',
+        'Elephant',
+        'Leopard',
+        'Lion',
+        'Tiger',
+        'Panther'
+      }
     },
   },
   ["BackgroundColour"]=1,

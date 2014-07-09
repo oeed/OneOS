@@ -85,7 +85,7 @@ function ReloadIndicators()
 end
 
 function ReloadFiles()
-	program:RemoveObjects('DesktopItem')
+	program:RemoveObjects('FileView')
 
 	local list = OneOS.FS.list('Desktop/')
 	files = {}
@@ -93,11 +93,11 @@ function ReloadFiles()
 	for i, v in ipairs(list) do
 		local x, y = IconLocation(i)
 		files[v] = program:AddObject({
-			Type = 'DesktopItem',
+			Type = 'FileView',
 			X = x,
 			BaseX = x,
 			Y = y,
-			Name = 'DesktopItem',
+			Name = 'FileView',
 			Path = 'Desktop/'..v
 		})
 		count = i

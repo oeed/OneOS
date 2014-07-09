@@ -9,6 +9,8 @@
       ["X"]=2,
       ["Name"]="BackButton",
       ["Type"]="Button",
+      ["Enabled"]=false,
+      ["TextColour"]=128,
       ["Text"]="<",
       ["BackgroundColour"]=1
     },
@@ -17,6 +19,8 @@
       ["X"]=6,
       ["Name"]="ForwardButton",
       ["Type"]="Button",
+      ["Enabled"]=false,
+      ["TextColour"]=128,
       ["Text"]=">",
       ["BackgroundColour"]=1
     },
@@ -26,6 +30,7 @@
       ["Name"]="OptionsButton",
       ["Type"]="Button",
       ["Text"]="#",
+      ["TextColour"]=128,
       ["BackgroundColour"]=1
     },
   },

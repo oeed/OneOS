@@ -41,7 +41,7 @@ OnLoad = function(self)
 		if side == 1 then
 			OneOS.Helpers.OpenFile(self.Path)
 		elseif side == 2 then
-			--TODO: menu
+			--TODO: refresh button doesnt work atm
 			if obj:ToggleMenu('filemenu', x, y) then
 				self.Bedrock:GetObject('OpenMenuItem').OnClick = function(itm)
 					OneOS.Helpers.OpenFile(self.Path)
@@ -56,11 +56,11 @@ OnLoad = function(self)
 				end
 
 				self.Bedrock:GetObject('NewFolderMenuItem').OnClick = function(itm)
-					OneOS.Helpers.NewFolder('/Desktop/', ReloadFiles, self.Bedrock)
+					OneOS.Helpers.NewFolder(OneOS.Helpers.ParentFolder(self.Path)..'/', ReloadFiles, self.Bedrock)
 				end
 
 				self.Bedrock:GetObject('NewFileMenuItem').OnClick = function(itm)
-					OneOS.Helpers.NewFile('/Desktop/', ReloadFiles, self.Bedrock)
+					OneOS.Helpers.NewFile(OneOS.Helpers.ParentFolder(self.Path)..'/', ReloadFiles, self.Bedrock)
 				end
 
 				self.Bedrock:GetObject('RefreshMenuItem').OnClick = function(itm)

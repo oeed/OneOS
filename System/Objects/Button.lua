@@ -2,11 +2,13 @@ BackgroundColour = colours.lightGrey
 ActiveBackgroundColour = colours.blue
 ActiveTextColour = colours.white
 TextColour = colours.black
+DisabledTextColour = colours.lightGrey
 Text = ""
 Toggle = nil
 Momentary = true
 AutoWidth = true
 Align = 'Center'
+Enabled = true
 
 OnUpdate = function(self, value)
 	if value == 'Text' and self.AutoWidth then
@@ -24,6 +26,9 @@ OnDraw = function(self, x, y)
 	local txt = self.TextColour
 	if self.Toggle then
 		txt = self.ActiveTextColour
+	end
+	if not self.Enabled then
+		txt = self.DisabledTextColour
 	end
 	Drawing.DrawBlankArea(x, y, self.Width, self.Height, bg)
 
@@ -47,7 +52,7 @@ OnLoad = function(self)
 end
 
 Click = function(self, event, side, x, y)
-	if self.Visible and not self.IgnoreClick then
+	if self.Visible and not self.IgnoreClick and self.Enabled then
 		if self.OnClick then
 			local newToggle = not self.Toggle
 			if self:OnClick(event, side, x, y, not self.Toggle) ~= false and self.Toggle ~= nil then

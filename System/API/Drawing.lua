@@ -15,27 +15,28 @@ Constraints = {
 	
 }
 
-CurrentConstraint = {}
+CurrentConstraint = {1,1,_w,_h}
 IgnoreConstraint = false
 
 function AddConstraint(x, y, width, height)
 	local x2 = x + width - 1
 	local y2 = y + height - 1
-	table.insert(Constraints, {x, y, x2, y2})
-	GetConstraint()
+	table.insert(Drawing.Constraints, {x, y, x2, y2})
+	Drawing.GetConstraint()
 end
 
 function RemoveConstraint()
-	table.remove(Constraints, #Constraints)
-	GetConstraint()
+	--table.remove(Drawing.Constraints, #Drawing.Constraints)
+	Drawing.Constraints[#Drawing.Constraints] = nil
+	Drawing.GetConstraint()
 end
 
 function GetConstraint()
 	local x = 1
 	local y = 1
-	local x2 = Screen.Width
-	local y2 = Screen.Height
-	for i, c in ipairs(Constraints) do
+	local x2 = Drawing.Screen.Width
+	local y2 = Drawing.Screen.Height
+	for i, c in ipairs(Drawing.Constraints) do
 		if x < c[1] then
 			x = c[1]
 		end
@@ -49,16 +50,15 @@ function GetConstraint()
 			y2 = c[4]
 		end
 	end
-	CurrentConstraint = {x, y, x2, y2}
+	Drawing.CurrentConstraint = {x, y, x2, y2}
 end
-GetConstraint()
 
 function WithinContraint(x, y)
 	return Drawing.IgnoreConstraint or
-		  (x >= CurrentConstraint[1] and
-		   y >= CurrentConstraint[2] and
-		   x <= CurrentConstraint[3] and
-		   y <= CurrentConstraint[4])
+		  (x >= Drawing.CurrentConstraint[1] and
+		   y >= Drawing.CurrentConstraint[2] and
+		   x <= Drawing.CurrentConstraint[3] and
+		   y <= Drawing.CurrentConstraint[4])
 end
 
 colours.transparent = -1
@@ -253,8 +253,8 @@ WriteStringToBuffer = function (x, y, characters, textColour,bgColour)
 	end
 end
 
-WriteToBuffer = function(x, y, character, textColour,bgColour)
-	if not WithinContraint(x, y) then
+WriteToBuffer = function(x, y, character, textColour,bgColour, cached)
+	if not cached and not Drawing.WithinContraint(x, y) then
 		return
 	end
 	x = round(x)
@@ -283,7 +283,7 @@ end
 DrawCachedBuffer = function(buffer)
 	for y, row in pairs(buffer) do
 		for x, pixel in pairs(row) do
-			WriteToBuffer(x, y, pixel[1], pixel[2], pixel[3])
+			WriteToBuffer(x, y, pixel[1], pixel[2], pixel[3], true)
 		end
 	end
 end
