@@ -9,12 +9,21 @@
     },
     [2]={
       ["Y"]=4,
+      ["X"]=12,
+      ["Height"]="100%,-3",
+      ["Name"]="Separator",
+      ["Type"]="Separator",
+      ["Colour"]=256
+    },
+    [3]={
+      ["Y"]=4,
       ["X"]=1,
       ["Height"]="100%,-3",
-      ["Width"]=11,
+      ["Width"]=12,
       ["Name"]="Sidebar",
       ["Type"]="ListView",
       ["TextColour"]=128,
+      ["BackgroundColour"]=-1,
       ["Items"]={
         ["Favourites"]={
           {["Text"] = 'Desktop', ["Path"] = '/Desktop/'},
@@ -22,38 +31,32 @@
           {["Text"] = 'Programs', ["Path"] = '/Programs/'},
           {["Text"] = 'Computer', ["Path"] = '/'},
         },
-        ["Peripherals"]={
-        }
-      }
-    },
-    [3]={
-      ["Y"]=4,
-      ["X"]=13,
-      ["Height"]="100%,-3",
-      ["Name"]="Separator",
-      ["Type"]="Separator",
-      ["Colour"]=256
+        ["Peripherals"]={}
+      },
     },
     [4]={
+      ["Y"]=4,
+      ["X"]=13,
+      ["Width"]="100%,-12",
+      ["Name"]="PathLabel",
+      ["Type"]="Label",
+      ["TextColour"]=256,
+      ["Text"]="/Desktop/"
+    },
+    [5]={
       ["Y"]=5,
-      ["X"]=15,
-      ["Height"]=8,
-      ["Width"]=11,
-      ["Name"]="Sidebar",
+      ["X"]=13,
+      ["Height"]="100%,-4",
+      ["Width"]="100%,-12",
+      ["Name"]="FilesListView",
       ["Type"]="ListView",
       ["TextColour"]=128,
-      ["BackgroundColour"]=256,
+      ["BackgroundColour"]=-1,
       ["Items"]={
-        'Cat',
-        'Dog',
-        'Fish',
-        'Frog',
-        'Bird',
-        'Elephant',
-        'Leopard',
-        'Lion',
-        'Tiger',
-        'Panther'
+        {["Text"] = 'Desktop', ["Path"] = '/Desktop/'},
+        {["Text"] = 'Documents', ["Path"] = '/Desktop/Documents/'},
+        {["Text"] = 'Programs', ["Path"] = '/Programs/'},
+        {["Text"] = 'Computer', ["Path"] = '/'},
       }
     },
   },

@@ -1,83 +1,62 @@
 Inherit = 'View'
+ChildOffset = {0, 0}
+ContentWidth = 0
+ContentHeight = 0
 
-TextColour = colours.black
-BackgroundColour = colours.white
-HeadingColour = colours.lightGrey
-SelectionBackgroundColour = colours.blue
-SelectionTextColour = colours.white
-Items = false
-CanSelect = false
-Selected = nil
-ChildOffset = {0,-1}
-
-OnDraw = function(self, x, y)
-	Drawing.DrawBlankArea(x, y, self.Width, self.Height, self.BackgroundColour)
-end
-
-local function AddItem(self, v, x, y, group)
-	local toggle = false
-	if not self.CanSelect then
-		toggle = nil
+CalculateContentSize = function(self)
+	local function calculateObject(obj)
+		local pos = obj:GetPosition()
+		local x2 = pos.X + obj.Width - 1
+		local y2 = pos.Y + obj.Height - 1
+		if obj.Children then
+			for i, child in ipairs(obj.Children) do
+				local _x2, _y2 = calculateObject(child)
+				if _x2 > x2 then
+					x2 = _x2
+				end
+				if _y2 > y2 then
+					y2 = _y2
+				end
+			end
+		end
+		return x2, y2
 	end
-	local item = {
-		["Width"]=self.Width + 1,
-		["X"]=x,
-		["Y"]=y,
-		["Name"]="ListViewItem",
-		["Type"]="Button",
-		["TextColour"]=self.TextColour,
-		["BackgroundColour"]=-1,
-		["ActiveTextColour"]=self.SelectionTextColour,
-		["ActiveBackgroundColour"]=self.SelectionBackgroundColour,
-		["Align"]='Left',
-		["Toggle"]=toggle,
-		["Group"]=group,
-		OnClick = function(itm)
-			if self.CanSelect then
-				for i2, _v in ipairs(self.Children) do
-					_v.Toggle = false
-				end
-				self.Selected = itm
-			end
-		end
-    }
-    if type(v) == 'table' then
-    	for k, _v in pairs(v) do
-    		item[k] = _v
-    	end
-    else
-		item.Text = v
-    end
-	
-	self:AddObject(item)
+
+	local pos = self:GetPosition()
+	local x2, y2 = calculateObject(self)
+	self.ContentWidth = x2 - pos.X + 1
+	self.ContentHeight = y2 - pos.Y + 1
 end
 
-OnUpdate = function(self, value)
-	if value == 'Items' then
-		--self:RemoveAllObjects()
-		local groupMode = false
-		for k, v in pairs(self.Items) do
-			if type(k) == 'string' then
-				groupMode = true
-				break
-			end
-		end
+UpdateScroll = function(self)
+	self:CalculateContentSize()
+	if self.ContentHeight > self.Height then
+		if not self:GetObject('ScrollViewScrollBar') then
+			local _scrollBar = self:AddObject({
+				["Name"] = 'ScrollViewScrollBar',
+				["Type"] = 'ScrollBar',
+				["X"] = self.Width,
+				["Y"] = 1,
+				["Width"] = 1,
+				["Height"] = self.Height,
+				["Z"]=999
+			})
 
-		if not groupMode then
-			for i, v in ipairs(self.Items) do
-				AddItem(self, v, 1, i)
-			end
-		else
-			local y = 1
-			for k, v in pairs(self.Items) do
-				y = y + 1
-				AddItem(self, {Text = k, TextColour = self.HeadingColour, IgnoreClick = true}, 0, y)
-				for i, _v in ipairs(v) do
-					y = y + 1
-					AddItem(self, _v, 1, y, k)
+			_scrollBar.OnChange = function(scrollBar)
+				self.ChildOffset[2] = -scrollBar.Scroll
+				for i, child in ipairs(self.Children) do
+					child:ForceDraw()
 				end
-				y = y + 1
 			end
 		end
+		self:GetObject('ScrollViewScrollBar').MaxScroll = self.ContentHeight - self.Height
+	else
+		self:RemoveObject('ScrollViewScrollBar')
+	end
+end
+
+OnScroll = function(self, event, direction, x, y)
+	if self:GetObject('ScrollViewScrollBar') then
+		self:GetObject('ScrollViewScrollBar'):OnScroll(event, direction, x, y)
 	end
 end

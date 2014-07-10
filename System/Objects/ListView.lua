@@ -1,4 +1,4 @@
-Inherit = 'View'
+Inherit = 'ScrollView'
 
 TextColour = colours.black
 BackgroundColour = colours.white
@@ -8,7 +8,6 @@ SelectionTextColour = colours.white
 Items = false
 CanSelect = false
 Selected = nil
-ChildOffset = {0,-1}
 
 OnDraw = function(self, x, y)
 	Drawing.DrawBlankArea(x, y, self.Width, self.Height, self.BackgroundColour)
@@ -20,7 +19,7 @@ local function AddItem(self, v, x, y, group)
 		toggle = nil
 	end
 	local item = {
-		["Width"]=self.Width + 1,
+		["Width"]=self.Width,
 		["X"]=x,
 		["Y"]=y,
 		["Name"]="ListViewItem",
@@ -54,7 +53,7 @@ end
 
 OnUpdate = function(self, value)
 	if value == 'Items' then
-		--self:RemoveAllObjects()
+		self:RemoveAllObjects()
 		local groupMode = false
 		for k, v in pairs(self.Items) do
 			if type(k) == 'string' then
@@ -79,5 +78,7 @@ OnUpdate = function(self, value)
 				y = y + 1
 			end
 		end
+		
+		self:UpdateScroll()
 	end
 end

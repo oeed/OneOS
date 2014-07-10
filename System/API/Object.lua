@@ -9,6 +9,7 @@ IgnoreClick = false
 Name = nil 
 ClipDrawing = true
 UpdateDrawBlacklist = {}
+Fixed = false
 
 DrawCache = {}
 
@@ -142,6 +143,8 @@ Click = function(self, event, side, x, y)
 		if event == 'mouse_click' and self.OnClick and self:OnClick(event, side, x, y) ~= false then
 			return true
 		elseif event == 'mouse_drag' and self.OnDrag and self:OnDrag(event, side, x, y) ~= false then
+			return true
+		elseif event == 'mouse_scroll' and self.OnScroll and self:OnScroll(event, side, x, y) ~= false then
 			return true
 		else
 			return false

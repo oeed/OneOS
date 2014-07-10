@@ -49,7 +49,8 @@ end
 
 Click = function(self, event, side, x, y)
 	if self.Visible and not self.IgnoreClick then
-		for i, child in ipairs(self.Children) do
+		for i = #self.Children, 1, -1 do --children are ordered from smallest Z to highest, so this is done in reverse
+			local child = self.Children[i]
 			if self:DoClick(child, event, side, x, y) then
 				if self.OnChildClick then
 					self:OnChildClick(child, event, side, x, y)
@@ -60,6 +61,8 @@ Click = function(self, event, side, x, y)
 		if event == 'mouse_click' and self.OnClick and self:OnClick(event, side, x, y) ~= false then
 			return true
 		elseif event == 'mouse_drag' and self.OnDrag and self:OnDrag(event, side, x, y) ~= false then
+			return true
+		elseif event == 'mouse_scroll' and self.OnScroll and self:OnScroll(event, side, x, y) ~= false then
 			return true
 		else
 			return false

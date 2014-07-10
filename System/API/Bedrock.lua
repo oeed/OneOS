@@ -39,6 +39,7 @@ local apis = {
 
 local objects = {
 	'View',
+	'ScrollView',
 	'Button',
 	'Label',
 	'Separator',
@@ -48,7 +49,8 @@ local objects = {
 	'Window',
 	'ProgressBar',
 	'ListView',
-	'FileView'
+	'FileView',
+	'ScrollBar'
 }
 
 local env = getfenv()
@@ -224,7 +226,7 @@ function GetAbsolutePosition(self, obj)
 		local pos = self:GetAbsolutePosition(obj.Parent)
 		local x = pos.X + obj.X - 1
 		local y = pos.Y + obj.Y - 1
-		if obj.Parent.ChildOffset then
+		if not obj.Fixed and obj.Parent.ChildOffset then
 			x = x + obj.Parent.ChildOffset[1]
 			y = y + obj.Parent.ChildOffset[2]
 		end
@@ -634,7 +636,7 @@ local eventFuncs = {
 	OnKeyChar = {'key', 'char'},
 	OnDrag = {'mouse_drag'},
 	OnScroll = {'mouse_scroll'},
-	HandleClick = {'mouse_click', 'mouse_drag'},
+	HandleClick = {'mouse_click', 'mouse_drag', 'mouse_scroll'},
 	HandleKeyChar = {'key', 'char'},
 	HandleTimer = {'timer'}
 }

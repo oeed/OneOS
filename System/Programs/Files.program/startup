@@ -1,14 +1,43 @@
+tArgs = {...}
+
 OneOS.LoadAPI('/System/API/Bedrock.lua', false)
 
 local program = Bedrock:Initialise()
 
+Current = {
+	History = {},
+	FileList = {},
+	Path = tArgs[1] or '/Desktop/'
+}
+
+Settings = {
+	ShowHidden = false,
+	ListMode = false,
+}
+
+function WriteSettings()
+	local h = fs.open('.Files.settings', 'w')
+	h.write(textutils.serialize(Settings))
+	h.close()
+end
+
+function ReadSettings()
+	local h = fs.open('.Files.settings', 'r')
+	if h then
+		Settings = textutils.unserialize(h.readAll())
+		h.close()
+	else
+		WriteSettings()
+	end
+end
+
 function OptionsButtonClick(self, event, side, x, y)
 	if self:ToggleMenu('optionsmenu') then
-		if not listmode then
+		if Settings.ListMode then
 			program:GetObject('ViewModeMenuItem').Text = 'Icon View'
 		end
 
-		if showhidden then
+		if Settings.ShowHidden then
 			program:GetObject('HiddenFilesMenuItem').Text = 'Hide Hidden Files'
 		end
 	end
@@ -18,9 +47,162 @@ function SidebarClick(self, item, event, side, x, y)
 	--term.setTextColour(colours.black)
 end
 
+function RefreshFiles()
+	diskOpenButton = nil
+	if Current.Path:sub(1,13) == '/Peripherals/' then
+		if peripheral.isPresent(Current.Peripheral.Side:lower()) then
+			if Current.Peripheral.Type == 'wireless_modem' then
+				Current.Peripheral.Type = 'Wireless Modem'
+			end
+			Current.Peripheral.Type = Helpers.Capitalise(Current.Peripheral.Type)
+			Current.Peripheral.Side = Helpers.Capitalise(Current.Peripheral.Side)
+
+			Current.Peripheral.Image = Drawing.LoadImage('/System/Programs/Files.program/images/'..Current.Peripheral.Type)
+			if not Current.Peripheral.Image then
+				Current.Peripheral.Image = Drawing.LoadImage('/System/Programs/Files.program/images/Unknown')
+			end
+
+			Current.Peripheral.Info = {}
+
+			if Current.Peripheral.Type == 'Computer' then
+				local id = peripheral.call(Current.Peripheral.Side:lower(),'getID')
+				if id then
+					Current.Peripheral.Info = {
+						ID = tostring(id)
+					}
+				else
+					Current.Peripheral.Info = {}
+				end
+			elseif Current.Peripheral.Type == 'Drive' then
+				local discType = 'No Disc'
+				local discID = nil
+				local mountPath = nil
+				local discLabel = nil
+				local songName = nil
+				if peripheral.call(Current.Peripheral.Side:lower(), 'isDiskPresent') then
+					if peripheral.call(Current.Peripheral.Side:lower(), 'hasData') then
+						discType = 'Data'
+						discID = peripheral.call(Current.Peripheral.Side:lower(), 'getDiskID')
+						if discID then
+							discID = tostring(discID)
+						else
+							discID = 'None'
+						end
+						mountPath = '/'..peripheral.call(Current.Peripheral.Side:lower(), 'getMountPath')..'/'
+						discLabel = peripheral.call(Current.Peripheral.Side:lower(), 'getDiskLabel')
+					else
+						discType = 'Audio'
+						songName = peripheral.call(Current.Peripheral.Side:lower(), 'getAudioTitle')
+					end
+				end
+				if mountPath then
+					diskOpenButton = Button:Initialise(Current.SidebarWidth+10, 9, nil, nil, colours.lightGrey, nil, nil, nil, nil, function()GoToPath(mountPath)end, 'View Files')
+				elseif discType == 'Audio' then
+					diskOpenButton = Button:Initialise(Current.SidebarWidth+10, 9, nil, nil, colours.lightGrey, nil, nil, nil, nil, function()disk.playAudio(Current.Peripheral.Side:lower()) end, 'Play')
+				else
+					diskOpenButton = nil
+				end
+
+				Current.Peripheral.Info = {
+					['Disc Type'] = discType,
+					['Disc Label'] = discLabel,
+					['Song Title'] = songName,
+					['Disc ID'] = discID,
+					['Mount Path'] = mountPath
+				}
+			elseif Current.Peripheral.Type == 'Printer' then
+				local pageSize = 'No Loaded Page'
+				local _, err = pcall(function() return tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getPgaeSize')) end)
+				if not err then
+					pageSize = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getPageSize'))
+				end
+				Current.Peripheral.Info = {
+					['Paper Level'] = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getPaperLevel')),
+					['Paper Size'] = pageSize,
+					['Ink Level'] = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getInkLevel'))
+				}
+			elseif Current.Peripheral.Type == 'Modem' then
+				Current.Peripheral.Info = {
+					['Connected Peripherals'] = tostring(#peripheral.call(Current.Peripheral.Side:lower(), 'getNamesRemote'))
+				}
+			elseif Current.Peripheral.Type == 'Monitor' then
+				local w, h = peripheral.call(Current.Peripheral.Side:lower(), 'getSize')
+				local screenType = 'Black and White'
+				if peripheral.call(Current.Peripheral.Side:lower(), 'isColour') then
+					screenType = 'Colour'
+				end
+				local buttonTitle = 'Use as Screen'
+				if OneOS.Settings:GetValues()['Monitor'] == Current.Peripheral.Side:lower() then
+					buttonTitle = 'Use Computer Screen'
+				end
+				diskOpenButton = Button:Initialise(Current.SidebarWidth+10, 9, nil, nil, colours.lightGrey, nil, nil, nil, nil, function() 
+					ButtonDialogueWindow:Initialise("Reboot Required", "To change screen you'll need to reboot your computer.", 'Reboot', 'Cancel', function(self, success)
+						if success then
+							if buttonTitle == 'Use Computer Screen' then
+								OneOS.Settings:SetValue('Monitor', nil)
+							else
+								OneOS.Settings:SetValue('Monitor', Current.Peripheral.Side:lower())
+							end
+							OneOS.Reboot()
+						end
+					end):Show()
+				end, buttonTitle)
+				Current.Peripheral.Info = {
+					['Type'] = screenType,
+					['Width'] = tostring(w),
+					['Height'] = tostring(h),
+				}
+			end
+			return
+		else
+			Current.Path = '/Desktop/'
+		end
+	end
+	for i, v in ipairs(OneOS.FS.list(Current.Path)) do
+		Current.Peripheral = nil
+		if Settings.ShowHidden or string.sub( v, 1, 1 ) ~= '.' then
+			local path = Current.Path .. '/' .. v
+			if Helpers.TidyPath(path) == '/rom/' then
+				break
+			end
+			local  = 1
+			if Settings.ListMode then
+
+			end
+			table.insert(Current.FileList,{
+				Name = OneOS.FS.getName(path),
+				ShortName = Helpers.RemoveExtension(OneOS.FS.getName(path)),
+				Size = OneOS.FS.getSize(path),
+				Directory = OneOS.FS.isDir(path),
+				Path = Helpers.TidyPath(path)
+			})
+		end
+	end
+	--Current.SidebarList.Peripherals = Peripheral.GetPeripherals()
+end
+
+function GoToPath(path, history)
+	history = history or false
+	local path = Helpers.TidyPath(path)
+
+	if not history then
+		for i, v in ipairs(Current.History) do
+			if i >= Current.HistoryItem then
+				Current.History[i] = nil
+ 			end
+		end
+		table.insert(Current.History, Current.Path)
+		Current.HistoryItem = #Current.History + 1
+	end
+	Current.FileScroll = 0
+	Current.Path = Helpers.TidyPath(path)
+	RefreshFiles()
+end
+
 program:Run(function()
 	program:LoadView('main')
-
+	ReadSettings()
+	RefreshFiles()
 	program:GetObject('OptionsButton').OnClick = OptionsButtonClick
 	program:GetObject('Sidebar').OnChildClick = SidebarClick
 

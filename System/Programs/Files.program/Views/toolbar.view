@@ -26,6 +26,15 @@
     },
     [3]={
       ["Y"]=2,
+      ["X"]=11,
+      ["Name"]="GoUpButton",
+      ["Type"]="Button",
+      ["TextColour"]=128,
+      ["Text"]="Up",
+      ["BackgroundColour"]=1
+    },
+    [4]={
+      ["Y"]=2,
       ["X"]="100%,-3",
       ["Name"]="OptionsButton",
       ["Type"]="Button",

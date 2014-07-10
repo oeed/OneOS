@@ -165,6 +165,7 @@ OnClick = function(self, event, side, x, y)
 end
 
 OnDrag = OnClick
+OnScroll = OnClick
 
 
 --[[

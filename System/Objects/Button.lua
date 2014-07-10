@@ -5,7 +5,7 @@ TextColour = colours.black
 DisabledTextColour = colours.lightGrey
 Text = ""
 Toggle = nil
-Momentary = true
+Momentary = true --TODO: the flash doesn't actually appear because it is skipped over in the 0.05s
 AutoWidth = true
 Align = 'Center'
 Enabled = true
@@ -52,7 +52,7 @@ OnLoad = function(self)
 end
 
 Click = function(self, event, side, x, y)
-	if self.Visible and not self.IgnoreClick and self.Enabled then
+	if self.Visible and not self.IgnoreClick and self.Enabled and event ~= 'mouse_scroll' then
 		if self.OnClick then
 			local newToggle = not self.Toggle
 			if self:OnClick(event, side, x, y, not self.Toggle) ~= false and self.Toggle ~= nil then
