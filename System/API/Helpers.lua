@@ -33,7 +33,7 @@ OpenFile = function(path, args)
 
 			end
 		else
-			LaunchProgram('/Programs/LuaIDE.program/startup', {path}, 'LuaIDE')
+			OpenFileWith(path)
 		end
 	end
 end
@@ -56,7 +56,6 @@ ListPrograms = function()
 end
 
 ReadIcon = function(path, cacheName)
-	print(path)
 	cacheName = cacheName or path
 	if not IconCache[cacheName] then
 		IconCache[cacheName] = Drawing.LoadImage(path, true)
@@ -315,4 +314,72 @@ NewFolder = function(basePath, done, bedrock)
 			end
 		end
 	end)
+end
+
+OpenFileWith = function(path, bedrock)
+	bedrock = bedrock or Current.Bedrock
+	path = TidyPath(path)
+	local text = 'Choose the program you want to open this file with.'
+	local height = #Helpers.WrapText(text, 26)
+
+	local children = {
+		{
+			["Y"]="100%,-1",
+			["X"]="100%,-4",
+			["Name"]="OpenButton",
+			["Type"]="Button",
+			["Text"]="Open",
+			OnClick = function()
+				local selected = bedrock.Window:GetObject('ListView').Selected
+				if selected then
+					OneOS.Run(value, selected.Path, path)
+					bedrock.Window:Close()
+				end
+			end
+		},
+		{
+			["Y"]="100%,-1",
+			["X"]="100%,-13",
+			["Name"]="CancelButton",
+			["Type"]="Button",
+			["Text"]="Cancel",
+			OnClick = function()
+				bedrock.Window:Close()
+			end
+		},
+	    {
+			["Y"]=2,
+			["X"]=2,
+			["Height"]="100%,-3",
+			["Width"]="100%,-2",
+			["Name"]="ListView",
+			["Type"]="ListView",
+			["TextColour"]=128,
+			["BackgroundColour"]=-1,
+			["CanSelect"]=true,
+			["Items"]={
+				{["Text"] = 'Desktop', ["Path"] = '/Desktop/'},
+				{["Text"] = 'Documents', ["Path"] = '/Desktop/Documents/'},
+				{["Text"] = 'Programs', ["Path"] = '/Programs/'},
+				{["Text"] = 'Computer', ["Path"] = '/'},
+			},
+	    },
+	    {
+			["Y"]=2,
+			["X"]=2,
+			["Width"]="100%,-2",
+			["Height"]=height,
+			["Name"]="Label",
+			["Type"]="Label",
+			["Text"]=text
+		}
+	}
+
+	local view = {
+		Children = {children},
+		Width=28,
+		Height=10+height,
+	}
+	bedrock:DisplayWindow(view, 'Open With')
+
 end

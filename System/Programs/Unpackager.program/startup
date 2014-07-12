@@ -4,7 +4,6 @@ if not tArgs[1] or not OneOS.FS.exists(tArgs[1]) then
 	OneOS.Close()
 end
 
-OneOS.LoadAPI('/System/API/Helpers.lua')
 OneOS.LoadAPI('/System/API/Drawing.lua')
 
 Drawing.Clear(colours.white)
@@ -14,7 +13,7 @@ Drawing.DrawBuffer()
 
 local packrun, err = OneOS.LoadFile(tArgs[1])
 local env = getfenv()
-env['installLocation'] = Helpers.RemoveFileName(tArgs[1])..'/'
+env['installLocation'] = OneOS.Helpers.RemoveFileName(tArgs[1])..'/'
 setfenv( packrun, env)
 if packrun then
 	packrun()
@@ -23,6 +22,7 @@ else
 	error(tArgs[1])
 	error('The package appears to be corrupt.')
 end
+sleep(0.5)
 
 Drawing.Clear(colours.white)
 Drawing.DrawCharactersCenter(nil, nil, nil, nil, 'Package Extracted', colours.black, colours.white)

@@ -7,7 +7,7 @@
 ]]
 
 --adds a few debugging things (a draw call counter)
-local isDebug = true
+local isDebug = false
 
 local function loadAPI(path)
 	local name = string.match(fs.getName(path), '(%a+)%.?.-')
@@ -254,7 +254,9 @@ function LoadView(self, name, draw)
 			if view.ToolBarTextColour then
 				OneOS.ToolBarTextColour = view.ToolBarTextColour
 			end
-			self:SetActiveObject()
+			if not self:GetActiveObject() then
+				self:SetActiveObject()
+			end
 			success = true
 		end
 	end
@@ -376,6 +378,11 @@ function ObjectFromFile(self, file, view)
 		end
 		return object
 	elseif not file.Type then
+		for k, v in pairs(file) do
+			print(k)
+			print(v.Name)
+			print('*')
+		end
 		error('No object type specified. (e.g. Type = "Button")')
 	else
 		error('No Object: '..file.Type..'. The API probably isn\'t loaded')
@@ -430,6 +437,10 @@ function DisplayWindow(self, _view, title, canClose)
 	_view.Type = 'View'
 	_view.Name = 'View'
 	_view.BackgroundColour = _view.BackgroundColour or colours.white
+	print(_view)
+	print(self.Window)
+	print('*****')
+	print(self)
 	self.Window:SetView(self:ObjectFromFile(_view, self.Window))
 end
 
@@ -680,9 +691,6 @@ function Draw(self)
 		term.setCursorBlink(true)
 	else
 		term.setCursorBlink(false)
-	end
-	if ViewPath == 'Views/' then
-		term.setCursorPos(1, 6)
 	end
 
 	self.IsDrawing = false

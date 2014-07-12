@@ -1,4 +1,5 @@
 Inherit = 'ScrollView'
+UpdateDrawBlacklist = {['NeedsItemUpdate']=true}
 
 TextColour = colours.black
 BackgroundColour = colours.white
@@ -8,8 +9,13 @@ SelectionTextColour = colours.white
 Items = false
 CanSelect = false
 Selected = nil
+NeedsItemUpdate = false
 
 OnDraw = function(self, x, y)
+	if self.NeedsItemUpdate then
+		self:UpdateItems()
+		self.NeedsItemUpdate = false
+	end
 	Drawing.DrawBlankArea(x, y, self.Width, self.Height, self.BackgroundColour)
 end
 
@@ -51,34 +57,37 @@ local function AddItem(self, v, x, y, group)
 	self:AddObject(item)
 end
 
+UpdateItems = function(self)
+	self:RemoveAllObjects()
+	local groupMode = false
+	for k, v in pairs(self.Items) do
+		if type(k) == 'string' then
+			groupMode = true
+			break
+		end
+	end
+
+	if not groupMode then
+		for i, v in ipairs(self.Items) do
+			AddItem(self, v, 1, i)
+		end
+	else
+		local y = 1
+		for k, v in pairs(self.Items) do
+			y = y + 1
+			AddItem(self, {Text = k, TextColour = self.HeadingColour, IgnoreClick = true}, 0, y)
+			for i, _v in ipairs(v) do
+				y = y + 1
+				AddItem(self, _v, 1, y, k)
+			end
+			y = y + 1
+		end
+	end
+	self:UpdateScroll()
+end
+
 OnUpdate = function(self, value)
 	if value == 'Items' then
-		self:RemoveAllObjects()
-		local groupMode = false
-		for k, v in pairs(self.Items) do
-			if type(k) == 'string' then
-				groupMode = true
-				break
-			end
-		end
-
-		if not groupMode then
-			for i, v in ipairs(self.Items) do
-				AddItem(self, v, 1, i)
-			end
-		else
-			local y = 1
-			for k, v in pairs(self.Items) do
-				y = y + 1
-				AddItem(self, {Text = k, TextColour = self.HeadingColour, IgnoreClick = true}, 0, y)
-				for i, _v in ipairs(v) do
-					y = y + 1
-					AddItem(self, _v, 1, y, k)
-				end
-				y = y + 1
-			end
-		end
-		
-		self:UpdateScroll()
+		self.NeedsItemUpdate = true
 	end
 end

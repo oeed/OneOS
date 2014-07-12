@@ -86,7 +86,7 @@ local function findObjectNamed(view, name, minI)
 	local minI = minI or 0
 	if view and view.Children then
 		for i, child in ipairs(view.Children) do
-			if child.Name == name then
+			if child.Name == name or child == name then
 				return child, i, view
 			elseif child.Children then
 				local found, index, foundView = findObjectNamed(child, name)
@@ -138,56 +138,37 @@ function GetObjects(self, name)
 	local objects = {}
 	local minI = 0
 	while true do
-		local obj, index = findObjectNamed(self, name, minI)
+		local obj, index, view = findObjectNamed(self, name, minI)
 		if not obj then
 			break
 		end
 		table.insert(objects, obj)
+		if view.OnUpdate then
+			view:OnUpdate('Children')
+		end
 		minI = index
 	end
 	return objects
 end
 
 function RemoveObject(self, name)
-	if type(name) == 'string' then
-		local object, index = findObjectNamed(self, name)
-		if index then
-			self.Children[index]:OnRemove()
-			table.remove(self.Children, index)
-			self:ForceDraw()
-			return true
-		else
-			return false
+	local obj, index, view = findObjectNamed(self, name, minI)
+	if index then
+		view.Children[index]:OnRemove()
+		table.remove(view.Children, index)
+		if view.OnUpdate then
+			view:OnUpdate('Children')
 		end
-	else
-		local found = false
-		for i, child in ipairs(self.Children) do
-			if name == child then
-				child:OnRemove()
-				table.remove(self.Children, i)
-				found = true
-			end
-		end
-
-		if found then
-			self:ForceDraw()
-			return true
-		else
-			return false
-		end
+		return true
 	end
+	return false
 end
 
 function RemoveObjects(self, name)
-	while true do
-		local obj, index = findObjectNamed(self, name)
-		if not obj then
-			break
-		end
-		self.Children[index]:OnRemove()
-		table.remove(self.Children, index)
+	local i = 1
+	while self:RemoveObject(name) and i < 100 do
+		i = i + 1
 	end
-		self:ForceDraw()
 	
 end
 

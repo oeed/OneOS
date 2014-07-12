@@ -33,6 +33,9 @@ OnUpdate = function(self, value)
 	if value == 'Children' then
 		self.Width = self.Bedrock.Helpers.LongestString(self.Children, 'Text') + 2
 		self.Height = #self.Children + 1 + (self.HideTop and 0 or 1)
+		if not self.BaseY then
+			self.BaseY = self.Y
+		end
 
 		for i, v in ipairs(self.Children) do
 			if v.TextColour then
@@ -53,7 +56,7 @@ OnUpdate = function(self, value)
 
 		local pos = self:GetPosition()
 		if pos.Y + self.Height + 1 > Drawing.Screen.Height then
-			self.Y = self.Y - ((self.Height +  pos.Y) - Drawing.Screen.Height)
+			self.Y = self.BaseY - ((self.Height +  pos.Y) - Drawing.Screen.Height)
 		end
 		
 		if pos.X + self.Width > Drawing.Screen.Width then

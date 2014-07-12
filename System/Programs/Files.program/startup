@@ -6,6 +6,7 @@ local program = Bedrock:Initialise()
 
 Current = {
 	History = {},
+	HistoryItem = 0,
 	FileList = {},
 	Path = tArgs[1] or '/Desktop/'
 }
@@ -47,135 +48,113 @@ function SidebarClick(self, item, event, side, x, y)
 	--term.setTextColour(colours.black)
 end
 
-function RefreshFiles()
-	diskOpenButton = nil
-	if Current.Path:sub(1,13) == '/Peripherals/' then
-		if peripheral.isPresent(Current.Peripheral.Side:lower()) then
-			if Current.Peripheral.Type == 'wireless_modem' then
-				Current.Peripheral.Type = 'Wireless Modem'
-			end
-			Current.Peripheral.Type = Helpers.Capitalise(Current.Peripheral.Type)
-			Current.Peripheral.Side = Helpers.Capitalise(Current.Peripheral.Side)
-
-			Current.Peripheral.Image = Drawing.LoadImage('/System/Programs/Files.program/images/'..Current.Peripheral.Type)
-			if not Current.Peripheral.Image then
-				Current.Peripheral.Image = Drawing.LoadImage('/System/Programs/Files.program/images/Unknown')
-			end
-
-			Current.Peripheral.Info = {}
-
-			if Current.Peripheral.Type == 'Computer' then
-				local id = peripheral.call(Current.Peripheral.Side:lower(),'getID')
-				if id then
-					Current.Peripheral.Info = {
-						ID = tostring(id)
-					}
-				else
-					Current.Peripheral.Info = {}
-				end
-			elseif Current.Peripheral.Type == 'Drive' then
-				local discType = 'No Disc'
-				local discID = nil
-				local mountPath = nil
-				local discLabel = nil
-				local songName = nil
-				if peripheral.call(Current.Peripheral.Side:lower(), 'isDiskPresent') then
-					if peripheral.call(Current.Peripheral.Side:lower(), 'hasData') then
-						discType = 'Data'
-						discID = peripheral.call(Current.Peripheral.Side:lower(), 'getDiskID')
-						if discID then
-							discID = tostring(discID)
-						else
-							discID = 'None'
-						end
-						mountPath = '/'..peripheral.call(Current.Peripheral.Side:lower(), 'getMountPath')..'/'
-						discLabel = peripheral.call(Current.Peripheral.Side:lower(), 'getDiskLabel')
-					else
-						discType = 'Audio'
-						songName = peripheral.call(Current.Peripheral.Side:lower(), 'getAudioTitle')
-					end
-				end
-				if mountPath then
-					diskOpenButton = Button:Initialise(Current.SidebarWidth+10, 9, nil, nil, colours.lightGrey, nil, nil, nil, nil, function()GoToPath(mountPath)end, 'View Files')
-				elseif discType == 'Audio' then
-					diskOpenButton = Button:Initialise(Current.SidebarWidth+10, 9, nil, nil, colours.lightGrey, nil, nil, nil, nil, function()disk.playAudio(Current.Peripheral.Side:lower()) end, 'Play')
-				else
-					diskOpenButton = nil
-				end
-
-				Current.Peripheral.Info = {
-					['Disc Type'] = discType,
-					['Disc Label'] = discLabel,
-					['Song Title'] = songName,
-					['Disc ID'] = discID,
-					['Mount Path'] = mountPath
-				}
-			elseif Current.Peripheral.Type == 'Printer' then
-				local pageSize = 'No Loaded Page'
-				local _, err = pcall(function() return tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getPgaeSize')) end)
-				if not err then
-					pageSize = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getPageSize'))
-				end
-				Current.Peripheral.Info = {
-					['Paper Level'] = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getPaperLevel')),
-					['Paper Size'] = pageSize,
-					['Ink Level'] = tostring(peripheral.call(Current.Peripheral.Side:lower(), 'getInkLevel'))
-				}
-			elseif Current.Peripheral.Type == 'Modem' then
-				Current.Peripheral.Info = {
-					['Connected Peripherals'] = tostring(#peripheral.call(Current.Peripheral.Side:lower(), 'getNamesRemote'))
-				}
-			elseif Current.Peripheral.Type == 'Monitor' then
-				local w, h = peripheral.call(Current.Peripheral.Side:lower(), 'getSize')
-				local screenType = 'Black and White'
-				if peripheral.call(Current.Peripheral.Side:lower(), 'isColour') then
-					screenType = 'Colour'
-				end
-				local buttonTitle = 'Use as Screen'
-				if OneOS.Settings:GetValues()['Monitor'] == Current.Peripheral.Side:lower() then
-					buttonTitle = 'Use Computer Screen'
-				end
-				diskOpenButton = Button:Initialise(Current.SidebarWidth+10, 9, nil, nil, colours.lightGrey, nil, nil, nil, nil, function() 
-					ButtonDialogueWindow:Initialise("Reboot Required", "To change screen you'll need to reboot your computer.", 'Reboot', 'Cancel', function(self, success)
-						if success then
-							if buttonTitle == 'Use Computer Screen' then
-								OneOS.Settings:SetValue('Monitor', nil)
-							else
-								OneOS.Settings:SetValue('Monitor', Current.Peripheral.Side:lower())
-							end
-							OneOS.Reboot()
-						end
-					end):Show()
-				end, buttonTitle)
-				Current.Peripheral.Info = {
-					['Type'] = screenType,
-					['Width'] = tostring(w),
-					['Height'] = tostring(h),
-				}
-			end
-			return
+function FileClick(item, event, side, x, y)
+	if side == 1 then
+		if OneOS.FS.isDir(item.Path) then
+			GoToPath(item.Path)
 		else
-			Current.Path = '/Desktop/'
+			OneOS.Helpers.OpenFile(item.Path)
+			program:StartTimer(RefreshFiles, 1)
+		end
+	elseif side == 2 then
+		if item:ToggleMenu('filemenu', x, y) then
+			program:GetObject('OpenMenuItem').OnClick = function(_item)
+				FileClick(item, event, 1, x, y)
+			end
+
+			program:GetObject('ViewProgramContentMenuItem').OnClick = function(_item)
+				GoToPath(item.Path)
+			end
+
+			program:GetObject('OpenWithArgsMenuItem').OnClick = function(_item)
+				program:DisplayTextBoxWindow("Program Arguments", 'Enter the arguments for the program separated by a space.', function(success, value)
+					if success and #value ~= 0 then
+						local tWords = {}
+						for match in string.gmatch( value, "[^ \t]+" ) do
+							table.insert( tWords, match )
+						end
+						OneOS.Run(item.Path, unpack(tWords))
+					end
+				end)
+			end
+
+			program:GetObject('OpenWithMenuItem').OnClick = function(_item)
+				OneOS.Helpers.OpenFileWith(item.Path)
+			end
+
+			program:GetObject('TransmitMenuItem').OnClick = function(_item)
+				OneOS.Run('/Programs/Transmit.program/', item.Path)
+			end
+
+			program:GetObject('CreatePackageMenuItem').OnClick = function(_item)
+				local packrun = loadfile('pkgmake')
+				local env = getfenv()
+				setfenv( packrun, env)
+				local path = item.Path:sub(1,#item.Path-1)
+				packrun(item.Path, OneOS.Helpers.RemoveFileName(path)..OneOS.Helpers.RemoveExtension(OneOS.FS.getName(path))..'.pkg')
+				RefreshFiles()
+			end
+
+			program:GetObject('RenameMenuItem').OnClick = function(_item)
+				OneOS.Helpers.RenameFile(item.Path, RefreshFiles, program)
+			end
+
+			program:GetObject('DeleteMenuItem').OnClick = function(_item)
+				OneOS.Helpers.DeleteFile(item.Path, RefreshFiles, program)
+			end
+
+			program:GetObject('AddToDesktopMenuItem').OnClick = function(_item)
+				OneOS.Helpers.MakeShortcut(item.Path)
+			end
+
+			program:GetObject('CopyMenuItem').OnClick = function(_item)
+				--TODO: clipboard
+				Current.Clipboard.Copy(item.Path, 'filepath')
+			end
+
+			program:GetObject('CutMenuItem').OnClick = function(_item)
+				Current.Clipboard.Cut(item.Path, 'filepath')
+			end
+
+			program:GetObject('NewFolderMenuItem').OnClick = function(_item)
+				OneOS.Helpers.NewFolder(OneOS.Helpers.ParentFolder(item.Path)..'/', RefreshFiles, program)
+			end
+
+			program:GetObject('NewFileMenuItem').OnClick = function(_item)
+				OneOS.Helpers.NewFile(OneOS.Helpers.ParentFolder(item.Path)..'/', RefreshFiles, program)
+			end
+			
+			if OneOS.FS.isDir(item.Path) then
+				program:RemoveObject('TransmitMenuItem')
+			else
+				program:RemoveObject('CreatePackageMenuItem')
+			end
+
+			if not OneOS.Helpers.Extension(item.Path) == 'program' or not OneOS.FS.isDir(item.Path) then
+				program:RemoveObject('ViewProgramContentMenuItem')
+				program:RemoveObject('OpenWithArgsMenuItem')
+			else
+				program:RemoveObject('OpenWithMenuItem')
+			end
 		end
 	end
+end
+
+
+function RefreshFiles()
+	diskOpenButton = nil
+	program:GetObject('FilesListView').Items = {}
+
 	for i, v in ipairs(OneOS.FS.list(Current.Path)) do
-		Current.Peripheral = nil
 		if Settings.ShowHidden or string.sub( v, 1, 1 ) ~= '.' then
-			local path = Current.Path .. '/' .. v
-			if Helpers.TidyPath(path) == '/rom/' then
+			local path = OneOS.Helpers.TidyPath(Current.Path .. '/' .. v)
+			if path == '/rom/' then
 				break
 			end
-			local  = 1
-			if Settings.ListMode then
 
+			if Settings.ListMode then
+				table.insert(program:GetObject('FilesListView').Items, {["Text"] = OneOS.FS.getName(path), ["Path"] = path, ["TextColour"] = OneOS.FS.isDir(path) and colours.grey or colours.black, OnClick = FileClick})
 			end
-			table.insert(Current.FileList,{
-				Name = OneOS.FS.getName(path),
-				ShortName = Helpers.RemoveExtension(OneOS.FS.getName(path)),
-				Size = OneOS.FS.getSize(path),
-				Directory = OneOS.FS.isDir(path),
-				Path = Helpers.TidyPath(path)
-			})
 		end
 	end
 	--Current.SidebarList.Peripherals = Peripheral.GetPeripherals()
@@ -183,8 +162,8 @@ end
 
 function GoToPath(path, history)
 	history = history or false
-	local path = Helpers.TidyPath(path)
-
+	local path = OneOS.Helpers.TidyPath(path)
+	program:GetObject('PathLabel').Text = path
 	if not history then
 		for i, v in ipairs(Current.History) do
 			if i >= Current.HistoryItem then
@@ -195,16 +174,41 @@ function GoToPath(path, history)
 		Current.HistoryItem = #Current.History + 1
 	end
 	Current.FileScroll = 0
-	Current.Path = Helpers.TidyPath(path)
+	Current.Path = path
+	if Current.History[Current.HistoryItem-1] then
+		program:GetObject('BackButton').Enabled = true
+	else
+		program:GetObject('BackButton').Enabled = false
+	end
+
+	if Current.History[Current.HistoryItem+1] then
+		program:GetObject('ForwardButton').Enabled = true
+	else
+		program:GetObject('ForwardButton').Enabled = false
+	end
 	RefreshFiles()
 end
 
 program:Run(function()
 	program:LoadView('main')
 	ReadSettings()
-	RefreshFiles()
+	GoToPath(Current.Path, true)
 	program:GetObject('OptionsButton').OnClick = OptionsButtonClick
 	program:GetObject('Sidebar').OnChildClick = SidebarClick
 
+	program:GetObject('BackButton').OnClick = function(self)
+		if Current.History[Current.HistoryItem-1] then
+			table.insert(Current.History, Current.Path)
+			Current.HistoryItem = Current.HistoryItem - 1
+			GoToPath(Current.History[Current.HistoryItem], true)
+		end
+	end
+
+	program:GetObject('ForwardButton').OnClick = function(self)
+		if Current.History[Current.HistoryItem+1] then
+			Current.HistoryItem = Current.HistoryItem + 1
+			GoToPath(Current.History[Current.HistoryItem], true)
+		end
+	end
 end)
 

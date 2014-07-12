@@ -25,7 +25,7 @@
       ["TextColour"]=128,
       ["BackgroundColour"]=-1,
       ["Items"]={
-        ["Favourites"]={
+        ["Places"]={
           {["Text"] = 'Desktop', ["Path"] = '/Desktop/'},
           {["Text"] = 'Documents', ["Path"] = '/Desktop/Documents/'},
           {["Text"] = 'Programs', ["Path"] = '/Programs/'},
@@ -36,12 +36,12 @@
     },
     [4]={
       ["Y"]=4,
-      ["X"]=13,
+      ["X"]=14,
       ["Width"]="100%,-12",
       ["Name"]="PathLabel",
       ["Type"]="Label",
       ["TextColour"]=256,
-      ["Text"]="/Desktop/"
+      ["Text"]=""
     },
     [5]={
       ["Y"]=5,
@@ -52,12 +52,7 @@
       ["Type"]="ListView",
       ["TextColour"]=128,
       ["BackgroundColour"]=-1,
-      ["Items"]={
-        {["Text"] = 'Desktop', ["Path"] = '/Desktop/'},
-        {["Text"] = 'Documents', ["Path"] = '/Desktop/Documents/'},
-        {["Text"] = 'Programs', ["Path"] = '/Programs/'},
-        {["Text"] = 'Computer', ["Path"] = '/'},
-      }
+      ["Items"]={}
     },
   },
   ["BackgroundColour"]=1,

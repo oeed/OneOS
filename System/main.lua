@@ -143,7 +143,7 @@ function Initialise()
 		end
 
 		Helpers.OpenFile('System/Programs/Files.program')
-		--Helpers.OpenFile('Programs/LuaIDE.program')
+		--Helpers.OpenFile('Programs/Shell.program')
 		--Helpers.OpenFile('Programs/Test2.program')
 		UpdateOverlay()
 	end)
