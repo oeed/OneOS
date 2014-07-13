@@ -54,6 +54,7 @@ OnUpdate = function(self, value)
 			v.Height = 1
 		end
 
+		self.Y = self.BaseY
 		local pos = self:GetPosition()
 		if pos.Y + self.Height + 1 > Drawing.Screen.Height then
 			self.Y = self.BaseY - ((self.Height +  pos.Y) - Drawing.Screen.Height)

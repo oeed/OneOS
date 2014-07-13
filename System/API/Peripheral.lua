@@ -12,7 +12,7 @@ Call = function(type, ...)
 	peripheral.call(p.Side, unpack(tArgs))
 end
 
-	local getNames = peripheral.getNames or function()
+local getNames = peripheral.getNames or function()
 	local tResults = {}
 	for n,sSide in ipairs( rs.getSides() ) do
 		if peripheral.isPresent( sSide ) then

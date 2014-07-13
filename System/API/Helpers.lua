@@ -119,6 +119,10 @@ RemoveFileName = function(path)
 	return v[1]
 end
 
+IsDirectory = function(path)
+	return fs.isDir(path) and Helpers.Extension(path) ~= 'program'
+end
+
 IconForFile = function(path)
 	path = TidyPath(path)
 	local extension = Helpers.Extension(path)

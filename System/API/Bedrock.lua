@@ -50,7 +50,8 @@ local objects = {
 	'ProgressBar',
 	'ListView',
 	'FileView',
-	'ScrollBar'
+	'ScrollBar',
+	'CollectionView'
 }
 
 local env = getfenv()
@@ -341,6 +342,9 @@ function ObjectFromFile(self, file, view)
 
 		object.Parent = view
 		object.Bedrock = self
+		if not object.Name then
+			object.Name = file.Type
+		end
 
 		object = env[file.Type]:Initialise(object)
 
@@ -359,7 +363,7 @@ function ObjectFromFile(self, file, view)
 			object.OnClick = function(...) return self:ClickObject(...) end
 		end
 		--object.OnUpdate = function(...) self:UpdateObject(...) end
-		
+
 		if object.OnUpdate then
 			for k, v in pairs(env[file.Type]) do
 				object:OnUpdate(k)
@@ -378,11 +382,6 @@ function ObjectFromFile(self, file, view)
 		end
 		return object
 	elseif not file.Type then
-		for k, v in pairs(file) do
-			print(k)
-			print(v.Name)
-			print('*')
-		end
 		error('No object type specified. (e.g. Type = "Button")')
 	else
 		error('No Object: '..file.Type..'. The API probably isn\'t loaded')

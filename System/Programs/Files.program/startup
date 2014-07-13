@@ -45,12 +45,13 @@ function OptionsButtonClick(self, event, side, x, y)
 end
 
 function SidebarClick(self, item, event, side, x, y)
-	--term.setTextColour(colours.black)
+	term.setTextColour(colours.black)
+	GoToPath(item.Path)	
 end
 
 function FileClick(item, event, side, x, y)
 	if side == 1 then
-		if OneOS.FS.isDir(item.Path) then
+		if OneOS.Helpers.IsDirectory(item.Path) then
 			GoToPath(item.Path)
 		else
 			OneOS.Helpers.OpenFile(item.Path)
@@ -143,7 +144,11 @@ end
 
 function RefreshFiles()
 	diskOpenButton = nil
-	program:GetObject('FilesListView').Items = {}
+	if Settings.ListMode then
+		program:GetObject('FilesListView').Items = {}
+	else
+		program:GetObject('FilesCollectionView').Items = {}
+	end
 
 	for i, v in ipairs(OneOS.FS.list(Current.Path)) do
 		if Settings.ShowHidden or string.sub( v, 1, 1 ) ~= '.' then
@@ -153,7 +158,9 @@ function RefreshFiles()
 			end
 
 			if Settings.ListMode then
-				table.insert(program:GetObject('FilesListView').Items, {["Text"] = OneOS.FS.getName(path), ["Path"] = path, ["TextColour"] = OneOS.FS.isDir(path) and colours.grey or colours.black, OnClick = FileClick})
+				table.insert(program:GetObject('FilesListView').Items, {["Text"] = OneOS.FS.getName(path), ["Path"] = path, ["TextColour"] = OneOS.Helpers.IsDirectory(path) and colours.grey or colours.black, OnClick = FileClick})
+			else
+				table.insert(program:GetObject('FilesCollectionView').Items, {["Type"] = 'FileView', ["Path"] = path, OnClick = FileClick, ["Height"]=FileView.Height, ["Width"]=FileView.Width})
 			end
 		end
 	end
@@ -202,6 +209,10 @@ program:Run(function()
 			Current.HistoryItem = Current.HistoryItem - 1
 			GoToPath(Current.History[Current.HistoryItem], true)
 		end
+	end
+
+	program:GetObject('GoUpButton').OnClick = function(self)
+		GoToPath(OneOS.Helpers.ParentFolder(Current.Path))
 	end
 
 	program:GetObject('ForwardButton').OnClick = function(self)

@@ -1,5 +1,5 @@
-X = 0
-Y = 0
+X = 1
+Y = 1
 Width = 1
 Height = 1
 Parent = nil

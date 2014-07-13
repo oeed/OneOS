@@ -48,8 +48,8 @@
       ["X"]=13,
       ["Height"]="100%,-4",
       ["Width"]="100%,-12",
-      ["Name"]="FilesListView",
-      ["Type"]="ListView",
+      ["Name"]="FilesCollectionView",
+      ["Type"]="CollectionView",
       ["TextColour"]=128,
       ["BackgroundColour"]=-1,
       ["Items"]={}

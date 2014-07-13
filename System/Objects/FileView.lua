@@ -2,6 +2,8 @@ Inherit = 'View'
 
 BackgroundColour = colours.transparent
 Path = ''
+Width = 10
+Height = 4
 
 OnLoad = function(self)
 	self.Width = 10
@@ -36,35 +38,39 @@ OnLoad = function(self)
 			Name = 'ShortcutLabel'
 		})
 	end
+	local click = nil
+	if self.OnClick then
+		click = function(obj, event, side, x, y) self:OnClick(event, side, x, y) end
+	else
+		click = function(obj, event, side, x, y)
+			if side == 1 then
+				OneOS.Helpers.OpenFile(self.Path)
+			elseif side == 2 then
+				--TODO: refresh button doesnt work atm
+				if obj:ToggleMenu('filemenu', x, y) then
+					self.Bedrock:GetObject('OpenMenuItem').OnClick = function(itm)
+						OneOS.Helpers.OpenFile(self.Path)
+					end
 
-	local function click(obj, event, side, x, y)
-		if side == 1 then
-			OneOS.Helpers.OpenFile(self.Path)
-		elseif side == 2 then
-			--TODO: refresh button doesnt work atm
-			if obj:ToggleMenu('filemenu', x, y) then
-				self.Bedrock:GetObject('OpenMenuItem').OnClick = function(itm)
-					OneOS.Helpers.OpenFile(self.Path)
-				end
+					self.Bedrock:GetObject('RenameMenuItem').OnClick = function(itm)
+						OneOS.Helpers.RenameFile(self.Path, ReloadFiles, self.Bedrock)
+					end
 
-				self.Bedrock:GetObject('RenameMenuItem').OnClick = function(itm)
-					OneOS.Helpers.RenameFile(self.Path, ReloadFiles, self.Bedrock)
-				end
+					self.Bedrock:GetObject('DeleteMenuItem').OnClick = function(itm)
+						OneOS.Helpers.DeleteFile(self.Path, ReloadFiles, self.Bedrock)
+					end
 
-				self.Bedrock:GetObject('DeleteMenuItem').OnClick = function(itm)
-					OneOS.Helpers.DeleteFile(self.Path, ReloadFiles, self.Bedrock)
-				end
+					self.Bedrock:GetObject('NewFolderMenuItem').OnClick = function(itm)
+						OneOS.Helpers.NewFolder(OneOS.Helpers.ParentFolder(self.Path)..'/', ReloadFiles, self.Bedrock)
+					end
 
-				self.Bedrock:GetObject('NewFolderMenuItem').OnClick = function(itm)
-					OneOS.Helpers.NewFolder(OneOS.Helpers.ParentFolder(self.Path)..'/', ReloadFiles, self.Bedrock)
-				end
+					self.Bedrock:GetObject('NewFileMenuItem').OnClick = function(itm)
+						OneOS.Helpers.NewFile(OneOS.Helpers.ParentFolder(self.Path)..'/', ReloadFiles, self.Bedrock)
+					end
 
-				self.Bedrock:GetObject('NewFileMenuItem').OnClick = function(itm)
-					OneOS.Helpers.NewFile(OneOS.Helpers.ParentFolder(self.Path)..'/', ReloadFiles, self.Bedrock)
-				end
-
-				self.Bedrock:GetObject('RefreshMenuItem').OnClick = function(itm)
-					ReloadFiles()
+					self.Bedrock:GetObject('RefreshMenuItem').OnClick = function(itm)
+						ReloadFiles()
+					end
 				end
 			end
 		end
