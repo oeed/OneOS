@@ -10,7 +10,24 @@ term.clear()
 
 --local _, err = pcall(function()
 
+
+if fs.exists('/System/OneOS.log') then
+	fs.delete('/System/OneOS.log')
+end
+
+local h = fs.open('/System/OneOS.log', 'w')
+h.write('-- OneOS Log --')
+h.close()
+
+function l(...)
+	local h = fs.open('/System/OneOS.log', 'a')
+	h.write('['..os.clock()..'] '..tostring(...)..'\n')
+	h.close()
+end
+l('Starting OneOS')
+
 local function log(...)
+	l(...)
 	if isDebug then
 		print(...)
 	end

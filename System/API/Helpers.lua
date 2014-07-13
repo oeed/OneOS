@@ -1,6 +1,6 @@
 local IconCache = {}
 
-local function LaunchProgram(path, args, title)
+function LaunchProgram(path, args, title)
 	return Program:Initialise(shell, path, title, args)
 end
 

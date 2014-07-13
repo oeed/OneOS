@@ -113,7 +113,7 @@ Initialise = function(self, program, shell, path)
 	setfenv(self.Shell, shellEnv)
 	self.Shell(env, program, shell, path, Helpers, os.run)
 	env.shell = addErrorHandler(shellEnv, 'Shell')
-		env.OneOS = addErrorHandler(self.OneOS(env, program, path), 'OneOS API')
+	env.OneOS = addErrorHandler(self.OneOS(env, program, path), 'OneOS API')
 	env.sleep = env.os.sleep
 	return env
 end
@@ -161,9 +161,9 @@ OneOS = function(env, program, path)
 		Run = function(path, ...)
 			local args = {...}
 			if fs.isDir(path) and fs.exists(path..'/startup') then
-				LaunchProgram(path..'/startup', args, Helpers.RemoveExtension(fs.getName(path)))
+				Program:Initialise(shell, path..'/startup', Helpers.RemoveExtension(fs.getName(path)), args)
 			elseif not fs.isDir(path) then
-				LaunchProgram(path, args, Helpers.RemoveExtension(fs.getName(path)))
+				Program:Initialise(shell, path, Helpers.RemoveExtension(fs.getName(path)), args)
 			end
 		end,
 		LoadAPI = function(_sPath, global)
@@ -427,9 +427,6 @@ OS = function(env, program, path)
 		setAlarm = os.setAlarm,
 
 		shutdown = function()
-			print()
-			term.setTextColour(colours.red)
-			print('The program has shutdown.')
 			program:Close()
 		end,
 
@@ -633,27 +630,4 @@ Shell = function(env, program, nativeShell, appPath, Helpers, osrun)
 		end
 		return tCopy
 	end
-		
---[[
-	term.setBackgroundColor( bgColour )
-	term.setTextColour( promptColour )
-	print( os.version() )
-	term.setTextColour( textColour )
-
-	-- Read commands and execute them
-	local tCommandHistory = {}
-	while not bExit do
-		term.setBackgroundColor( bgColour )
-		term.setTextColour( promptColour )
-		write( nativeShell.dir() .. "> " )
-		term.setTextColour( textColour )
-
-		local sLine = read( nil, tCommandHistory )
-		table.insert( tCommandHistory, sLine )
-		runLine( sLine )
-	end
-]]--
-
-	--os.shutdown() -- just in case
-
 end

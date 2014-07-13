@@ -41,6 +41,15 @@ UpdateScroll = function(self)
 				["Height"] = self.Height,
 				["Z"]=999
 			})
+			self:AddObject({
+				["Name"] = 'test',
+				["Type"] = 'Button',
+				["X"] = 1,
+				["Y"] = 19,
+				["Text"]='aaa',
+				["Height"] = 1,
+				["Z"]=998
+			})
 
 			_scrollBar.OnChange = function(scrollBar)
 				self.ChildOffset[2] = -scrollBar.Scroll

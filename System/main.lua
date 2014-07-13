@@ -130,7 +130,9 @@ end
 
 function Initialise()
 	bedrock:Run(function()
+		l('Reached GUI')
 		bedrock:LoadView('main', false)
+		l('GUI Loaded')
 		
 		Current.ProgramView = bedrock:GetObject('ProgramView')
 		Current.Overlay = bedrock:GetObject('Overlay')
@@ -142,7 +144,8 @@ function Initialise()
 			UpdateOverlay()
 		end
 
-		Helpers.OpenFile('System/Programs/Files.program')
+		--Helpers.OpenFile('System/Programs/Files.program')
+		--Helpers.OpenFile('Programs/Games/Gold Runner.program')
 		--Helpers.OpenFile('Programs/Shell.program')
 		--Helpers.OpenFile('Programs/Test2.program')
 		UpdateOverlay()

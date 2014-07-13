@@ -1,128 +1,16 @@
---[[
-	AppStore placeholder/installer program
-]]--
+OneOS.LoadAPI('/System/API/Bedrock.lua', false)
 
-OneOS.ToolBarColour = colours.grey
-OneOS.ToolBarTextColour = colours.white
+local program = Bedrock:Initialise()
 
-local applicationID = 58
-local applicationName = 'Lasers'
+program:ObjectClick('YesButton', function(self, event, side, x, y)
+	OneOS.Run('/Programs/App Store.program/', 'install', 58, 'Games', true)
+	OneOS.Close()
+end)
 
-OneOS.LoadAPI('/System/API/Drawing.lua', true)
-OneOS.LoadAPI('/System/API/Button.lua', true)
-OneOS.LoadAPI('/System/API/Helpers.lua', true)
+program:ObjectClick('NoButton', function(self, event, side, x, y)
+	OneOS.Close()
+end)
 
-Current = {
-	Clicks = {},
-}
-
-Events = {
-	
-}
-
-InterfaceElements = {
-	
-}
-
-function Initialise()
-	EventRegister('mouse_click', TryClick)
-
-	yesButton = Button:Initialise(Drawing.Screen.Width - 6, Drawing.Screen.Height - 1, nil, 1, colours.green, colours.white, nil, nil, nil, function(self, x, y, toggle) OneOS.Run('/Programs/App Store.program/', 'install', applicationID, 'Games', true) OneOS.Close() end, 'Yes'):Register()
-	noButton = Button:Initialise(Drawing.Screen.Width - 11, Drawing.Screen.Height - 1, nil, 1, colours.red, colours.white, nil, nil, nil, function(self, x, y, toggle) OneOS.Close() end, 'No'):Register()
-	Draw()
-	EventHandler()
-end
-
-function Draw()
-	Drawing.Clear(colours.white)
-
-	Drawing.DrawBlankArea(1, 1, Drawing.Screen.Width, 3, colours.grey)
-	Drawing.DrawCharacters(#applicationName + 3, 2, 'Install', colours.lightGrey, colours.grey)
-	Drawing.DrawCharacters(2, 2, applicationName, colours.white, colours.grey)
-
-	for i, elem in ipairs(InterfaceElements) do
-		if elem.Draw then
-			RegisterClick(elem)
-			elem:Draw()
-		end
-	end
-
-	local lines = Helpers.WrapText('To save disc space, OneOS does not come with '..applicationName..' downloaded by default. Do you want to download it now?', Drawing.Screen.Width - 4)
-	for i, v in ipairs(lines) do
-		Drawing.DrawCharacters(3, 4+i, lines[i], colours.black, colours.white)
-	end
-
-	Drawing.DrawBuffer()
-end
-
-MainDraw = Draw
-
-function RegisterElement(elem)
-	table.insert(InterfaceElements, elem)
-end
-
-function UnregisterElement(elem)
-	for i, e in ipairs(InterfaceElements) do
-		if elem == e then
-			InterfaceElements[i] = nil
-		end
-	end
-end
-
-function RegisterClick(elem)
-	table.insert(Current.Clicks, elem)
-end
-
-function CheckClick(object, x, y)
-	local pos = GetAbsolutePosition(object)
-	if pos.X <= x and pos.Y <= y and  pos.X + object.Width > x and pos.Y + object.Height > y then
-		return true
-	end
-end
-
-function DoClick(event, object, side, x, y)
-	if object and CheckClick(object, x, y) then
-		return object:Click(side, x - object.X + 1, y - object.Y + 1)
-	end	
-end
-
-function TryClick(event, side, x, y)
-	for i, object in ipairs(Current.Clicks) do
-		if DoClick(event, object, side, x, y) then
-			Draw()
-			return
-		end		
-	end
-end
-
-function GetAbsolutePosition(obj)
-	if not obj.Parent then
-		return {X = obj.X, Y = obj.Y}
-	else
-		local pos = GetAbsolutePosition(obj.Parent)
-		local x = pos.X + obj.X - 1
-		local y = pos.Y + obj.Y - 1
-		return {X = x, Y = y}
-	end
-end
-
-function EventRegister(event, func)
-	if not Events[event] then
-		Events[event] = {}
-	end
-
-	table.insert(Events[event], func)
-end
-
-function EventHandler()
-	while true do
-		local event = { coroutine.yield() }
-		if Events[event[1]] then
-			for i, e in ipairs(Events[event[1]]) do
-				e(event[1], event[2], event[3], event[4], event[5])
-			end
-		end
-	end
-end
-
-Initialise()
+program:Run(function()
+	program:LoadView('main')
+end)

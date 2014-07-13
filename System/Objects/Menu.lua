@@ -71,8 +71,8 @@ Close = function(self, isBedrockCall)
 	self.Bedrock:RemoveObject(self)
 	if self.Owner and self.Owner.Toggle then
 		self.Owner.Toggle = false
-	elseif self.Bedrock then
 	end
+	self.Bedrock:ForceDraw()
 	self = nil
 end
 

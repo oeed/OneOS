@@ -48,7 +48,7 @@ OnClick = function(self, event, side, x, y)
 		barHeight = 3
 	end
 
-	local relScroll = (self.MaxScroll * y/self.Height) - 1
+	local relScroll = self.MaxScroll * ((y-1)/self.Height)
 	self.Scroll = relScroll
 
 	if self.OnChange then

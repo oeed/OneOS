@@ -151,9 +151,11 @@ DrawAnimation = function(self)
 end
 
 DrawProgram = function(self, program, x, y)
-	for _y, row in ipairs(program.AppRedirect.Buffer) do
-		for _x, pixel in pairs(row) do
-			Drawing.WriteToBuffer(x+_x-1, y+_y-1, pixel[1], pixel[2], pixel[3])
+	if program then
+		for _y, row in ipairs(program.AppRedirect.Buffer) do
+			for _x, pixel in pairs(row) do
+				Drawing.WriteToBuffer(x+_x-1, y+_y-1, pixel[1], pixel[2], pixel[3])
+			end
 		end
 	end
 end

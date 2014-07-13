@@ -1,0 +1,24 @@
+{
+  ["Width"]="100%",
+  ["Height"]=3,
+  ["Type"]="View",
+  ["BackgroundColour"] = 128,
+  ["Children"]={
+    [1]={
+      ["Y"]=2,
+      ["X"]=2,
+      ["Name"]="InstallLabel",
+      ["Type"]="Label",
+      ["Text"]="Install",
+      ["TextColour"]=1
+    },
+    [2]={
+      ["Y"]=2,
+      ["X"]=10,
+      ["Name"]="ProgramNameLabel",
+      ["Type"]="Label",
+      ["Text"]="Gold Runner",
+      ["TextColour"]=256
+    },
+  },
+}

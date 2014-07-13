@@ -174,10 +174,11 @@ Close = function(self, force)
 		end
 		for i, program in ipairs(Current.Programs) do
 			if program == self then
-				Current.Programs[i] = nil
+				table.remove(Current.Programs, i)
 				break
 			end
 		end
+		UpdateOverlay()
 		Current.ProgramView:ForceDraw()
 		return true
 	else
