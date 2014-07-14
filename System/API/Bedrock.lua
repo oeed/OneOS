@@ -436,10 +436,12 @@ function DisplayWindow(self, _view, title, canClose)
 	_view.Type = 'View'
 	_view.Name = 'View'
 	_view.BackgroundColour = _view.BackgroundColour or colours.white
-	print(_view)
+	--[[
+print(_view)
 	print(self.Window)
 	print('*****')
 	print(self)
+]]--
 	self.Window:SetView(self:ObjectFromFile(_view, self.Window))
 end
 

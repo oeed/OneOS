@@ -16,7 +16,7 @@ if fs.exists('/System/OneOS.log') then
 end
 
 local h = fs.open('/System/OneOS.log', 'w')
-h.write('-- OneOS Log --')
+h.write('-- OneOS Log --\n')
 h.close()
 
 function l(...)
@@ -90,6 +90,7 @@ function LoadAPI(_sPath)
 		fnAPI()
 	else
 		printError( err )
+		log('Error: '..err)
         tAPIsLoading[sName] = nil
 		return false
 	end
@@ -100,6 +101,7 @@ function LoadAPI(_sPath)
 	end
 	
 	if not tAPI then
+		log('Could not find API: '..sName)
 		error('Could not find API: '..sName)
 	elseif _sPath:find('Objects') then
 		tAPI.__index = Object
@@ -231,12 +233,6 @@ function LoadingScreen()
 		end
 
 		if not LoadAPI(root .. file) then
-			if not isDebug then
-				term.setTextColour(colours.red)
-				PrintCentered('Error While Loading API '..file, y + 11)
-				term.setCursorPos(1, 1)
-				sleep(3)
-			end
 			return false
 		end
 	end
@@ -247,9 +243,11 @@ end
 function RecieveStartupKey()
 	while true do
 	  local event, arg = os.pullEvent()
-	  if event=='onesos_bootdone' then 
+	  if event=='onesos_bootdone' then
+	  	log('No Boot Key')
 	  	return nil
 	  elseif event == "key" then
+	  	log('Boot Key: '..arg)
 	  	return arg 
 	  end
 	  
@@ -416,9 +414,11 @@ function IsSystemModified()
 		h.close()
 		local hash = GetHash()
 		if hash == correctHash then
+			log('System is not modified.')
 			return false
 		end		
 	end
+	log('System is modified.')
 	return true
 end
 
@@ -480,10 +480,12 @@ elseif Start() then
 
 	local ok = nil
 	if not fs.exists('/System/.version') or not fs.exists('/System/.OneOS.settings') then
+		log('Not .version or .OneOS.settings! Running First Setup')
 		if fs.exists('/System/.OneOS.settings') then
 			fs.delete('/System/.OneOS.settings')
 		end
 		xpcall(FirstSetup, function(err)
+			log('Error: '..err)
 			ok = {false, err}
 		end)
 	else
@@ -491,6 +493,7 @@ elseif Start() then
 			Initialise()
 		else
 			xpcall(Initialise, function(err)
+				log('Error: '..err)
 				ok = {false, err}
 			end)
 		end
@@ -499,6 +502,7 @@ elseif Start() then
 	if not ok[1] then
 
 		xpcall(function()loadfile('/System/main.lua')end, function(err)
+			log('Syntaxt error (probably): '..err)
 			table.insert(ok, err)
 		end)
 		--if the crash is a too long without yeilding error then there's nothing we can really do, restart
@@ -565,6 +569,7 @@ elseif Start() then
 				PrintCentered('Modified file system detected.', Drawing.Screen.Height-3)
 				PrintCentered('Not sending report.', Drawing.Screen.Height-2)
 			else
+				log('Sending error report...')
 				PrintCentered('Sending error report, please wait.', Drawing.Screen.Height-3)
 				local success = false
 				parallel.waitForAny(function()sleep(7) end, function()
@@ -610,6 +615,7 @@ elseif Start() then
 				if success then
 					message = 'Error report sent!'
 				end
+				log(message)
 				term.setCursorPos(1, Drawing.Screen.Height-3)
 				term.clearLine()
 				PrintCentered(message..' Click to reboot.', Drawing.Screen.Height-3)

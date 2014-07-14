@@ -1,4 +1,5 @@
--- OneOS Log --[0] Starting OneOS
+-- OneOS Log --
+[0] Starting OneOS
 [0] Loading: System/API/Settings.lua
 [0] Loading: System/API/Object.lua
 [0] Loading: System/API/AppRedirect.lua
@@ -30,5 +31,6 @@
 [0] Loading: System/Objects/Separator.lua
 [0] Loading: System/Objects/TextBox.lua
 [0] Loading: System/Objects/Window.lua
+[0.4] No Boot Key
 [0.4] Reached GUI
 [0.4] GUI Loaded
