@@ -29,14 +29,15 @@ OnScroll = function(self, event, direction, x, y)
 	if self.Scroll < 0 or self.Scroll > self.MaxScroll then
 		return false
 	end
-	self.Scroll = self.Scroll + direction
+	local old = self.Scroll
+	self.Scroll = self.Bedrock.Helpers.Round(self.Scroll + direction)
 	if self.Scroll < 0 then
 		self.Scroll = 0
 	elseif self.Scroll > self.MaxScroll then
 		self.Scroll = self.MaxScroll
 	end
 
-	if self.OnChange then
+	if self.Scroll ~= old and self.OnChange then
 		self:OnChange()
 	end
 end
@@ -49,7 +50,7 @@ OnClick = function(self, event, side, x, y)
 	end
 
 	local relScroll = self.MaxScroll * ((y-1)/self.Height)
-	self.Scroll = relScroll
+	self.Scroll = self.Bedrock.Helpers.Round(relScroll)
 
 	if self.OnChange then
 		self:OnChange()

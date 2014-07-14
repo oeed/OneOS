@@ -46,16 +46,13 @@ end
 function DoClick(self, object, event, side, x, y)
 	if object then
 		if self:CheckClick(object, x, y) then
-			local offset = {0,0}
-			if not object.Fixed and self.ChildOffset then
-				offset = self.ChildOffset
-			end
-			return object:Click(event, side, x - object.X + offset[1] + 1, y - object.Y + offset[2] + 1)
+			local relPos = object:GetRelativePosition(x, y)
+			return object:Click(event, side, relPos.X, relPos.Y)
 		end
 	end	
 end
 
-Click = function(self, event, side, x, y)
+Click = function(self, event, side, x, y, z)
 	if self.Visible and not self.IgnoreClick then
 		for i = #self.Children, 1, -1 do --children are ordered from smallest Z to highest, so this is done in reverse
 			local child = self.Children[i]

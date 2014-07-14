@@ -663,6 +663,7 @@ function Draw(self)
 	end
 
 	if self.View and self.View:NeedsDraw() then
+		l('Draw')
 		self.View:Draw()
 		Drawing.DrawBuffer()
 		if isDebug then
@@ -699,7 +700,7 @@ end
 
 function EventHandler(self)
 	local event = { os.pullEventRaw() }
-
+	
 	if self.EventHandlers[event[1]] then
 		for i, e in ipairs(self.EventHandlers[event[1]]) do
 			e(self, unpack(event))

@@ -84,6 +84,32 @@ function ReloadIndicators()
 	end
 end
 
+function ReloadFiles()
+	program:RemoveObjects('FileView')
+
+	local list = OneOS.FS.list('Desktop/')
+	files = {}
+	local count = 0
+	for i, v in ipairs(list) do
+		local x, y = IconLocation(i)
+		files[v] = program:AddObject({
+			Type = 'FileView',
+			X = x,
+			BaseX = x,
+			Y = y,
+			Name = 'FileView',
+			Path = 'Desktop/'..v,
+			OnClick = FileClick
+		})
+		count = i
+	end
+
+	local x, y, maxX, maxY, maxPage = MaxIcons()
+	totalPages = math.ceil(count/maxPage)
+
+	ReloadIndicators()
+end
+
 function FileClick(self, event, side, x, y, obj)
 	if side == 1 then
 		OneOS.Helpers.OpenFile(self.Path)
@@ -114,32 +140,6 @@ function FileClick(self, event, side, x, y, obj)
 			end
 		end
 	end
-end
-
-function ReloadFiles()
-	program:RemoveObjects('FileView')
-
-	local list = OneOS.FS.list('Desktop/')
-	files = {}
-	local count = 0
-	for i, v in ipairs(list) do
-		local x, y = IconLocation(i)
-		files[v] = program:AddObject({
-			Type = 'FileView',
-			X = x,
-			BaseX = x,
-			Y = y,
-			Name = 'FileView',
-			Path = 'Desktop/'..v,
-			OnClick = FileClick
-		})
-		count = i
-	end
-
-	local x, y, maxX, maxY, maxPage = MaxIcons()
-	totalPages = math.ceil(count/maxPage)
-
-	ReloadIndicators()
 end
 
 function GoToPage(i)

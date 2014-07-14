@@ -41,7 +41,6 @@ bedrock.OnTimer = function(self, event, timer)
 	end
 end
 
-local oldHandler = bedrock.EventHandler
 bedrock.EventHandler = function(self)
 	for i, program in ipairs(Current.Programs) do
 		for i, event in ipairs(program.EventQueue) do
@@ -49,10 +48,19 @@ bedrock.EventHandler = function(self)
 		end
 		program.EventQueue = {}
 	end
-	oldHandler(self)
+	
+	local event = { os.pullEventRaw() }
+	--l('Event: '..table.concat(event, ', ')) --TODO: enable at release
+
+	if self.EventHandlers[event[1]] then
+		for i, e in ipairs(self.EventHandlers[event[1]]) do
+			e(self, unpack(event))
+		end
+	end
 end
 
 function Shutdown(force, restart)
+	l('Trying to shutdown/restart. Restart: '..tostring(restart))
 	local success = true
 	if not force then
 		for i, program in ipairs(Current.Programs) do
@@ -65,6 +73,7 @@ function Shutdown(force, restart)
 	if success then
 		AnimateShutdown(restart)
 	else
+		l('Shutdown/restart aborted')
 		Current.Desktop:SwitchTo()
 		local shutdownLabel = (restart and 'restart' or 'shutdown')
 		local shutdownLabelCaptital = (restart and 'Restart' or 'Shutdown')
@@ -78,6 +87,7 @@ function Shutdown(force, restart)
 end
 
 function AnimateShutdown(restart)
+	l('System safely stopping.')
 	if not Settings:GetValues()['UseAnimations'] then
 		return
 	end
@@ -144,7 +154,8 @@ function Initialise()
 			UpdateOverlay()
 		end
 
-		--Helpers.OpenFile('System/Programs/Files.program')
+		sleep(0)
+		Helpers.OpenFile('System/Programs/Files.program')
 		--Helpers.OpenFile('Programs/Games/Gold Runner.program')
 		--Helpers.OpenFile('Programs/Shell.program')
 		--Helpers.OpenFile('Programs/Test2.program')

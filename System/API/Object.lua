@@ -41,6 +41,22 @@ GetPosition = function(self)
 	return self.Bedrock:GetAbsolutePosition(self)
 end
 
+GetRelativePosition = function(self, x, y)
+	if not self.Parent then
+		return {X = 1, Y = 1}
+	end
+
+	local offset = {0,0}
+	if not self.Fixed and self.Parent.ChildOffset then
+		offset = self.Parent.ChildOffset
+	end
+	if x and y then
+		return {X = x - self.X - offset[1] + 1, Y = x - self.Y + 1 - offset[2]}
+	else
+		return {X = self.X - offset[1], Y = self.Y - offset[2]}
+	end
+end
+
 Draw = function(self)
 	if not self.Visible then
 		return
@@ -53,7 +69,7 @@ Draw = function(self)
 		Drawing.StartCopyBuffer()
 
 		if self.ClipDrawing then
-			Drawing.AddConstraint(pos.X, pos.Y, self.Width, self.Height)
+			--Drawing.AddConstraint(pos.X, pos.Y, self.Width, self.Height)
 		end
 
 		if self.OnDraw then
@@ -64,12 +80,17 @@ Draw = function(self)
 		
 		if self.Children then
 			for i, child in ipairs(self.Children) do
-				child:Draw()
+				local pos = child:GetRelativePosition()
+				if pos.Y + self.Height > 1 and pos.Y <= self.Height and pos.X + self.Width > 1 and pos.X <= self.Width then
+					child:Draw()
+				else
+					l('denined '..child.Name)
+				end
 			end
 		end
 
 		if self.ClipDrawing then
-			Drawing.RemoveConstraint()
+			--Drawing.RemoveConstraint()
 		end
 
 	else

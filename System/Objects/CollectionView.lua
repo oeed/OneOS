@@ -61,7 +61,7 @@ local function AddItem(self, v, i)
 	for k, _v in pairs(v) do
 		item[k] = _v
    	end
-	
+	l('Add '..item.Path)
 	self:AddObject(item)
 end
 

@@ -1,5 +1,5 @@
 Inherit = 'View'
-ChildOffset = {0, 0}
+ChildOffset = false
 ContentWidth = 0
 ContentHeight = 0
 
@@ -29,6 +29,8 @@ CalculateContentSize = function(self)
 end
 
 UpdateScroll = function(self)
+	l('Updating!')
+	self.ChildOffset[2] = 0
 	self:CalculateContentSize()
 	if self.ContentHeight > self.Height then
 		if not self:GetObject('ScrollViewScrollBar') then
@@ -52,12 +54,15 @@ UpdateScroll = function(self)
 			})
 
 			_scrollBar.OnChange = function(scrollBar)
+				l('Scroll '..scrollBar.Scroll)
+
 				self.ChildOffset[2] = -scrollBar.Scroll
 				for i, child in ipairs(self.Children) do
 					child:ForceDraw()
 				end
 			end
 		end
+		l('Max scroll '..self.ContentHeight - self.Height)
 		self:GetObject('ScrollViewScrollBar').MaxScroll = self.ContentHeight - self.Height
 	else
 		self:RemoveObject('ScrollViewScrollBar')
@@ -67,5 +72,11 @@ end
 OnScroll = function(self, event, direction, x, y)
 	if self:GetObject('ScrollViewScrollBar') then
 		self:GetObject('ScrollViewScrollBar'):OnScroll(event, direction, x, y)
+	end
+end
+
+OnLoad = function(self)
+	if not self.ChildOffset or not self.ChildOffset[1] or not self.ChildOffset[2] then
+		self.ChildOffset = {0, 0}
 	end
 end

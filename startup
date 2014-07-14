@@ -244,7 +244,7 @@ function RecieveStartupKey()
 	while true do
 	  local event, arg = os.pullEvent()
 	  if event=='onesos_bootdone' then
-	  	log('No Boot Key')
+	  	log('No boot modifier, starting normally.')
 	  	return nil
 	  elseif event == "key" then
 	  	log('Boot Key: '..arg)
@@ -475,7 +475,6 @@ elseif Start() then
 			fs.delete('/.update/')
 		end
 	end
-
 	os.run(getfenv(), '/System/main.lua')
 
 	local ok = nil
