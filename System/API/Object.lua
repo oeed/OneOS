@@ -41,20 +41,17 @@ GetPosition = function(self)
 	return self.Bedrock:GetAbsolutePosition(self)
 end
 
-GetRelativePosition = function(self, x, y)
+GetOffsetPosition = function(self)
 	if not self.Parent then
 		return {X = 1, Y = 1}
 	end
 
-	local offset = {0,0}
+	local offset = {X = 0, Y = 0}
 	if not self.Fixed and self.Parent.ChildOffset then
 		offset = self.Parent.ChildOffset
 	end
-	if x and y then
-		return {X = x - self.X - offset[1] + 1, Y = x - self.Y + 1 - offset[2]}
-	else
-		return {X = self.X - offset[1], Y = self.Y - offset[2]}
-	end
+
+	return {X = self.X + offset.X, Y = self.Y + offset.Y}
 end
 
 Draw = function(self)
@@ -62,14 +59,13 @@ Draw = function(self)
 		return
 	end
 
-	if self.X > Drawing.Screen.Width or self.Y > Drawing.Screen.Height or self.X + self.Width < 1 or self.Y + self.Height < 1 then
-	elseif self:NeedsDraw() then
+	if self:NeedsDraw() then
 		self.DrawCache.NeedsDraw = false
 		local pos = self:GetPosition()
 		Drawing.StartCopyBuffer()
 
 		if self.ClipDrawing then
-			--Drawing.AddConstraint(pos.X, pos.Y, self.Width, self.Height)
+			Drawing.AddConstraint(pos.X, pos.Y, self.Width, self.Height)
 		end
 
 		if self.OnDraw then
@@ -80,17 +76,15 @@ Draw = function(self)
 		
 		if self.Children then
 			for i, child in ipairs(self.Children) do
-				local pos = child:GetRelativePosition()
+				local pos = child:GetOffsetPosition()
 				if pos.Y + self.Height > 1 and pos.Y <= self.Height and pos.X + self.Width > 1 and pos.X <= self.Width then
 					child:Draw()
-				else
-					l('denined '..child.Name)
 				end
 			end
 		end
 
 		if self.ClipDrawing then
-			--Drawing.RemoveConstraint()
+			Drawing.RemoveConstraint()
 		end
 
 	else
@@ -111,11 +105,11 @@ ForceDraw = function(self, ignoreChildren, ignoreParent, ignoreBedrock)
 	end
 	self.DrawCache.NeedsDraw = true
 	if not ignoreParent and self.Parent then
-		self.Parent:ForceDraw(true, nil, ignoreBedrock)
+		self.Parent:ForceDraw(true, nil, true)
 	end
 	if not ignoreChildren and self.Children then
 		for i, child in ipairs(self.Children) do
-			child:ForceDraw(nil, true, ignoreBedrock)
+			child:ForceDraw(nil, true, true)
 		end
 	end
 end

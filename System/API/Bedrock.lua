@@ -228,8 +228,8 @@ function GetAbsolutePosition(self, obj)
 		local x = pos.X + obj.X - 1
 		local y = pos.Y + obj.Y - 1
 		if not obj.Fixed and obj.Parent.ChildOffset then
-			x = x + obj.Parent.ChildOffset[1]
-			y = y + obj.Parent.ChildOffset[2]
+			x = x + obj.Parent.ChildOffset.X
+			y = y + obj.Parent.ChildOffset.Y
 		end
 		return {X = x, Y = y}
 	end
@@ -663,7 +663,6 @@ function Draw(self)
 	end
 
 	if self.View and self.View:NeedsDraw() then
-		l('Draw')
 		self.View:Draw()
 		Drawing.DrawBuffer()
 		if isDebug then

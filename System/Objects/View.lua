@@ -34,11 +34,11 @@ InitialiseFile = function(self, bedrock, file, name)
 end
 
 function CheckClick(self, object, x, y)
-	local offset = {0,0}
+	local offset = {X = 0, Y = 0}
 	if not object.Fixed and self.ChildOffset then
 		offset = self.ChildOffset
 	end
-	if object.X + offset[1] <= x and object.Y + offset[2] <= y and  object.X + offset[1] + object.Width > x and object.Y + offset[2] + object.Height > y then
+	if object.X + offset.X <= x and object.Y + offset.Y <= y and  object.X + offset.X + object.Width > x and object.Y + offset.Y + object.Height > y then
 		return true
 	end
 end
@@ -46,8 +46,11 @@ end
 function DoClick(self, object, event, side, x, y)
 	if object then
 		if self:CheckClick(object, x, y) then
-			local relPos = object:GetRelativePosition(x, y)
-			return object:Click(event, side, relPos.X, relPos.Y)
+			local offset = {X = 0, Y = 0}
+			if not object.Fixed and self.ChildOffset then
+				offset = self.ChildOffset
+			end
+			return object:Click(event, side, x - object.X - offset.X + 1, y - object.Y + 1 - offset.Y)
 		end
 	end	
 end

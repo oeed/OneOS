@@ -50,6 +50,9 @@ OnClick = function(self, event, side, x, y)
 	end
 
 	local relScroll = self.MaxScroll * ((y-1)/self.Height)
+	if y == self.Height then
+		relScroll = self.MaxScroll
+	end
 	self.Scroll = self.Bedrock.Helpers.Round(relScroll)
 
 	if self.OnChange then
