@@ -24,3 +24,5 @@ System/.fingerprint
 dorelease
 
 System/main-old.lua
+
+System/OneOS.log
