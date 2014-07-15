@@ -160,7 +160,7 @@ function RefreshFiles()
 			if Settings.ListMode then
 				table.insert(program:GetObject('FilesListView').Items, {["Text"] = OneOS.FS.getName(path), ["Path"] = path, ["TextColour"] = OneOS.Helpers.IsDirectory(path) and colours.grey or colours.black, OnClick = FileClick})
 			else
-				table.insert(program:GetObject('FilesCollectionView').Items, {["Type"] = 'FileView', ["Path"] = path, OnClick = FileClick, ["Height"]=FileView.Height, ["Width"]=FileView.Width, ["BackgroundColour"]=colours.red})
+				table.insert(program:GetObject('FilesCollectionView').Items, {["Type"] = 'FileView', ["Path"] = path, OnClick = FileClick, ["Height"]=FileView.Height, ["Width"]=FileView.Width})
 			end
 		end
 	end

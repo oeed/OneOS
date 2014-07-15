@@ -19,7 +19,7 @@ end
 local function MaxIcons(self, obj)
 	local x, y = 2, 1
 	if not obj.Height or not obj.Width then
-		error('You must provide each object\'s height to a CollectionView when adding.')
+		error('You must provide each object\'s height when adding to a CollectionView.')
 	end
 	local slotHeight = obj.Height + self.SpacingY
 	local slotWidth = obj.Width + self.SpacingX

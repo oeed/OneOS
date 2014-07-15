@@ -60,7 +60,7 @@ bedrock.EventHandler = function(self)
 end
 
 function Shutdown(force, restart)
-	l('Trying to shutdown/restart. Restart: '..tostring(restart))
+	Log.i('Trying to shutdown/restart. Restart: '..tostring(restart))
 	local success = true
 	if not force then
 		for i, program in ipairs(Current.Programs) do
@@ -73,7 +73,7 @@ function Shutdown(force, restart)
 	if success then
 		AnimateShutdown(restart)
 	else
-		l('Shutdown/restart aborted')
+		Log.w('Shutdown/restart aborted')
 		Current.Desktop:SwitchTo()
 		local shutdownLabel = (restart and 'restart' or 'shutdown')
 		local shutdownLabelCaptital = (restart and 'Restart' or 'Shutdown')
@@ -87,7 +87,7 @@ function Shutdown(force, restart)
 end
 
 function AnimateShutdown(restart)
-	l('System safely stopping.')
+	Log.w('System safely stopping.')
 	if not Settings:GetValues()['UseAnimations'] then
 		return
 	end
@@ -140,10 +140,9 @@ end
 
 function Initialise()
 	bedrock:Run(function()
-		l('Reached GUI')
+		Log.i('Reached GUI')
 		bedrock:LoadView('main', false)
-		l('GUI Loaded')
-		
+		Log.i('GUI Loaded')		
 		Current.ProgramView = bedrock:GetObject('ProgramView')
 		Current.Overlay = bedrock:GetObject('Overlay')
 		Indexer.RefreshIndex() --TODO: finish the search. this needs to be done before starting the desktop

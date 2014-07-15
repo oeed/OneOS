@@ -1,1 +1,2929 @@
-tArgs={...}if OneOS then OneOS.ToolBarColour=colours.grey;OneOS.ToolBarTextColour=colours.white end;local b,d=term.getSize()local g=function(i,j)local k=10^j or 0;return math.floor(i*k+0.5)/k end;UIColours={Toolbar=colours.grey,ToolbarText=colours.lightGrey,ToolbarSelected=colours.lightBlue,ControlText=colours.white,ToolbarItemTitle=colours.black,Background=colours.lightGrey,MenuBackground=colours.white,MenuText=colours.black,MenuSeparatorText=colours.grey,MenuDisabledText=colours.lightGrey,Shadow=colours.grey,TransparentBackgroundOne=colours.white,TransparentBackgroundTwo=colours.lightGrey,MenuBarActive=colours.white}Clipboard={Content=nil,Type=nil,IsCut=false,Empty=function()Clipboard.Content=nil;Clipboard.Type=nil;Clipboard.IsCut=false end,isEmpty=function()return Clipboard.Content==nil end,Copy=function(u,w)Clipboard.Content=u;Clipboard.Type=w or'generic'Clipboard.IsCut=false end,Cut=function(u,w)Clipboard.Content=u;Clipboard.Type=w or'generic'Clipboard.IsCut=true end,Paste=function()local c,t=Clipboard.Content,Clipboard.Type;if Clipboard.IsCut then Clipboard.Empty()end;return c,t end}if OneOS and OneOS.Clipboard then Clipboard=OneOS.Clipboard end;Drawing={Screen={Width=b,Height=d},DrawCharacters=function(x,y,A,B,C)Drawing.WriteStringToBuffer(x,y,A,B,C)end,DrawBlankArea=function(x,y,D,h,E)Drawing.DrawArea(x,y,D,h," ",1,E)end,DrawArea=function(x,y,D,h,F,B,C)if D<0 then D=D*-1 elseif D==0 then D=1 end;for G=1,D do local H=x+G-1;for I=1,h do local J=y+I-1;Drawing.WriteToBuffer(H,J,F,B,C)end end end,DrawImage=function(K,L,M,D,h)if M then for y=1,h do if not M[y]then break end;for x=1,D do if not M[y][x]then break end;local C=M[y][x]local B=M.textcol[y][x]or colours.white;local char=M.text[y][x]Drawing.WriteToBuffer(x+K-1,y+L-1,char,B,C)end end elseif D and h then Drawing.DrawBlankArea(x,y,D,h,colours.green)end end,LoadImage=function(N)local O={text={},textcol={}}local fs=fs;if OneOS then fs=OneOS.FS end;if fs.exists(N)then local P=io.open;if OneOS then P=OneOS.IO.open end;local Q=P(N,"r")local R=Q:read()local i=1;while R do table.insert(O,i,{})table.insert(O.text,i,{})table.insert(O.textcol,i,{})local S=1;local T,U=false,false;local V,W=nil,nil;for Z=1,#R do local _=string.sub(R,Z,Z)if _:byte()==30 then T=true elseif _:byte()==31 then U=true elseif T then V=Drawing.GetColour(_)T=false elseif U then W=Drawing.GetColour(_)U=false else if _~=" "and W==nil then W=colours.white end;O[i][S]=V;O.textcol[i][S]=W;O.text[i][S]=_;S=S+1 end end;i=i+1;R=Q:read()end;Q:close()end;return O end,DrawCharactersCenter=function(x,y,D,h,A,B,C)D=D or Drawing.Screen.Width;h=h or Drawing.Screen.Height;x=x or 0;y=y or 0;x=math.ceil((D-#A)/2)+x;y=math.floor(h/2)+y;Drawing.DrawCharacters(x,y,A,B,C)end,GetColour=function(a0)if a0==' 'then return colours.transparent end;local a1=tonumber(a0,16)if not a1 then return nil end;a1=math.pow(2,a1)return a1 end,Clear=function(a2)a2=a2 or colours.black;Drawing.ClearBuffer()Drawing.DrawBlankArea(1,1,Drawing.Screen.Width,Drawing.Screen.Height,a2)end,Buffer={},BackBuffer={},DrawBuffer=function()for y,a3 in pairs(Drawing.Buffer)do for x,a4 in pairs(a3)do local a5=true;local a6=true;if Drawing.BackBuffer[y]==nil or Drawing.BackBuffer[y][x]==nil or#Drawing.BackBuffer[y][x]~=3 then a6=false end;if a6 and Drawing.BackBuffer[y][x][1]==Drawing.Buffer[y][x][1]and Drawing.BackBuffer[y][x][2]==Drawing.Buffer[y][x][2]and Drawing.BackBuffer[y][x][3]==Drawing.Buffer[y][x][3]then a5=false end;if a5 then term.setBackgroundColour(a4[3])term.setTextColour(a4[2])term.setCursorPos(x,y)term.write(a4[1])end end end;Drawing.BackBuffer=Drawing.Buffer;Drawing.Buffer={}term.setCursorPos(1,1)end,ClearBuffer=function()Drawing.Buffer={}end,WriteStringToBuffer=function(x,y,A,B,C)for Z=1,#A do local F=A:sub(Z,Z)Drawing.WriteToBuffer(x+Z-1,y,F,B,C)end end,WriteToBuffer=function(x,y,F,B,C)x=g(x)y=g(y)if C==colours.transparent then Drawing.Buffer[y]=Drawing.Buffer[y]or{}Drawing.Buffer[y][x]=Drawing.Buffer[y][x]or{"",colours.white,colours.black}Drawing.Buffer[y][x][1]=F;Drawing.Buffer[y][x][2]=B else Drawing.Buffer[y]=Drawing.Buffer[y]or{}Drawing.Buffer[y][x]={F,B,C}end end}Current={Document=nil,TextInput=nil,CursorPos={1,1},CursorColour=colours.black,Selection={8,36},Window=nil,Modified=false}local a7=false;function OrderSelection()if Current.Selection then if Current.Selection[1]<=Current.Selection[2]then return Current.Selection else return{Current.Selection[2],Current.Selection[1]}end end end;function StripColours(a8)return a8:gsub('['..string.char(14)..'-'..string.char(29)..']','')end;function FindColours(a8)local a9,aa=a8:gsub('['..string.char(14)..'-'..string.char(29)..']','')return aa end;ColourFromCharacter=function(F)local n=F:byte()-14;if n>16 then return nil else return 2^n end end;CharacterFromColour=function(E)return string.char(math.floor(math.log(E)/math.log(2))+14)end;Events={}Button={X=1,Y=1,Width=0,Height=0,BackgroundColour=colours.lightGrey,TextColour=colours.white,ActiveBackgroundColour=colours.lightGrey,Text="",Parent=nil,_Click=nil,Toggle=nil,AbsolutePosition=function(ab)return ab.Parent:AbsolutePosition()end,Draw=function(ab)local ac=ab.BackgroundColour;local ad=ab.TextColour;if type(ac)=='function'then ac=ac()end;if ab.Toggle then ad=UIColours.MenuBarActive;ac=ab.ActiveBackgroundColour end;local ae=GetAbsolutePosition(ab)Drawing.DrawBlankArea(ae.X,ae.Y,ab.Width,ab.Height,ac)Drawing.DrawCharactersCenter(ae.X,ae.Y,ab.Width,ab.Height,ab.Text,ad,ac)end,Initialise=function(ab,x,y,af,ag,ah,ai,aj,text,B,ak,al)local am={}setmetatable(am,{__index=ab})ag=ag or 1;am.Width=af or#text+2;am.Height=ag;am.Y=y;am.X=x;am.Text=text or""am.BackgroundColour=ah or colours.lightGrey;am.TextColour=B or colours.white;am.ActiveBackgroundColour=al or colours.lightGrey;am.Parent=ai;am._Click=aj;am.Toggle=ak;return am end,Click=function(ab,an,x,y)if ab._Click then if ab:_Click(an,x,y,not ab.Toggle)~=false and ab.Toggle~=nil then ab.Toggle=not ab.Toggle;Draw()end;return true else return false end end}TextBox={X=1,Y=1,Width=0,Height=0,BackgroundColour=colours.lightGrey,TextColour=colours.black,Parent=nil,TextInput=nil,Placeholder='',AbsolutePosition=function(ab)return ab.Parent:AbsolutePosition()end,Draw=function(ab)local ae=GetAbsolutePosition(ab)Drawing.DrawBlankArea(ae.X,ae.Y,ab.Width,ab.Height,ab.BackgroundColour)local text=ab.TextInput.Value;if#tostring(text)>ab.Width-2 then text=text:sub(#text-ab.Width-3)if Current.TextInput==ab.TextInput then Current.CursorPos={ae.X+1+ab.Width-2,ae.Y}end else if Current.TextInput==ab.TextInput then Current.CursorPos={ae.X+1+ab.TextInput.CursorPos,ae.Y}end end;if#tostring(text)==0 then Drawing.DrawCharacters(ae.X+1,ae.Y,ab.Placeholder,colours.lightGrey,ab.BackgroundColour)else Drawing.DrawCharacters(ae.X+1,ae.Y,text,ab.TextColour,ab.BackgroundColour)end;term.setCursorBlink(true)Current.CursorColour=ab.TextColour end,Initialise=function(ab,x,y,af,ag,ai,text,ah,B,ao,ap)local am={}setmetatable(am,{__index=ab})ag=ag or 1;am.Width=af or#text+2;am.Height=ag;am.Y=y;am.X=x;am.TextInput=TextInput:Initialise(text or'',function(key)if ao then ao(key)end;Draw()end,ap)am.BackgroundColour=ah or colours.lightGrey;am.TextColour=B or colours.black;am.Parent=ai;return am end,Click=function(ab,an,x,y)Current.Input=ab.TextInput;ab:Draw()end}TextInput={Value="",Change=nil,CursorPos=nil,Numerical=false,IsDocument=nil,Initialise=function(ab,a1,aq,ap,ar)local am={}setmetatable(am,{__index=ab})am.Value=tostring(a1)am.Change=aq;am.CursorPos=#tostring(a1)am.Numerical=ap;am.IsDocument=ar or false;return am end,Insert=function(ab,a8)if ab.Numerical then a8=tostring(tonumber(a8))end;local as=OrderSelection()if ab.IsDocument and as then ab.Value=string.sub(ab.Value,1,as[1]-1)..a8 ..string.sub(ab.Value,as[2]+2)ab.CursorPos=as[1]Current.Selection=nil else local a9,at=string.gsub(ab.Value:sub(1,ab.CursorPos),'\n','')ab.Value=string.sub(ab.Value,1,ab.CursorPos+at)..a8 ..string.sub(ab.Value,ab.CursorPos+1+at)ab.CursorPos=ab.CursorPos+1 end;ab.Change(key)end,Extract=function(ab,au)local as=OrderSelection()if ab.IsDocument and as then local a9,at=string.gsub(ab.Value:sub(as[1],as[2]),'\n','')local a8=string.sub(ab.Value,as[1],as[2]+1+at)if au then ab.Value=string.sub(ab.Value,1,as[1]-1)..string.sub(ab.Value,as[2]+2+at)ab.CursorPos=as[1]-1;Current.Selection=nil end;return a8 end end,Char=function(ab,char)if char=='nil'then return end;ab:Insert(char)end,Key=function(ab,key)if key==keys.enter then if ab.IsDocument then ab.Value=string.sub(ab.Value,1,ab.CursorPos)..'\n'..string.sub(ab.Value,ab.CursorPos+1)ab.CursorPos=ab.CursorPos+1 end;ab.Change(key)elseif key==keys.left then if ab.CursorPos>0 then local av=FindColours(string.sub(ab.Value,ab.CursorPos,ab.CursorPos))ab.CursorPos=ab.CursorPos-1-av;ab.Change(key)end elseif key==keys.right then if ab.CursorPos<string.len(ab.Value)then local av=FindColours(string.sub(ab.Value,ab.CursorPos+1,ab.CursorPos+1))ab.CursorPos=ab.CursorPos+1+av;ab.Change(key)end elseif key==keys.backspace then if ab.IsDocument and Current.Selection then ab:Extract(true)ab.Change(key)elseif ab.CursorPos>0 then local av=FindColours(string.sub(ab.Value,ab.CursorPos,ab.CursorPos))local a9,at=string.gsub(ab.Value:sub(1,ab.CursorPos),'\n','')ab.Value=string.sub(ab.Value,1,ab.CursorPos-1-av+at)..string.sub(ab.Value,ab.CursorPos+1-av+at)ab.CursorPos=ab.CursorPos-1-av;ab.Change(key)end elseif key==keys.home then ab.CursorPos=0;ab.Change(key)elseif key==keys.delete then if ab.IsDocument and Current.Selection then ab:Extract(true)ab.Change(key)elseif ab.CursorPos<string.len(ab.Value)then ab.Value=string.sub(ab.Value,1,ab.CursorPos)..string.sub(ab.Value,ab.CursorPos+2)ab.Change(key)end elseif key==keys["end"]then ab.CursorPos=string.len(ab.Value)ab.Change(key)elseif key==keys.up and ab.IsDocument then if Current.Document.CursorPos then local aw=Current.Document.Pages[Current.Document.CursorPos.Page]ab.CursorPos=aw:GetCursorPosFromPoint(Current.Document.CursorPos.Collum+aw.MarginX,Current.Document.CursorPos.Line-aw.MarginY-1+Current.Document.ScrollBar.Scroll,true)ab.Change(key)end elseif key==keys.down and ab.IsDocument then if Current.Document.CursorPos then local aw=Current.Document.Pages[Current.Document.CursorPos.Page]ab.CursorPos=aw:GetCursorPosFromPoint(Current.Document.CursorPos.Collum+aw.MarginX,Current.Document.CursorPos.Line-aw.MarginY+1+Current.Document.ScrollBar.Scroll,true)ab.Change(key)end end end}Menu={X=0,Y=0,Width=0,Height=0,Owner=nil,Items={},RemoveTop=false,Draw=function(ab)Drawing.DrawBlankArea(ab.X+1,ab.Y+1,ab.Width,ab.Height,UIColours.Shadow)if not ab.RemoveTop then Drawing.DrawBlankArea(ab.X,ab.Y,ab.Width,ab.Height,UIColours.MenuBackground)for Z,ax in ipairs(ab.Items)do if ax.Separator then Drawing.DrawArea(ab.X,ab.Y+Z,ab.Width,1,'-',colours.grey,UIColours.MenuBackground)else local B=ax.Colour or UIColours.MenuText;if ax.Enabled and type(ax.Enabled)=='function'and ax.Enabled()==false or ax.Enabled==false then B=UIColours.MenuDisabledText end;Drawing.DrawCharacters(ab.X+1,ab.Y+Z,ax.Title,B,UIColours.MenuBackground)end end else Drawing.DrawBlankArea(ab.X,ab.Y,ab.Width,ab.Height,UIColours.MenuBackground)for Z,ax in ipairs(ab.Items)do if ax.Separator then Drawing.DrawArea(ab.X,ab.Y+Z-1,ab.Width,1,'-',colours.grey,UIColours.MenuBackground)else local B=ax.Colour or UIColours.MenuText;if ax.Enabled and type(ax.Enabled)=='function'and ax.Enabled()==false or ax.Enabled==false then B=UIColours.MenuDisabledText end;Drawing.DrawCharacters(ab.X+1,ab.Y+Z-1,ax.Title,B,UIColours.MenuBackground)Drawing.DrawCharacters(ab.X-1+ab.Width-#ax.KeyName,ab.Y+Z-1,ax.KeyName,B,UIColours.MenuBackground)end end end end,NameForKey=function(ab,key)if key==keys.leftCtrl then return'^'elseif key==keys.tab then return'Tab'elseif key==keys.delete then return'Delete'elseif key==keys.n then return'N'elseif key==keys.a then return'A'elseif key==keys.s then return'S'elseif key==keys.o then return'O'elseif key==keys.z then return'Z'elseif key==keys.y then return'Y'elseif key==keys.c then return'C'elseif key==keys.x then return'X'elseif key==keys.v then return'V'elseif key==keys.r then return'R'elseif key==keys.l then return'L'elseif key==keys.t then return'T'elseif key==keys.h then return'H'elseif key==keys.e then return'E'elseif key==keys.p then return'P'elseif key==keys.f then return'F'elseif key==keys.m then return'M'elseif key==keys.q then return'Q'else return'?'end end,Initialise=function(ab,x,y,ay,az,aA)local am={}setmetatable(am,{__index=ab})if not az then return end;local aB={}for Z,v in ipairs(ay)do ay[Z].KeyName=''if v.Keys then for aC,key in ipairs(v.Keys)do ay[Z].KeyName=ay[Z].KeyName..ab:NameForKey(key)end end;if ay[Z].KeyName~=''then table.insert(aB,ay[Z].KeyName)end end;local aD=LongestString(aB)if aD>0 then aD=aD+2 end;am.Width=LongestString(ay,'Title')+2+aD;if am.Width<10 then am.Width=10 end;am.Height=#ay+2;am.RemoveTop=aA or false;if aA then am.Height=am.Height-1 end;if y<1 then y=1 end;if x<1 then x=1 end;if y+am.Height>Drawing.Screen.Height+1 then y=Drawing.Screen.Height-am.Height end;if x+am.Width>Drawing.Screen.Width+1 then x=Drawing.Screen.Width-am.Width end;am.Y=y;am.X=x;am.Items=ay;am.Owner=az;return am end,New=function(ab,x,y,ay,az,aA)if Current.Menu and Current.Menu.Owner==az then Current.Menu=nil;return end;local am=ab:Initialise(x,y,ay,az,aA)Current.Menu=am;return am end,Click=function(ab,an,x,y)local Z=y-1;if ab.RemoveTop then Z=y end;if Z>=1 and y<ab.Height then if not(ab.Items[Z].Enabled and type(ab.Items[Z].Enabled)=='function'and ab.Items[Z].Enabled()==false or ab.Items[Z].Enabled==false)and ab.Items[Z].Click then ab.Items[Z]:Click()if Current.Menu.Owner and Current.Menu.Owner.Toggle then Current.Menu.Owner.Toggle=false end;Current.Menu=nil;ab=nil end;return true end end}MenuBar={X=1,Y=1,Width=Drawing.Screen.Width,Height=1,MenuBarItems={},AbsolutePosition=function(ab)return{X=ab.X,Y=ab.Y}end,Draw=function(ab)Drawing.DrawBlankArea(ab.X,ab.Y,ab.Width,ab.Height,colours.grey)for Z,aE in ipairs(ab.MenuBarItems)do aE:Draw()end end,Initialise=function(ab,ay)local am={}setmetatable(am,{__index=ab})am.X=1;am.Y=1;am.MenuBarItems=ay;return am end,AddToolbarItem=function(ab,ax)table.insert(ab.ToolbarItems,ax)ab:CalculateToolbarItemPositions()end,CalculateToolbarItemPositions=function(ab)local J=1;for Z,aF in ipairs(ab.ToolbarItems)do aF.Y=J;J=J+aF.Height end end,Click=function(ab,an,x,y)for Z,ax in ipairs(ab.MenuBarItems)do if ax.X<=x and ax.X+ax.Width>x then if ax:Click(ax,an,x-ax.X+1,1)then return true end end end;return false end}TextFormatPlainText=1;TextFormatInkText=2;Document={X=1,Y=1,PageSize={Width=25,Height=21},TextInput=nil,Pages={},Format=TextFormatPlainText,Title='',Path=nil,ScrollBar=nil,Lines={},CursorPos=nil,CalculateLineWrapping=function(ab)local aG=ab.PageSize.Width;local text=ab.TextInput.Value;local aH={''}local aI={}for aJ,aK in text:gmatch('(%S+)(%s*)')do for Z=1,math.ceil(#aJ/aG)do local aL=''if Z==math.ceil(#aJ/aG)then aL=aK end;table.insert(aI,{aJ:sub(1+aG*Z-1,aG*Z),aL})end end;for Z,aM in ipairs(aI)do local aJ=aM[1]local aK=aM[2]local aN=aH[#aH]..aJ..aK:gsub('\n','')if#aN>aG then table.insert(aH,'')end;if aK:find('\n')then aH[#aH]=aH[#aH]..aJ;aK=aK:gsub('\n',function()table.insert(aH,'')return''end)else aH[#aH]=aH[#aH]..aJ..aK end end;return aH end,CalculateCursorPos=function(ab)local aO=0;Current.CursorPos=nil;for p,aw in ipairs(ab.Pages)do aw:Draw()if not Current.CursorPos then for Z,aP in ipairs(aw.Lines)do local aQ=ab.TextInput.CursorPos-FindColours(ab.TextInput.Value:sub(1,ab.TextInput.CursorPos))if aO+#StripColours(aP.Text:gsub('\n',''))>=aQ then Current.CursorPos={ab.X+aw.MarginX+aQ-aO,aw.Y+1+Z}ab.CursorPos={Page=p,Line=Z,Collum=aQ-aO-FindColours(ab.TextInput.Value:sub(1,ab.TextInput.CursorPos-1))}break end;aO=aO+#StripColours(aP.Text:gsub('\n',''))end end end end,Draw=function(ab)ab:CalculatePages()ab:CalculateCursorPos()ab.ScrollBar:Draw()end,CalculatePages=function(ab)ab.Pages={}local aH=ab:CalculateLineWrapping()ab.Lines=aH;local aR={}local aS=3+ab.PageSize.Height+2*Page.MarginY;for Z,aP in ipairs(aH)do table.insert(aR,TextLine:Initialise(aP))if Z%ab.PageSize.Height==0 then table.insert(ab.Pages,Page:Initialise(ab,aR,3-ab.ScrollBar.Scroll+aS*#ab.Pages))aR={}end end;if#aR~=0 then table.insert(ab.Pages,Page:Initialise(ab,aR,3-ab.ScrollBar.Scroll+aS*#ab.Pages))end;ab.ScrollBar.MaxScroll=aS*#ab.Pages-Drawing.Screen.Height+1 end,ScrollToCursor=function(ab)ab:CalculateCursorPos()if Current.CursorPos and Current.CursorPos[2]>Drawing.Screen.Height or Current.CursorPos[2]<2 then ab.ScrollBar:DoScroll(Current.CursorPos[2]-Drawing.Screen.Height)end end,SetSelectionColour=function(ab,E)local as=OrderSelection()local text=ab.TextInput:Extract(true)local aT=CharacterFromColour(E)local aU=''if FindColours(ab.TextInput.Value:sub(ab.TextInput.CursorPos+1,ab.TextInput.CursorPos+1))==0 then for Z=1,ab.TextInput.CursorPos do local c=ab.TextInput.Value:sub(ab.TextInput.CursorPos-Z,ab.TextInput.CursorPos-Z)if FindColours(c)==1 then aU=c;break end end;if aU==''then aU=CharacterFromColour(colours.black)end end;ab.TextInput:Insert(aT..StripColours(text)..aU)end,Initialise=function(ab,text,aV,N)local am={}setmetatable(am,{__index=ab})am.Title=aV or'New Document'am.Path=N;am.X=(Drawing.Screen.Width-am.PageSize.Width+2*Page.MarginX)/2;am.Y=2;am.TextInput=TextInput:Initialise(text,function()am:ScrollToCursor()Current.Modified=true;Draw()end,false,true)am.ScrollBar=ScrollBar:Initialise(Drawing.Screen.Width,am.Y,Drawing.Screen.Height-1,0,nil,nil,nil,function()end)Current.TextInput=am.TextInput;Current.ScrollBar=am.ScrollBar;return am end}ScrollBar={X=1,Y=1,Width=1,Height=1,BackgroundColour=colours.grey,BarColour=colours.lightBlue,Parent=nil,Change=nil,Scroll=0,MaxScroll=0,ClickPoint=nil,AbsolutePosition=function(ab)return ab.Parent:AbsolutePosition()end,Draw=function(ab)local ae=GetAbsolutePosition(ab)local aW=ab.Height-ab.MaxScroll;if aW<3 then aW=3 end;local aX=ab.Scroll/ab.MaxScroll;Drawing.DrawBlankArea(ae.X,ae.Y,ab.Width,ab.Height,ab.BackgroundColour)Drawing.DrawBlankArea(ae.X,ae.Y+g(ab.Height*aX-aW*aX),ab.Width,aW,ab.BarColour)end,Initialise=function(ab,x,y,ag,aY,ah,aZ,ai,aq)local am={}setmetatable(am,{__index=ab})am.Width=1;am.Height=ag;am.Y=y;am.X=x;am.BackgroundColour=ah or colours.grey;am.BarColour=aZ or colours.lightBlue;am.Parent=ai;am.Change=aq or function()end;am.MaxScroll=aY;am.Scroll=0;return am end,DoScroll=function(ab,a_)a_=g(a_)if ab.Scroll<0 or ab.Scroll>ab.MaxScroll then return false end;ab.Scroll=ab.Scroll+a_;if ab.Scroll<0 then ab.Scroll=0 elseif ab.Scroll>ab.MaxScroll then ab.Scroll=ab.MaxScroll end;ab.Change()return true end,Click=function(ab,an,x,y,b0)local aX=ab.Scroll/ab.MaxScroll;local aW=ab.Height-ab.MaxScroll;if aW<3 then aW=3 end;local b1=ab.MaxScroll*y+aW*aX/ab.Height;if not b0 then ab.ClickPoint=ab.Scroll-b1+1 end;if ab.Scroll-1~=b1 then ab:DoScroll(b1-ab.Scroll-1+ab.ClickPoint)end;return true end}AlignmentLeft=1;AlignmentCentre=2;AlignmentRight=3;TextLine={Text="",Alignment=AlignmentLeft,Initialise=function(ab,text,b2)local am={}setmetatable(am,{__index=ab})am.Text=text;am.Alignment=b2 or AlignmentLeft;return am end}local b3=1;Page={X=1,Y=1,Width=1,Height=1,MarginX=3,MarginY=2,BackgroundColour=colours.white,TextColour=colours.white,ActiveBackgroundColour=colours.lightGrey,Lines={},Parent=nil,AbsolutePosition=function(ab)return ab.Parent:AbsolutePosition()end,Draw=function(ab)local ae=GetAbsolutePosition(ab)if ae.Y>Drawing.Screen.Height or ae.Y+ab.Height<1 then return end;Drawing.DrawBlankArea(ae.X+ab.Width,ae.Y-1+1,1,ab.Height,UIColours.Shadow)Drawing.DrawBlankArea(ae.X+1,ae.Y-1+ab.Height,ab.Width,1,UIColours.Shadow)Drawing.DrawBlankArea(ae.X,ae.Y-1,ab.Width,ab.Height,ab.BackgroundColour)local B=ab.TextColour;if not Current.Selection then for Z,aP in ipairs(ab.Lines)do local b4=1;for c=1,#aP.Text do local b5=ColourFromCharacter(aP.Text:sub(c,c))if b5 then B=b5 else Drawing.WriteToBuffer(ae.X+ab.MarginX-1+b4,ae.Y-2+Z+ab.MarginY,aP.Text:sub(c,c),B,ab.BackgroundColour)b4=b4+1 end end end else local as=OrderSelection()local char=1;local B=ab.TextColour;for Z,aP in ipairs(ab.Lines)do local b4=1;for c=1,#aP.Text do local b5=ColourFromCharacter(aP.Text:sub(c,c))if b5 then B=b5 else local ad=B;local E=colours.white;if char>=as[1]and char<=as[2]then E=colours.lightBlue;ad=colours.white end;Drawing.WriteToBuffer(ae.X+ab.MarginX-1+b4,ae.Y-2+Z+ab.MarginY,aP.Text:sub(c,c),ad,E)b4=b4+1 end;char=char+1 end end end end,Initialise=function(ab,ai,aH,y)local am={}setmetatable(am,{__index=ab})am.Height=ai.PageSize.Height+2*ab.MarginY;am.Width=ai.PageSize.Width+2*ab.MarginX;am.X=1;am.Y=y or 1;am.Lines=aH or{}am.BackgroundColour=colours.white;am.TextColour=colours.black;am.Parent=ai;am.ClickPos=1;return am end,GetCursorPosFromPoint=function(ab,x,y,b6)local ae=GetAbsolutePosition(ab)if b6 then ae={Y=0,X=0}end;local a3=y-ae.Y+ab.MarginY-ab.Parent.ScrollBar.Scroll;local b5=x-ab.MarginX-ae.X+1;local b7=0;if a3<=0 or b5<=0 then return 0 end;if a3>#ab.Lines then for Z,v in ipairs(ab.Lines)do b7=b7+#v.Text end;return b7 end;local b8=0;for Z,v in ipairs(ab.Lines)do if Z==a3 then if b5>#v.Text then b5=#v.Text else b5=b5+FindColours(v.Text:sub(1,b5))end;b7=b7+b5+2-Z-b8;break else b8=FindColours(v.Text)if b8~=0 then b8=b8 end;b7=b7+#v.Text+2-Z+FindColours(v.Text)end end;return b7-2 end,Click=function(ab,an,x,y,b0)local b7=ab:GetCursorPosFromPoint(x,y)ab.Parent.TextInput.CursorPos=b7;if b0==nil then Current.Selection=nil;b3=x else local aQ=b7;if not Current.Selection then local b9=1;if b3 and b3<x then b9=0 end;Current.Selection={aQ+b9,aQ+1+b9}else Current.Selection[2]=aQ+1 end end;Draw()return true end}function GetAbsolutePosition(ba)local bb=ba;local Z=0;local x=1;local y=1;while true do x=x+bb.X-1;y=y+bb.Y-1;if not bb.Parent then return{X=x,Y=y}end;bb=bb.Parent;if Z>32 then return{X=1,Y=1}end;Z=Z+1 end end;function Draw()if not Current.Window then Drawing.Clear(colours.lightGrey)else Drawing.DrawArea(1,2,Drawing.Screen.Width,Drawing.Screen.Height,'|',colours.black,colours.lightGrey)end;if Current.Document then Current.Document:Draw()end;Current.MenuBar:Draw()if Current.Window then Current.Window:Draw()end;if Current.Menu then Current.Menu:Draw()end;Drawing.DrawBuffer()if Current.TextInput and Current.CursorPos and not Current.Menu and not(Current.Window and Current.Document and Current.TextInput==Current.Document.TextInput)and Current.CursorPos[2]>1 then term.setCursorPos(Current.CursorPos[1],Current.CursorPos[2])term.setCursorBlink(true)term.setTextColour(Current.CursorColour)else term.setCursorBlink(false)end end;MainDraw=Draw;LongestString=function(bc,key)local bd=0;for Z=1,#bc do local a1=bc[Z]if key then if a1[key]then a1=a1[key]else a1=''end end;local be=string.len(a1)if be>bd then bd=be end end;return bd end;function LoadMenuBar()Current.MenuBar=MenuBar:Initialise({Button:Initialise(1,1,nil,nil,colours.grey,Current.MenuBar,function(ab,an,x,y,ak)if ak then Menu:New(1,2,{{Title="New...",Click=function()Current.Document=Document:Initialise('')end,Keys={keys.leftCtrl,keys.n}},{Title='Open...',Click=function()DisplayOpenDocumentWindow()end,Keys={keys.leftCtrl,keys.o}},{Separator=true},{Title='Save...',Click=function()SaveDocument()end,Keys={keys.leftCtrl,keys.s},Enabled=function()return true end},{Separator=true},{Title='Print...',Click=function()PrintDocument()end,Keys={keys.leftCtrl,keys.p},Enabled=function()return true end},{Separator=true},{Title='Quit',Click=function()Close()end}},ab,true)else Current.Menu=nil end;return true end,'File',colours.lightGrey,false),Button:Initialise(7,1,nil,nil,colours.grey,Current.MenuBar,function(ab,an,x,y,ak)if not ab.Toggle then Menu:New(7,2,{{Title='Cut',Click=function()Clipboard.Cut(Current.Document.TextInput:Extract(true),'text')end,Keys={keys.leftCtrl,keys.x},Enabled=function()return Current.Document~=nil and Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil end},{Title='Copy',Click=function()Clipboard.Copy(Current.Document.TextInput:Extract(),'text')end,Keys={keys.leftCtrl,keys.c},Enabled=function()return Current.Document~=nil and Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil end},{Title='Paste',Click=function()local bf=Clipboard.Paste()Current.Document.TextInput:Insert(bf)Current.Document.TextInput.CursorPos=Current.Document.TextInput.CursorPos+#bf-1 end,Keys={keys.leftCtrl,keys.v},Enabled=function()return Current.Document~=nil and not Clipboard.isEmpty()and Clipboard.Type=='text'end},{Separator=true},{Title='Select All',Click=function()Current.Selection={1,#Current.Document.TextInput.Value:gsub('\n','')}end,Keys={keys.leftCtrl,keys.a},Enabled=function()return Current.Document~=nil end}},ab,true)else Current.Menu=nil end;return true end,'Edit',colours.lightGrey,false)})end;function LoadMenuBar()Current.MenuBar=MenuBar:Initialise({Button:Initialise(1,1,nil,nil,colours.grey,Current.MenuBar,function(ab,an,x,y,ak)if ak then Menu:New(1,2,{{Title="New...",Click=function()Current.Document=Document:Initialise('')end,Keys={keys.leftCtrl,keys.n}},{Title='Open...',Click=function()DisplayOpenDocumentWindow()end,Keys={keys.leftCtrl,keys.o}},{Separator=true},{Title='Save...',Click=function()SaveDocument()end,Keys={keys.leftCtrl,keys.s},Enabled=function()return Current.Document~=nil end},{Separator=true},{Title='Print...',Click=function()PrintDocument()end,Keys={keys.leftCtrl,keys.p},Enabled=function()return true end},{Separator=true},{Title='Quit',Click=function()if Close()and OneOS then OneOS.Close()end end,Keys={keys.leftCtrl,keys.q}}},ab,true)else Current.Menu=nil end;return true end,'File',colours.lightGrey,false),Button:Initialise(7,1,nil,nil,colours.grey,Current.MenuBar,function(ab,an,x,y,ak)if not ab.Toggle then Menu:New(7,2,{{Title='Cut',Click=function()Clipboard.Cut(Current.Document.TextInput:Extract(true),'text')end,Keys={keys.leftCtrl,keys.x},Enabled=function()return Current.Document~=nil and Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil end},{Title='Copy',Click=function()Clipboard.Copy(Current.Document.TextInput:Extract(),'text')end,Keys={keys.leftCtrl,keys.c},Enabled=function()return Current.Document~=nil and Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil end},{Title='Paste',Click=function()local bf=Clipboard.Paste()Current.Document.TextInput:Insert(bf)Current.Document.TextInput.CursorPos=Current.Document.TextInput.CursorPos+#bf-1 end,Keys={keys.leftCtrl,keys.v},Enabled=function()return Current.Document~=nil and not Clipboard.isEmpty()and Clipboard.Type=='text'end},{Separator=true},{Title='Select All',Click=function()Current.Selection={1,#Current.Document.TextInput.Value:gsub('\n','')}end,Keys={keys.leftCtrl,keys.a},Enabled=function()return Current.Document~=nil end}},ab,true)else Current.Menu=nil end;return true end,'Edit',colours.lightGrey,false),Button:Initialise(13,1,nil,nil,colours.grey,Current.MenuBar,function(ab,an,x,y,ak)if not ab.Toggle then Menu:New(13,2,{{Title='Red',Click=function(ax)Current.Document:SetSelectionColour(ax.Colour)end,Colour=colours.red,Enabled=function()return Current.Document~=nil and Current.Selection~=nil and Current.Selection[1]~=nil and Current.Selection[2]~=nil end},{Title='Orange',Click=function(ax)Current.Document:SetSelectionColour(ax.Colour)end,Colour=colours.orange,Enabled=function()return Current.Document~=nil and Current.Selection~=nil and Current.Selection[1]~=nil and Current.Selection[2]~=nil end},{Title='Yellow',Click=function(ax)Current.Document:SetSelectionColour(ax.Colour)end,Colour=colours.yellow,Enabled=function()return Current.Document~=nil and Current.Selection~=nil and Current.Selection[1]~=nil and Current.Selection[2]~=nil end},{Title='Pink',Click=function(ax)Current.Document:SetSelectionColour(ax.Colour)end,Colour=colours.pink,Enabled=function()return Current.Document~=nil and Current.Selection~=nil and Current.Selection[1]~=nil and Current.Selection[2]~=nil end},{Title='Magenta',Click=function(ax)Current.Document:SetSelectionColour(ax.Colour)end,Colour=colours.magenta,Enabled=function()return Current.Document~=nil and Current.Selection~=nil and Current.Selection[1]~=nil and Current.Selection[2]~=nil end},{Title='Purple',Click=function(ax)Current.Document:SetSelectionColour(ax.Colour)end,Colour=colours.purple,Enabled=function()return Current.Document~=nil and Current.Selection~=nil and Current.Selection[1]~=nil and Current.Selection[2]~=nil end},{Title='Light Blue',Click=function(ax)Current.Document:SetSelectionColour(ax.Colour)end,Colour=colours.lightBlue,Enabled=function()return Current.Document~=nil and Current.Selection~=nil and Current.Selection[1]~=nil and Current.Selection[2]~=nil end},{Title='Cyan',Click=function(ax)Current.Document:SetSelectionColour(ax.Colour)end,Colour=colours.cyan,Enabled=function()return Current.Document~=nil and Current.Selection~=nil and Current.Selection[1]~=nil and Current.Selection[2]~=nil end},{Title='Blue',Click=function(ax)Current.Document:SetSelectionColour(ax.Colour)end,Colour=colours.blue,Enabled=function()return Current.Document~=nil and Current.Selection~=nil and Current.Selection[1]~=nil and Current.Selection[2]~=nil end},{Title='Green',Click=function(ax)Current.Document:SetSelectionColour(ax.Colour)end,Colour=colours.green,Enabled=function()return Current.Document~=nil and Current.Selection~=nil and Current.Selection[1]~=nil and Current.Selection[2]~=nil end},{Title='Light Grey',Click=function(ax)Current.Document:SetSelectionColour(ax.Colour)end,Colour=colours.lightGrey,Enabled=function()return Current.Document~=nil and Current.Selection~=nil and Current.Selection[1]~=nil and Current.Selection[2]~=nil end},{Title='Grey',Click=function(ax)Current.Document:SetSelectionColour(ax.Colour)end,Colour=colours.grey,Enabled=function()return Current.Document~=nil and Current.Selection~=nil and Current.Selection[1]~=nil and Current.Selection[2]~=nil end},{Title='Black',Click=function(ax)Current.Document:SetSelectionColour(ax.Colour)end,Colour=colours.black,Enabled=function()return Current.Document~=nil and Current.Selection~=nil and Current.Selection[1]~=nil and Current.Selection[2]~=nil end},{Title='Brown',Click=function(ax)Current.Document:SetSelectionColour(ax.Colour)end,Colour=colours.brown,Enabled=function()return Current.Document~=nil and Current.Selection~=nil and Current.Selection[1]~=nil and Current.Selection[2]~=nil end}},ab,true)else Current.Menu=nil end;return true end,'Colour',colours.lightGrey,false)})end;function Initialise(bg)if OneOS then fs=OneOS.FS end;if not OneOS then SplashScreen()end;EventRegister('mouse_click',TryClick)EventRegister('mouse_drag',function(bh,an,x,y)TryClick(bh,an,x,y,true)end)EventRegister('mouse_scroll',Scroll)EventRegister('key',HandleKey)EventRegister('char',HandleKey)EventRegister('timer',Timer)EventRegister('terminate',function(bh)if Close()then error("Terminated",0)end end)term.setBackgroundColour(colours.lightGrey)term.clear()LoadMenuBar()if tArgs[1]then if fs.exists(tArgs[1])then OpenDocument(tArgs[1])else end else Current.Document=Document:Initialise('')end;Draw()EventHandler()end;local bi=false;controlPushedTimer=nil;closeWindowTimer=nil;function Timer(bh,bj)if bj==closeWindowTimer then if Current.Window then Current.Window:Close()end;Draw()elseif bj==controlPushedTimer then bi=false end end;local bk=false;function HandleKey(...)local bl={...}local bh=bl[1]local bm=bl[2]if bh=='key'and bm==keys.leftCtrl or bm==keys.rightCtrl or bm==219 then bi=true;controlPushedTimer=os.startTimer(0.5)elseif bi then if bh=='key'then if CheckKeyboardShortcut(bm)then bi=false;bk=true end end elseif bk then bk=false elseif Current.TextInput then if bh=='char'then Current.TextInput:Char(bm)elseif bh=='key'then Current.TextInput:Key(bm)end end end;function CheckKeyboardShortcut(key)local bn={}bn[keys.n]=function()Current.Document=Document:Initialise('')end;bn[keys.o]=function()DisplayOpenDocumentWindow()end;bn[keys.s]=function()if Current.Document~=nil then SaveDocument()end end;bn[keys.left]=function()if Current.TextInput then Current.TextInput:Key(keys.home)end end;bn[keys.right]=function()if Current.TextInput then Current.TextInput:Key(keys["end"])end end;if Current.Document~=nil then bn[keys.s]=function()SaveDocument()end;bn[keys.p]=function()PrintDocument()end;if Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then bn[keys.x]=function()Clipboard.Cut(Current.Document.TextInput:Extract(true),'text')end;bn[keys.c]=function()Clipboard.Copy(Current.Document.TextInput:Extract(),'text')end end;if not Clipboard.isEmpty()and Clipboard.Type=='text'then bn[keys.v]=function()local bf=Clipboard.Paste()Current.Document.TextInput:Insert(bf)Current.Document.TextInput.CursorPos=Current.Document.TextInput.CursorPos+#bf-1 end end;bn[keys.a]=function()Current.Selection={1,#Current.Document.TextInput.Value:gsub('\n','')}end end;if bn[key]then bn[key]()Draw()return true else return false end end;function CheckClick(ba,x,y)if ba.X<=x and ba.Y<=y and ba.X+ba.Width>x and ba.Y+ba.Height>y then return true end end;function DoClick(ba,an,x,y,b0)local bb=GetAbsolutePosition(ba)bb.Width=ba.Width;bb.Height=ba.Height;if ba and CheckClick(bb,x,y)then return ba:Click(an,x-ba.X+1,y-ba.Y+1,b0)end end;function TryClick(bh,an,x,y,b0)if Current.Menu then if DoClick(Current.Menu,an,x,y,b0)then Draw()return else if Current.Menu.Owner and Current.Menu.Owner.Toggle then Current.Menu.Owner.Toggle=false end;Current.Menu=nil;Draw()return end elseif Current.Window then if DoClick(Current.Window,an,x,y,b0)then Draw()return else Current.Window:Flash()return end end;local bo={}table.insert(bo,Current.MenuBar)table.insert(bo,Current.ScrollBar)for Z,aw in ipairs(Current.Document.Pages)do table.insert(bo,aw)end;for Z,ba in ipairs(bo)do if DoClick(ba,an,x,y,b0)then Draw()return end end;Draw()end;function Scroll(bh,bp,x,y)if Current.Window and Current.Window.OpenButton then Current.Document.Scroll=Current.Document.Scroll+bp;if Current.Window.Scroll<0 then Current.Window.Scroll=0 elseif Current.Window.Scroll>Current.Window.MaxScroll then Current.Window.Scroll=Current.Window.MaxScroll end;Draw()elseif Current.ScrollBar then if Current.ScrollBar:DoScroll(bp*2)then Draw()end end end;function EventRegister(bh,bq)if not Events[bh]then Events[bh]={}end;table.insert(Events[bh],bq)end;function EventHandler()while true do local bh,br,bs,bt,bu=os.pullEventRaw()if Events[bh]then for Z,e in ipairs(Events[bh])do e(bh,br,bs,bt,bu)end end end end;local function bv(N,bw)if not N then return nil elseif not string.find(fs.getName(N),'%.')then if not bw then return fs.getName(N)else return''end else local bx=N;if N:sub(#N)=='/'then bx=N:sub(1,#N-1)end;local by=bx:gmatch('%.[0-9a-z]+$')()if by then by=by:sub(2)else return''end;if bw then by='.'..by end;return by:lower()end end;local bz=function(N)if N:sub(1,1)=='.'then return N end;local by=bv(N)if by==N then return fs.getName(N)end;return string.gsub(N,by,''):sub(1,-2)end;local bA=false;function PrintDocument()if OneOS then OneOS.LoadAPI('/System/API/Helpers.lua')OneOS.LoadAPI('/System/API/Peripheral.lua')OneOS.LoadAPI('/System/API/Printer.lua')end;local bB=function()local bC=PrintDocumentWindow:Initialise():Show()end;if Peripheral.GetPeripheral('printer')==nil then ButtonDialougeWindow:Initialise('No Printer Found','Please place a printer next to your computer. Ensure you also insert dye (left slot) and paper (top slots)','Ok',nil,function(bC,bD)bC:Close()end):Show()elseif not bA and FindColours(Current.Document.TextInput.Value)~=0 then ButtonDialougeWindow:Initialise('Important','Due to the way printers work, you can\'t print in more than one colour. The dye you use will be the colour of the text.','Ok',nil,function(bC,bD)bA=true;bC:Close()bB()end):Show()else bB()end end;function SaveDocument()local function bE()local h=fs.open(Current.Document.Path,'w')if h then if Current.Document.Format==TextFormatPlainText then h.write(Current.Document.TextInput.Value)else local aH={}for p,aw in ipairs(Current.Document.Pages)do for Z,aP in ipairs(aw.Lines)do table.insert(aH,aP)end end;h.write(textutils.serialize(aH))end;Current.Modified=false else ButtonDialougeWindow:Initialise('Error','An error occured while saving the file, try again.','Ok',nil,function(bC,bD)bC:Close()end):Show()end;h.close()end;if not Current.Document.Path then SaveDocumentWindow:Initialise(function(ab,bF,N)ab:Close()if bF then local by=''if Current.Document.Format==TextFormatPlainText then by='.txt'elseif Current.Document.Format==TextFormatInkText then by='.ink'end;if N:sub(-4)~=by then N=N..by end;Current.Document.Path=N;Current.Document.Title=fs.getName(N)bE()end;if Current.Document then Current.TextInput=Current.Document.TextInput end end):Show()else bE()end end;function DisplayOpenDocumentWindow()OpenDocumentWindow:Initialise(function(ab,bF,N)ab:Close()if bF then OpenDocument(N)end end):Show()end;function OpenDocument(N)Current.Selection=nil;local h=fs.open(N,'r')if h then Current.Document=Document:Initialise(h.readAll(),bz(fs.getName(N)),N)else ButtonDialougeWindow:Initialise('Error','An error occured while opening the file, try again.','Ok',nil,function(bC,bD)bC:Close()if Current.Document then Current.TextInput=Current.Document.TextInput end end):Show()end;h.close()end;local bG=function(N)N='/'..N;local fs=fs;if OneOS then fs=OneOS.FS end;if fs.isDir(N)then N=N..'/'end;N,n=N:gsub("//","/")while n>0 do N,n=N:gsub("//","/")end;return N end;OpenDocumentWindow={X=1,Y=1,Width=0,Height=0,CursorPos=1,Visible=true,Return=nil,OpenButton=nil,PathTextBox=nil,CurrentDirectory='/',Scroll=0,MaxScroll=0,GoUpButton=nil,SelectedFile='',Files={},Typed=false,AbsolutePosition=function(ab)return{X=ab.X,Y=ab.Y}end,Draw=function(ab)if not ab.Visible then return end;Drawing.DrawBlankArea(ab.X+1,ab.Y+1,ab.Width,ab.Height,colours.grey)Drawing.DrawBlankArea(ab.X,ab.Y,ab.Width,3,colours.lightGrey)Drawing.DrawBlankArea(ab.X,ab.Y+1,ab.Width,ab.Height-6,colours.white)Drawing.DrawCharactersCenter(ab.X,ab.Y,ab.Width,1,ab.Title,colours.black,colours.lightGrey)Drawing.DrawBlankArea(ab.X,ab.Y+ab.Height-5,ab.Width,5,colours.lightGrey)ab:DrawFiles()if fs.exists(ab.PathTextBox.TextInput.Value)or ab.SelectedFile and#ab.SelectedFile>0 and fs.exists(ab.CurrentDirectory..ab.SelectedFile)then ab.OpenButton.TextColour=colours.black else ab.OpenButton.TextColour=colours.lightGrey end;ab.PathTextBox:Draw()ab.OpenButton:Draw()ab.CancelButton:Draw()ab.GoUpButton:Draw()end,DrawFiles=function(ab)for Z,Q in ipairs(ab.Files)do if Z>ab.Scroll and Z-ab.Scroll<=11 then if Q==ab.SelectedFile then Drawing.DrawCharacters(ab.X+1,ab.Y+Z-ab.Scroll,Q,colours.white,colours.lightBlue)elseif string.find(Q,'%.txt')or string.find(Q,'%.text')or string.find(Q,'%.ink')or fs.isDir(ab.CurrentDirectory..Q)then Drawing.DrawCharacters(ab.X+1,ab.Y+Z-ab.Scroll,Q,colours.black,colours.white)else Drawing.DrawCharacters(ab.X+1,ab.Y+Z-ab.Scroll,Q,colours.grey,colours.white)end end end;ab.MaxScroll=#ab.Files-11;if ab.MaxScroll<0 then ab.MaxScroll=0 end end,Initialise=function(ab,bH)local am={}setmetatable(am,{__index=ab})am.Width=32;am.Height=17;am.Return=bH;am.X=math.ceil((Drawing.Screen.Width-am.Width)/2)am.Y=math.ceil((Drawing.Screen.Height-am.Height)/2)am.Title='Open Document'am.Visible=true;am.CurrentDirectory='/'am.SelectedFile=nil;if OneOS and fs.exists('/Desktop/Documents/')then am.CurrentDirectory='/Desktop/Documents/'end;am.OpenButton=Button:Initialise(am.Width-6,am.Height-1,nil,nil,colours.white,am,function(ab,an,x,y,ak)if fs.exists(am.PathTextBox.TextInput.Value)and ab.TextColour==colours.black and not fs.isDir(am.PathTextBox.TextInput.Value)then bH(am,true,bG(am.PathTextBox.TextInput.Value))elseif am.SelectedFile and ab.TextColour==colours.black and fs.isDir(am.CurrentDirectory..am.SelectedFile)then am:GoToDirectory(am.CurrentDirectory..am.SelectedFile)elseif am.SelectedFile and ab.TextColour==colours.black then bH(am,true,bG(am.CurrentDirectory..'/'..am.SelectedFile))end end,'Open',colours.black)am.CancelButton=Button:Initialise(am.Width-15,am.Height-1,nil,nil,colours.white,am,function(ab,an,x,y,ak)bH(am,false)end,'Cancel',colours.black)am.GoUpButton=Button:Initialise(2,am.Height-1,nil,nil,colours.white,am,function(ab,an,x,y,ak)local bI=fs.getName(am.CurrentDirectory)local bJ=am.CurrentDirectory:sub(1,#am.CurrentDirectory-#bI-1)am:GoToDirectory(bJ)end,'Go Up',colours.black)am.PathTextBox=TextBox:Initialise(2,am.Height-3,am.Width-2,1,am,am.CurrentDirectory,colours.white,colours.black)am:GoToDirectory(am.CurrentDirectory)return am end,Show=function(ab)Current.Window=ab;return ab end,Close=function(ab)Current.Input=nil;Current.Window=nil;ab=nil end,GoToDirectory=function(ab,N)N=bG(N)ab.CurrentDirectory=N;ab.Scroll=0;ab.SelectedFile=nil;ab.Typed=false;ab.PathTextBox.TextInput.Value=N;local fs=fs;if OneOS then fs=OneOS.FS end;ab.Files=fs.list(ab.CurrentDirectory)Draw()end,Flash=function(ab)ab.Visible=false;Draw()sleep(0.15)ab.Visible=true;Draw()sleep(0.15)ab.Visible=false;Draw()sleep(0.15)ab.Visible=true;Draw()end,Click=function(ab,an,x,y)local ay={ab.OpenButton,ab.CancelButton,ab.PathTextBox,ab.GoUpButton}local bK=false;for Z,v in ipairs(ay)do if CheckClick(v,x,y)then v:Click(an,x,y)bK=true end end;if not bK then if y<=12 then local fs=fs;if OneOS then fs=OneOS.FS end;ab.SelectedFile=fs.list(ab.CurrentDirectory)[y-1]ab.PathTextBox.TextInput.Value=bG(ab.CurrentDirectory..'/'..ab.SelectedFile)Draw()end end;return true end}PrintDocumentWindow={X=1,Y=1,Width=0,Height=0,CursorPos=1,Visible=true,Return=nil,PrintButton=nil,CopiesTextBox=nil,Scroll=0,MaxScroll=0,PrinterSelectButton=nil,Title='',Status=0,StatusText='',SelectedPrinter=nil,AbsolutePosition=function(ab)return{X=ab.X,Y=ab.Y}end,Draw=function(ab)if not ab.Visible then return end;Drawing.DrawBlankArea(ab.X+1,ab.Y+1,ab.Width,ab.Height,colours.grey)Drawing.DrawBlankArea(ab.X,ab.Y,ab.Width,1,colours.lightGrey)Drawing.DrawBlankArea(ab.X,ab.Y+1,ab.Width,ab.Height-1,colours.white)Drawing.DrawCharactersCenter(ab.X,ab.Y,ab.Width,1,ab.Title,colours.black,colours.lightGrey)ab.PrinterSelectButton:Draw()Drawing.DrawCharactersCenter(ab.X,ab.Y+ab.PrinterSelectButton.Y-2,ab.Width,1,'Printer',colours.black,colours.white)Drawing.DrawCharacters(ab.X+ab.Width-3,ab.Y+ab.PrinterSelectButton.Y-1,'\\/',colours.black,colours.lightGrey)Drawing.DrawCharacters(ab.X+1,ab.Y+ab.CopiesTextBox.Y-1,'Copies',colours.black,colours.white)local bL=colours.grey;if ab.Status==-1 then bL=colours.red elseif ab.Status==1 then bL=colours.green end;Drawing.DrawCharacters(ab.X+1,ab.Y+ab.CopiesTextBox.Y+1,ab.StatusText,bL,colours.white)ab.CopiesTextBox:Draw()ab.PrintButton:Draw()ab.CancelButton:Draw()end,Initialise=function(ab)local am={}setmetatable(am,{__index=ab})am.Width=32;am.Height=11;am.Return=bH;am.X=math.ceil((Drawing.Screen.Width-am.Width)/2)am.Y=math.ceil((Drawing.Screen.Height-am.Height)/2)am.Title='Print Document'am.Visible=true;am.PrintButton=Button:Initialise(am.Width-7,am.Height-1,nil,nil,colours.lightGrey,am,function(ab,an,x,y,ak)local bB=true;if am.SelectedPrinter==nil then local p=Peripheral.GetPeripheral('printer')if p then am.SelectedPrinter=p.Side;am.PrinterSelectButton.Text=p.Fullname else am.StatusText='No Connected Printer'am.Status=-1;bB=false end end;if bB then local bM=Printer:Initialise()local bN=bM:PrintLines(Current.Document.Lines,Current.Document.Title,tonumber(am.CopiesTextBox.TextInput.Value))if not bN then am.StatusText='Document Printed!'am.Status=1;closeWindowTimer=os.startTimer(1)else am.StatusText=bN;am.Status=-1 end end end,'Print',colours.black)am.CancelButton=Button:Initialise(am.Width-15,am.Height-1,nil,nil,colours.lightGrey,am,function(ab,an,x,y,ak)am:Close()Draw()end,'Close',colours.black)am.PrinterSelectButton=Button:Initialise(2,4,am.Width-2,nil,colours.lightGrey,am,function(ab,an,x,y,ak)local bO={{Title="Automatic",Click=function()am.SelectedPrinter=nil;am.PrinterSelectButton.Text='Automatic'end},{Separator=true}}for Z,p in ipairs(Peripheral.GetPeripherals('printer'))do table.insert(bO,{Title=p.Fullname,Click=function(ab)am.SelectedPrinter=p.Side;am.PrinterSelectButton.Text=p.Fullname end})end;Current.Menu=Menu:New(x,y+4,bO,ab,true)end,'Automatic',colours.black)am.CopiesTextBox=TextBox:Initialise(9,6,4,1,am,1,colours.lightGrey,colours.black,nil,true)Current.TextInput=am.CopiesTextBox.TextInput;am.StatusText='Waiting...'am.Status=0;return am end,Show=function(ab)Current.Window=ab;return ab end,Close=function(ab)Current.Input=nil;Current.Window=nil;ab=nil end,Flash=function(ab)ab.Visible=false;Draw()sleep(0.15)ab.Visible=true;Draw()sleep(0.15)ab.Visible=false;Draw()sleep(0.15)ab.Visible=true;Draw()end,Click=function(ab,an,x,y)local ay={ab.PrintButton,ab.CancelButton,ab.CopiesTextBox,ab.PrinterSelectButton}for Z,v in ipairs(ay)do if CheckClick(v,x,y)then v:Click(an,x,y)end end;return true end}SaveDocumentWindow={X=1,Y=1,Width=0,Height=0,CursorPos=1,Visible=true,Return=nil,SaveButton=nil,PathTextBox=nil,CurrentDirectory='/',Scroll=0,MaxScroll=0,ScrollBar=nil,GoUpButton=nil,Files={},Typed=false,AbsolutePosition=function(ab)return{X=ab.X,Y=ab.Y}end,Draw=function(ab)if not ab.Visible then return end;Drawing.DrawBlankArea(ab.X+1,ab.Y+1,ab.Width,ab.Height,colours.grey)Drawing.DrawBlankArea(ab.X,ab.Y,ab.Width,3,colours.lightGrey)Drawing.DrawBlankArea(ab.X,ab.Y+1,ab.Width,ab.Height-6,colours.white)Drawing.DrawCharactersCenter(ab.X,ab.Y,ab.Width,1,ab.Title,colours.black,colours.lightGrey)Drawing.DrawBlankArea(ab.X,ab.Y+ab.Height-5,ab.Width,5,colours.lightGrey)Drawing.DrawCharacters(ab.X+1,ab.Y+ab.Height-5,ab.CurrentDirectory,colours.grey,colours.lightGrey)ab:DrawFiles()if ab.PathTextBox.TextInput.Value then ab.SaveButton.TextColour=colours.black else ab.SaveButton.TextColour=colours.lightGrey end;ab.PathTextBox:Draw()ab.SaveButton:Draw()ab.CancelButton:Draw()ab.GoUpButton:Draw()end,DrawFiles=function(ab)for Z,Q in ipairs(ab.Files)do if Z>ab.Scroll and Z-ab.Scroll<=10 then if Q==ab.SelectedFile then Drawing.DrawCharacters(ab.X+1,ab.Y+Z-ab.Scroll,Q,colours.white,colours.lightBlue)elseif fs.isDir(ab.CurrentDirectory..Q)then Drawing.DrawCharacters(ab.X+1,ab.Y+Z-ab.Scroll,Q,colours.black,colours.white)else Drawing.DrawCharacters(ab.X+1,ab.Y+Z-ab.Scroll,Q,colours.lightGrey,colours.white)end end end;ab.MaxScroll=#ab.Files-11;if ab.MaxScroll<0 then ab.MaxScroll=0 end end,Initialise=function(ab,bH)local am={}setmetatable(am,{__index=ab})am.Width=32;am.Height=16;am.Return=bH;am.X=math.ceil((Drawing.Screen.Width-am.Width)/2)am.Y=math.ceil((Drawing.Screen.Height-am.Height)/2)am.Title='Save Document'am.Visible=true;am.CurrentDirectory='/'if OneOS and fs.exists('/Desktop/Documents/')then am.CurrentDirectory='/Desktop/Documents/'end;am.SaveButton=Button:Initialise(am.Width-6,am.Height-1,nil,nil,colours.white,am,function(ab,an,x,y,ak)if ab.TextColour==colours.black and not fs.isDir(am.CurrentDirectory..'/'..am.PathTextBox.TextInput.Value)then bH(am,true,bG(am.CurrentDirectory..'/'..am.PathTextBox.TextInput.Value))elseif am.SelectedFile and ab.TextColour==colours.black and fs.isDir(am.CurrentDirectory..am.SelectedFile)then am:GoToDirectory(am.CurrentDirectory..am.SelectedFile)end end,'Save',colours.black)am.CancelButton=Button:Initialise(am.Width-15,am.Height-1,nil,nil,colours.white,am,function(ab,an,x,y,ak)bH(am,false)end,'Cancel',colours.black)am.GoUpButton=Button:Initialise(2,am.Height-1,nil,nil,colours.white,am,function(ab,an,x,y,ak)local bI=fs.getName(am.CurrentDirectory)local bJ=am.CurrentDirectory:sub(1,#am.CurrentDirectory-#bI-1)am:GoToDirectory(bJ)end,'Go Up',colours.black)am.PathTextBox=TextBox:Initialise(2,am.Height-3,am.Width-2,1,am,'',colours.white,colours.black,function(key)if key==keys.enter then am.SaveButton:Click()end end)am.PathTextBox.Placeholder='Document Name'Current.TextInput=am.PathTextBox.TextInput;am:GoToDirectory(am.CurrentDirectory)return am end,Show=function(ab)Current.Window=ab;return ab end,Close=function(ab)Current.Input=nil;Current.Window=nil;ab=nil end,GoToDirectory=function(ab,N)N=bG(N)ab.CurrentDirectory=N;ab.Scroll=0;ab.Typed=false;local fs=fs;if OneOS then fs=OneOS.FS end;ab.Files=fs.list(ab.CurrentDirectory)Draw()end,Flash=function(ab)ab.Visible=false;Draw()sleep(0.15)ab.Visible=true;Draw()sleep(0.15)ab.Visible=false;Draw()sleep(0.15)ab.Visible=true;Draw()end,Click=function(ab,an,x,y)local ay={ab.SaveButton,ab.CancelButton,ab.PathTextBox,ab.GoUpButton}local bK=false;for Z,v in ipairs(ay)do if CheckClick(v,x,y)then v:Click(an,x,y)bK=true end end;if not bK then if y<=11 then local bP=fs.list(ab.CurrentDirectory)if bP[y-1]then ab:GoToDirectory(ab.CurrentDirectory..bP[y-1])Draw()end end end;return true end}local bQ=function(text,bR)local aH={''}for aJ,aK in text:gmatch('(%S+)(%s*)')do local aN=aH[#aH]..aJ..aK:gsub('\n','')if#aN>bR then table.insert(aH,'')end;if aK:find('\n')then aH[#aH]=aH[#aH]..aJ;aK=aK:gsub('\n',function()table.insert(aH,'')return''end)else aH[#aH]=aH[#aH]..aJ..aK end end;return aH end;ButtonDialougeWindow={X=1,Y=1,Width=0,Height=0,CursorPos=1,Visible=true,CancelButton=nil,OkButton=nil,Lines={},AbsolutePosition=function(ab)return{X=ab.X,Y=ab.Y}end,Draw=function(ab)if not ab.Visible then return end;Drawing.DrawBlankArea(ab.X+1,ab.Y+1,ab.Width,ab.Height,colours.grey)Drawing.DrawBlankArea(ab.X,ab.Y,ab.Width,1,colours.lightGrey)Drawing.DrawBlankArea(ab.X,ab.Y+1,ab.Width,ab.Height-1,colours.white)Drawing.DrawCharactersCenter(ab.X,ab.Y,ab.Width,1,ab.Title,colours.black,colours.lightGrey)for Z,text in ipairs(ab.Lines)do Drawing.DrawCharacters(ab.X+1,ab.Y+1+Z,text,colours.black,colours.white)end;ab.OkButton:Draw()if ab.CancelButton then ab.CancelButton:Draw()end end,Initialise=function(ab,aV,bS,bT,bU,bH)local am={}setmetatable(am,{__index=ab})am.Width=28;am.Lines=bQ(bS,am.Width-2)am.Height=5+#am.Lines;am.Return=bH;am.X=math.ceil((Drawing.Screen.Width-am.Width)/2)am.Y=math.ceil((Drawing.Screen.Height-am.Height)/2)am.Title=aV;am.Visible=true;am.Visible=true;am.OkButton=Button:Initialise(am.Width-#bT-2,am.Height-1,nil,1,nil,am,function()bH(am,true)end,bT)if bU then am.CancelButton=Button:Initialise(am.Width-#bT-2-1-#bU-2,am.Height-1,nil,1,nil,am,function()bH(am,false)end,bU)end;return am end,Show=function(ab)Current.Window=ab;return ab end,Close=function(ab)Current.Window=nil;ab=nil end,Flash=function(ab)ab.Visible=false;Draw()sleep(0.15)ab.Visible=true;Draw()sleep(0.15)ab.Visible=false;Draw()sleep(0.15)ab.Visible=true;Draw()end,Click=function(ab,an,x,y)local ay={ab.OkButton,ab.CancelButton}local bK=false;for Z,v in ipairs(ay)do if CheckClick(v,x,y)then v:Click(an,x,y)bK=true end end;return true end}TextDialougeWindow={X=1,Y=1,Width=0,Height=0,CursorPos=1,Visible=true,CancelButton=nil,OkButton=nil,Lines={},TextInput=nil,AbsolutePosition=function(ab)return{X=ab.X,Y=ab.Y}end,Draw=function(ab)if not ab.Visible then return end;Drawing.DrawBlankArea(ab.X+1,ab.Y+1,ab.Width,ab.Height,colours.grey)Drawing.DrawBlankArea(ab.X,ab.Y,ab.Width,1,colours.lightGrey)Drawing.DrawBlankArea(ab.X,ab.Y+1,ab.Width,ab.Height-1,colours.white)Drawing.DrawCharactersCenter(ab.X,ab.Y,ab.Width,1,ab.Title,colours.black,colours.lightGrey)for Z,text in ipairs(ab.Lines)do Drawing.DrawCharacters(ab.X+1,ab.Y+1+Z,text,colours.black,colours.white)end;Drawing.DrawBlankArea(ab.X+1,ab.Y+ab.Height-4,ab.Width-2,1,colours.lightGrey)Drawing.DrawCharacters(ab.X+2,ab.Y+ab.Height-4,ab.TextInput.Value,colours.black,colours.lightGrey)Current.CursorPos={ab.X+2+ab.TextInput.CursorPos,ab.Y+ab.Height-4}Current.CursorColour=colours.black;ab.OkButton:Draw()if ab.CancelButton then ab.CancelButton:Draw()end end,Initialise=function(ab,aV,bS,bT,bU,bH,ap)local am={}setmetatable(am,{__index=ab})am.Width=28;am.Lines=bQ(bS,am.Width-2)am.Height=7+#am.Lines;am.Return=bH;am.X=math.ceil((Drawing.Screen.Width-am.Width)/2)am.Y=math.ceil((Drawing.Screen.Height-am.Height)/2)am.Title=aV;am.Visible=true;am.Visible=true;am.OkButton=Button:Initialise(am.Width-#bT-2,am.Height-1,nil,1,nil,am,function()if#am.TextInput.Value>0 then bH(am,true,am.TextInput.Value)end end,bT)if bU then am.CancelButton=Button:Initialise(am.Width-#bT-2-1-#bU-2,am.Height-1,nil,1,nil,am,function()bH(am,false)end,bU)end;am.TextInput=TextInput:Initialise('',function(enter)if enter then am.OkButton:Click()end;Draw()end,ap)Current.Input=am.TextInput;return am end,Show=function(ab)Current.Window=ab;return ab end,Close=function(ab)Current.Window=nil;Current.Input=nil;ab=nil end,Flash=function(ab)ab.Visible=false;Draw()sleep(0.15)ab.Visible=true;Draw()sleep(0.15)ab.Visible=false;Draw()sleep(0.15)ab.Visible=true;Draw()end,Click=function(ab,an,x,y)local ay={ab.OkButton,ab.CancelButton}local bK=false;for Z,v in ipairs(ay)do if CheckClick(v,x,y)then v:Click(an,x,y)bK=true end end;return true end}function DoVanillaClose()term.setBackgroundColour(colours.black)term.setTextColour(colours.white)term.clear()term.setCursorPos(1,1)PrintCentered("Thanks for using Sketch!",Drawing.Screen.Height/2-1)term.setTextColour(colours.lightGrey)PrintCentered("Photoshop Inspired Image Editor for ComputerCraft",Drawing.Screen.Height/2)term.setTextColour(colours.white)PrintCentered("(c) oeed 2013 - 2014",Drawing.Screen.Height/2+3)term.setCursorPos(1,Drawing.Screen.Height)error('',0)end;function Close()if a7 or not Current.Document or not Current.Modified then if not OneOS then DoVanillaClose()end;return true else local b=ButtonDialougeWindow:Initialise('Quit Ink?','You have unsaved changes, do you want to quit anyway?','Quit','Cancel',function(bC,bF)if bF then if OneOS then OneOS.Close(true)else DoVanillaClose()end end;bC:Close()Draw()end):Show()os.queueEvent('mouse_click',1,b.X,b.Y)return false end end;if OneOS then OneOS.CanClose=function()return Close()end end;Initialise()
+tArgs = {...}
+
+if OneOS then
+	--running under OneOS
+	OneOS.ToolBarColour = colours.grey
+	OneOS.ToolBarTextColour = colours.white
+end
+
+local _w, _h = term.getSize()
+
+local round = function(num, idp)
+	local mult = 10^(idp or 0)
+	return math.floor(num * mult + 0.5) / mult
+end
+
+UIColours = {
+	Toolbar = colours.grey,
+	ToolbarText = colours.lightGrey,
+	ToolbarSelected = colours.lightBlue,
+	ControlText = colours.white,
+	ToolbarItemTitle = colours.black,
+	Background = colours.lightGrey,
+	MenuBackground = colours.white,
+	MenuText = colours.black,
+	MenuSeparatorText = colours.grey,
+	MenuDisabledText = colours.lightGrey,
+	Shadow = colours.grey,
+	TransparentBackgroundOne = colours.white,
+	TransparentBackgroundTwo = colours.lightGrey,
+	MenuBarActive = colours.white
+}
+
+Clipboard = {
+	Content = nil,
+	Type = nil,
+	IsCut = false,
+
+	Empty = function()
+		Clipboard.Content = nil
+		Clipboard.Type = nil
+		Clipboard.IsCut = false
+	end,
+
+	isEmpty = function()
+		return Clipboard.Content == nil
+	end,
+
+	Copy = function(content, _type)
+		Clipboard.Content = content
+		Clipboard.Type = _type or 'generic'
+		Clipboard.IsCut = false
+	end,
+
+	Cut = function(content, _type)
+		Clipboard.Content = content
+		Clipboard.Type = _type or 'generic'
+		Clipboard.IsCut = true
+	end,
+
+	Paste = function()
+		local c, t = Clipboard.Content, Clipboard.Type
+		if Clipboard.IsCut then
+			Clipboard.Empty()
+		end
+		return c, t
+	end
+}
+
+if OneOS and OneOS.Clipboard then
+	Clipboard = OneOS.Clipboard
+end
+
+Drawing = {
+	
+	Screen = {
+		Width = _w,
+		Height = _h
+	},
+
+	DrawCharacters = function (x, y, characters, textColour,bgColour)
+		Drawing.WriteStringToBuffer(x, y, characters, textColour, bgColour)
+	end,
+	
+	DrawBlankArea = function (x, y, w, h, colour)
+		Drawing.DrawArea (x, y, w, h, " ", 1, colour)
+	end,
+
+	DrawArea = function (x, y, w, h, character, textColour, bgColour)
+		--width must be greater than 1, other wise we get a stack overflow
+		if w < 0 then
+			w = w * -1
+		elseif w == 0 then
+			w = 1
+		end
+
+		for ix = 1, w do
+			local currX = x + ix - 1
+			for iy = 1, h do
+				local currY = y + iy - 1
+				Drawing.WriteToBuffer(currX, currY, character, textColour, bgColour)
+			end
+		end
+	end,
+
+	DrawImage = function(_x,_y,tImage, w, h)
+		if tImage then
+			for y = 1, h do
+				if not tImage[y] then
+					break
+				end
+				for x = 1, w do
+					if not tImage[y][x] then
+						break
+					end
+					local bgColour = tImage[y][x]
+		            local textColour = tImage.textcol[y][x] or colours.white
+		            local char = tImage.text[y][x]
+		            Drawing.WriteToBuffer(x+_x-1, y+_y-1, char, textColour, bgColour)
+				end
+			end
+		elseif w and h then
+			Drawing.DrawBlankArea(x, y, w, h, colours.green)
+		end
+	end,
+	--using .nft
+	LoadImage = function(path)
+		local image = {
+			text = {},
+			textcol = {}
+		}
+		local fs = fs
+		if OneOS then
+			fs = OneOS.FS
+		end
+		if fs.exists(path) then
+			local _open = io.open
+			if OneOS then
+				_open = OneOS.IO.open
+			end
+	        local file = _open(path, "r")
+	        local sLine = file:read()
+	        local num = 1
+	        while sLine do  
+	                table.insert(image, num, {})
+	                table.insert(image.text, num, {})
+	                table.insert(image.textcol, num, {})
+	                                            
+	                --As we're no longer 1-1, we keep track of what index to write to
+	                local writeIndex = 1
+	                --Tells us if we've hit a 30 or 31 (BG and FG respectively)- next char specifies the curr colour
+	                local bgNext, fgNext = false, false
+	                --The current background and foreground colours
+	                local currBG, currFG = nil,nil
+	                for i=1,#sLine do
+	                        local nextChar = string.sub(sLine, i, i)
+	                        if nextChar:byte() == 30 then
+                                bgNext = true
+	                        elseif nextChar:byte() == 31 then
+                                fgNext = true
+	                        elseif bgNext then
+                                currBG = Drawing.GetColour(nextChar)
+                                bgNext = false
+	                        elseif fgNext then
+                                currFG = Drawing.GetColour(nextChar)
+                                fgNext = false
+	                        else
+                                if nextChar ~= " " and currFG == nil then
+                                       currFG = colours.white
+                                end
+                                image[num][writeIndex] = currBG
+                                image.textcol[num][writeIndex] = currFG
+                                image.text[num][writeIndex] = nextChar
+                                writeIndex = writeIndex + 1
+	                        end
+	                end
+	                num = num+1
+	                sLine = file:read()
+	        end
+	        file:close()
+		end
+	 	return image
+	end,
+
+	DrawCharactersCenter = function(x, y, w, h, characters, textColour,bgColour)
+		w = w or Drawing.Screen.Width
+		h = h or Drawing.Screen.Height
+		x = x or 0
+		y = y or 0
+		x = math.ceil((w - #characters) / 2) + x
+		y = math.floor(h / 2) + y
+
+		Drawing.DrawCharacters(x, y, characters, textColour, bgColour)
+	end,
+
+	GetColour = function(hex)
+		if hex == ' ' then
+			return colours.transparent
+		end
+	    local value = tonumber(hex, 16)
+	    if not value then return nil end
+	    value = math.pow(2,value)
+	    return value
+	end,
+
+	Clear = function (_colour)
+		_colour = _colour or colours.black
+		Drawing.ClearBuffer()
+		Drawing.DrawBlankArea(1, 1, Drawing.Screen.Width, Drawing.Screen.Height, _colour)
+	end,
+
+	Buffer = {},
+	BackBuffer = {},
+
+	DrawBuffer = function()
+		for y,row in pairs(Drawing.Buffer) do
+			for x,pixel in pairs(row) do
+				local shouldDraw = true
+				local hasBackBuffer = true
+				if Drawing.BackBuffer[y] == nil or Drawing.BackBuffer[y][x] == nil or #Drawing.BackBuffer[y][x] ~= 3 then
+					hasBackBuffer = false
+				end
+				if hasBackBuffer and Drawing.BackBuffer[y][x][1] == Drawing.Buffer[y][x][1] and Drawing.BackBuffer[y][x][2] == Drawing.Buffer[y][x][2] and Drawing.BackBuffer[y][x][3] == Drawing.Buffer[y][x][3] then
+					shouldDraw = false
+				end
+				if shouldDraw then
+					term.setBackgroundColour(pixel[3])
+					term.setTextColour(pixel[2])
+					term.setCursorPos(x, y)
+					term.write(pixel[1])
+				end
+			end
+		end
+		Drawing.BackBuffer = Drawing.Buffer
+		Drawing.Buffer = {}
+		term.setCursorPos(1,1)
+	end,
+
+	ClearBuffer = function()
+		Drawing.Buffer = {}
+	end,
+
+	WriteStringToBuffer = function (x, y, characters, textColour,bgColour)
+		for i = 1, #characters do
+   			local character = characters:sub(i,i)
+   			Drawing.WriteToBuffer(x + i - 1, y, character, textColour, bgColour)
+		end
+	end,
+
+	WriteToBuffer = function(x, y, character, textColour,bgColour)
+		x = round(x)
+		y = round(y)
+		if bgColour == colours.transparent then
+			Drawing.Buffer[y] = Drawing.Buffer[y] or {}
+			Drawing.Buffer[y][x] = Drawing.Buffer[y][x] or {"", colours.white, colours.black}
+			Drawing.Buffer[y][x][1] = character
+			Drawing.Buffer[y][x][2] = textColour
+		else
+			Drawing.Buffer[y] = Drawing.Buffer[y] or {}
+			Drawing.Buffer[y][x] = {character, textColour, bgColour}
+		end
+	end,
+}
+
+Current = {
+	Document = nil,
+	TextInput = nil,
+	CursorPos = {1,1},
+	CursorColour = colours.black,
+	Selection = {8, 36},
+	Window = nil,
+	Modified = false,
+}
+
+local isQuitting = false
+
+function OrderSelection()
+	if Current.Selection then
+		if Current.Selection[1] <= Current.Selection[2] then
+			return Current.Selection
+		else
+			return {Current.Selection[2], Current.Selection[1]}
+		end
+	end
+end
+
+function StripColours(str)
+	return str:gsub('['..string.char(14)..'-'..string.char(29)..']','')
+end
+
+function FindColours(str)
+	local _, count = str:gsub('['..string.char(14)..'-'..string.char(29)..']','')
+	return count
+end
+
+ColourFromCharacter = function(character)
+	local n = character:byte() - 14
+	if n > 16 then
+		return nil
+	else
+		return 2^n
+	end
+end
+
+CharacterFromColour = function(colour)
+	return string.char(math.floor(math.log(colour)/math.log(2))+14)
+end
+
+Events = {}
+
+Button = {
+	X = 1,
+	Y = 1,
+	Width = 0,
+	Height = 0,
+	BackgroundColour = colours.lightGrey,
+	TextColour = colours.white,
+	ActiveBackgroundColour = colours.lightGrey,
+	Text = "",
+	Parent = nil,
+	_Click = nil,
+	Toggle = nil,
+
+	AbsolutePosition = function(self)
+		return self.Parent:AbsolutePosition()
+	end,
+
+	Draw = function(self)
+		local bg = self.BackgroundColour
+		local tc = self.TextColour
+		if type(bg) == 'function' then
+			bg = bg()
+		end
+
+		if self.Toggle then
+			tc = UIColours.MenuBarActive
+			bg = self.ActiveBackgroundColour
+		end
+
+		local pos = GetAbsolutePosition(self)
+		Drawing.DrawBlankArea(pos.X, pos.Y, self.Width, self.Height, bg)
+		Drawing.DrawCharactersCenter(pos.X, pos.Y, self.Width, self.Height, self.Text, tc, bg)
+	end,
+
+	Initialise = function(self, x, y, width, height, backgroundColour, parent, click, text, textColour, toggle, activeBackgroundColour)
+		local new = {}    -- the new instance
+		setmetatable( new, {__index = self} )
+		height = height or 1
+		new.Width = width or #text + 2
+		new.Height = height
+		new.Y = y
+		new.X = x
+		new.Text = text or ""
+		new.BackgroundColour = backgroundColour or colours.lightGrey
+		new.TextColour = textColour or colours.white
+		new.ActiveBackgroundColour = activeBackgroundColour or colours.lightGrey
+		new.Parent = parent
+		new._Click = click
+		new.Toggle = toggle
+		return new
+	end,
+
+	Click = function(self, side, x, y)
+		if self._Click then
+			if self:_Click(side, x, y, not self.Toggle) ~= false and self.Toggle ~= nil then
+				self.Toggle = not self.Toggle
+				Draw()
+			end
+			return true
+		else
+			return false
+		end
+	end
+}
+
+TextBox = {
+	X = 1,
+	Y = 1,
+	Width = 0,
+	Height = 0,
+	BackgroundColour = colours.lightGrey,
+	TextColour = colours.black,
+	Parent = nil,
+	TextInput = nil,
+	Placeholder = '',
+
+	AbsolutePosition = function(self)
+		return self.Parent:AbsolutePosition()
+	end,
+
+	Draw = function(self)		
+		local pos = GetAbsolutePosition(self)
+		Drawing.DrawBlankArea(pos.X, pos.Y, self.Width, self.Height, self.BackgroundColour)
+		local text = self.TextInput.Value
+		if #tostring(text) > (self.Width - 2) then
+			text = text:sub(#text-(self.Width - 3))
+			if Current.TextInput == self.TextInput then
+				Current.CursorPos = {pos.X + 1 + self.Width-2, pos.Y}
+			end
+		else
+			if Current.TextInput == self.TextInput then
+				Current.CursorPos = {pos.X + 1 + self.TextInput.CursorPos, pos.Y}
+			end
+		end
+		
+		if #tostring(text) == 0 then
+			Drawing.DrawCharacters(pos.X + 1, pos.Y, self.Placeholder, colours.lightGrey, self.BackgroundColour)
+		else
+			Drawing.DrawCharacters(pos.X + 1, pos.Y, text, self.TextColour, self.BackgroundColour)
+		end
+
+		term.setCursorBlink(true)
+		
+		Current.CursorColour = self.TextColour
+	end,
+
+	Initialise = function(self, x, y, width, height, parent, text, backgroundColour, textColour, done, numerical)
+		local new = {}    -- the new instance
+		setmetatable( new, {__index = self} )
+		height = height or 1
+		new.Width = width or #text + 2
+		new.Height = height
+		new.Y = y
+		new.X = x
+		new.TextInput = TextInput:Initialise(text or '', function(key)
+			if done then
+				done(key)
+			end
+			Draw()
+		end, numerical)
+		new.BackgroundColour = backgroundColour or colours.lightGrey
+		new.TextColour = textColour or colours.black
+		new.Parent = parent
+		return new
+	end,
+
+	Click = function(self, side, x, y)
+		Current.Input = self.TextInput
+		self:Draw()
+	end
+}
+
+TextInput = {
+	Value = "",
+	Change = nil,
+	CursorPos = nil,
+	Numerical = false,
+	IsDocument = nil,
+
+	Initialise = function(self, value, change, numerical, isDocument)
+		local new = {}    -- the new instance
+		setmetatable( new, {__index = self} )
+		new.Value = tostring(value)
+		new.Change = change
+		new.CursorPos = #tostring(value)
+		new.Numerical = numerical
+		new.IsDocument = isDocument or false
+		return new
+	end,
+
+	Insert = function(self, str)
+		if self.Numerical then
+			str = tostring(tonumber(str))
+		end
+
+		local selection = OrderSelection()
+
+		if self.IsDocument and selection then
+			self.Value = string.sub(self.Value, 1, selection[1]-1) .. str .. string.sub( self.Value, selection[2]+2)
+			self.CursorPos = selection[1]
+			Current.Selection = nil
+		else
+			local _, newLineAdjust = string.gsub(self.Value:sub(1, self.CursorPos), '\n','')
+
+			self.Value = string.sub(self.Value, 1, self.CursorPos + newLineAdjust) .. str .. string.sub( self.Value, self.CursorPos + 1  + newLineAdjust)
+			self.CursorPos = self.CursorPos + 1
+		end
+		
+		self.Change(key)
+	end,
+
+	Extract = function(self, remove)
+		local selection = OrderSelection()
+		if self.IsDocument and selection then
+			local _, newLineAdjust = string.gsub(self.Value:sub(selection[1], selection[2]), '\n','')
+			local str = string.sub(self.Value, selection[1], selection[2]+1+newLineAdjust)
+			if remove then
+				self.Value = string.sub(self.Value, 1, selection[1]-1) .. string.sub( self.Value, selection[2]+2+newLineAdjust)
+				self.CursorPos = selection[1] - 1
+				Current.Selection = nil
+			end
+			return str
+		end
+	end,
+
+	Char = function(self, char)
+		if char == 'nil' then
+			return
+		end
+		self:Insert(char)
+	end,
+
+	Key = function(self, key)
+		if key == keys.enter then
+			if self.IsDocument then
+				self.Value = string.sub(self.Value, 1, self.CursorPos ) .. '\n' .. string.sub( self.Value, self.CursorPos + 1 )
+				self.CursorPos = self.CursorPos + 1
+			end
+			self.Change(key)		
+		elseif key == keys.left then
+			-- Left
+			if self.CursorPos > 0 then
+				local colShift = FindColours(string.sub( self.Value, self.CursorPos, self.CursorPos))
+				self.CursorPos = self.CursorPos - 1 - colShift
+				self.Change(key)
+			end
+			
+		elseif key == keys.right then
+			-- Right				
+			if self.CursorPos < string.len(self.Value) then
+				local colShift = FindColours(string.sub( self.Value, self.CursorPos+1, self.CursorPos+1))
+				self.CursorPos = self.CursorPos + 1 + colShift
+				self.Change(key)
+			end
+		
+		elseif key == keys.backspace then
+			-- Backspace
+			if self.IsDocument and Current.Selection then
+				self:Extract(true)
+				self.Change(key)
+			elseif self.CursorPos > 0 then
+				local colShift = FindColours(string.sub( self.Value, self.CursorPos, self.CursorPos))
+				local _, newLineAdjust = string.gsub(self.Value:sub(1, self.CursorPos), '\n','')
+
+				self.Value = string.sub( self.Value, 1, self.CursorPos - 1 - colShift + newLineAdjust) .. string.sub( self.Value, self.CursorPos + 1 - colShift + newLineAdjust)
+				self.CursorPos = self.CursorPos - 1 - colShift
+				self.Change(key)
+			end
+		elseif key == keys.home then
+			-- Home
+			self.CursorPos = 0
+			self.Change(key)
+		elseif key == keys.delete then
+			if self.IsDocument and Current.Selection then
+				self:Extract(true)
+				self.Change(key)
+			elseif self.CursorPos < string.len(self.Value) then
+				self.Value = string.sub( self.Value, 1, self.CursorPos ) .. string.sub( self.Value, self.CursorPos + 2 )				
+				self.Change(key)
+			end
+		elseif key == keys["end"] then
+			-- End
+			self.CursorPos = string.len(self.Value)
+			self.Change(key)
+		elseif key == keys.up and self.IsDocument then
+			-- Up
+			if Current.Document.CursorPos then
+				local page = Current.Document.Pages[Current.Document.CursorPos.Page]
+				self.CursorPos = page:GetCursorPosFromPoint(Current.Document.CursorPos.Collum + page.MarginX, Current.Document.CursorPos.Line - page.MarginY - 1 + Current.Document.ScrollBar.Scroll, true)
+				self.Change(key)
+			end
+		elseif key == keys.down and self.IsDocument then
+			-- Down
+			if Current.Document.CursorPos then
+				local page = Current.Document.Pages[Current.Document.CursorPos.Page]
+				self.CursorPos = page:GetCursorPosFromPoint(Current.Document.CursorPos.Collum + page.MarginX, Current.Document.CursorPos.Line - page.MarginY + 1 + Current.Document.ScrollBar.Scroll, true)
+				self.Change(key)
+			end
+		end
+	end
+}
+
+Menu = {
+	X = 0,
+	Y = 0,
+	Width = 0,
+	Height = 0,
+	Owner = nil,
+	Items = {},
+	RemoveTop = false,
+
+	Draw = function(self)
+		Drawing.DrawBlankArea(self.X + 1, self.Y + 1, self.Width, self.Height, UIColours.Shadow)
+		if not self.RemoveTop then
+			Drawing.DrawBlankArea(self.X, self.Y, self.Width, self.Height, UIColours.MenuBackground)
+			for i, item in ipairs(self.Items) do
+				if item.Separator then
+					Drawing.DrawArea(self.X, self.Y + i, self.Width, 1, '-', colours.grey, UIColours.MenuBackground)
+				else
+					local textColour = item.Colour or UIColours.MenuText
+					if (item.Enabled and type(item.Enabled) == 'function' and item.Enabled() == false) or item.Enabled == false then
+						textColour = UIColours.MenuDisabledText
+					end
+					Drawing.DrawCharacters(self.X + 1, self.Y + i, item.Title, textColour, UIColours.MenuBackground)
+				end
+			end
+		else
+			Drawing.DrawBlankArea(self.X, self.Y, self.Width, self.Height, UIColours.MenuBackground)
+			for i, item in ipairs(self.Items) do
+				if item.Separator then
+					Drawing.DrawArea(self.X, self.Y + i - 1, self.Width, 1, '-', colours.grey, UIColours.MenuBackground)
+				else
+					local textColour = item.Colour or UIColours.MenuText
+					if (item.Enabled and type(item.Enabled) == 'function' and item.Enabled() == false) or item.Enabled == false then
+						textColour = UIColours.MenuDisabledText
+					end
+					Drawing.DrawCharacters(self.X + 1, self.Y + i - 1, item.Title, textColour, UIColours.MenuBackground)
+
+					Drawing.DrawCharacters(self.X - 1 + self.Width-#item.KeyName, self.Y + i - 1, item.KeyName, textColour, UIColours.MenuBackground)
+				end
+			end
+		end
+	end,
+
+	NameForKey = function(self, key)
+		if key == keys.leftCtrl then
+			return '^'
+		elseif key == keys.tab then
+			return 'Tab'
+		elseif key == keys.delete then
+			return 'Delete'
+		elseif key == keys.n then
+			return 'N'
+		elseif key == keys.a then
+			return 'A'
+		elseif key == keys.s then
+			return 'S'
+		elseif key == keys.o then
+			return 'O'
+		elseif key == keys.z then
+			return 'Z'
+		elseif key == keys.y then
+			return 'Y'
+		elseif key == keys.c then
+			return 'C'
+		elseif key == keys.x then
+			return 'X'
+		elseif key == keys.v then
+			return 'V'
+		elseif key == keys.r then
+			return 'R'
+		elseif key == keys.l then
+			return 'L'
+		elseif key == keys.t then
+			return 'T'
+		elseif key == keys.h then
+			return 'H'
+		elseif key == keys.e then
+			return 'E'
+		elseif key == keys.p then
+			return 'P'
+		elseif key == keys.f then
+			return 'F'
+		elseif key == keys.m then
+			return 'M'
+		elseif key == keys.q then
+			return 'Q'
+		else
+			return '?'		
+		end
+	end,
+
+	Initialise = function(self, x, y, items, owner, removeTop)
+		local new = {}    -- the new instance
+		setmetatable( new, {__index = self} )
+		if not owner then
+			return
+		end
+
+		local keyNames = {}
+
+		for i, v in ipairs(items) do
+			items[i].KeyName = ''
+			if v.Keys then
+				for _i, key in ipairs(v.Keys) do
+					items[i].KeyName = items[i].KeyName .. self:NameForKey(key)
+				end
+			end
+			if items[i].KeyName ~= '' then
+				table.insert(keyNames, items[i].KeyName)
+			end
+		end
+		local keysLength = LongestString(keyNames)
+		if keysLength > 0 then
+			keysLength = keysLength + 2
+		end
+
+		new.Width = LongestString(items, 'Title') + 2 + keysLength
+		if new.Width < 10 then
+			new.Width = 10
+		end
+		new.Height = #items + 2
+		new.RemoveTop = removeTop or false
+		if removeTop then
+			new.Height = new.Height - 1
+		end
+		
+		if y < 1 then
+			y = 1
+		end
+		if x < 1 then
+			x = 1
+		end
+
+		if y + new.Height > Drawing.Screen.Height + 1 then
+			y = Drawing.Screen.Height - new.Height
+		end
+		if x + new.Width > Drawing.Screen.Width + 1 then
+			x = Drawing.Screen.Width - new.Width
+		end
+
+
+		new.Y = y
+		new.X = x
+		new.Items = items
+		new.Owner = owner
+		return new
+	end,
+
+	New = function(self, x, y, items, owner, removeTop)
+		if Current.Menu and Current.Menu.Owner == owner then
+			Current.Menu = nil
+			return
+		end
+
+		local new = self:Initialise(x, y, items, owner, removeTop)
+		Current.Menu = new
+		return new
+	end,
+
+	Click = function(self, side, x, y)
+		local i = y-1
+		if self.RemoveTop then
+			i = y
+		end
+		if i >= 1 and y < self.Height then
+			if not ((self.Items[i].Enabled and type(self.Items[i].Enabled) == 'function' and self.Items[i].Enabled() == false) or self.Items[i].Enabled == false) and self.Items[i].Click then
+				self.Items[i]:Click()
+				if Current.Menu.Owner and Current.Menu.Owner.Toggle then
+					Current.Menu.Owner.Toggle = false
+				end
+				Current.Menu = nil
+				self = nil
+			end
+			return true
+		end
+	end
+}
+
+MenuBar = {
+	X = 1,
+	Y = 1,
+	Width = Drawing.Screen.Width,
+	Height = 1,
+	MenuBarItems = {},
+
+	AbsolutePosition = function(self)
+		return {X = self.X, Y = self.Y}
+	end,
+
+	Draw = function(self)
+		--Drawing.DrawArea(self.X - 1, self.Y, 1, self.Height, "|", UIColours.ToolbarText, UIColours.Background)
+
+		Drawing.DrawBlankArea(self.X, self.Y, self.Width, self.Height, colours.grey)
+		for i, button in ipairs(self.MenuBarItems) do
+			button:Draw()
+		end
+	end,
+
+	Initialise = function(self, items)
+		local new = {}    -- the new instance
+		setmetatable( new, {__index = self} )
+		new.X = 1
+		new.Y = 1
+		new.MenuBarItems = items
+		return new
+	end,
+
+	AddToolbarItem = function(self, item)
+		table.insert(self.ToolbarItems, item)
+		self:CalculateToolbarItemPositions()
+	end,
+
+	CalculateToolbarItemPositions = function(self)
+		local currY = 1
+		for i, toolbarItem in ipairs(self.ToolbarItems) do
+			toolbarItem.Y = currY
+			currY = currY + toolbarItem.Height
+		end
+	end,
+
+	Click = function(self, side, x, y)
+		for i, item in ipairs(self.MenuBarItems) do
+			if item.X <= x and item.X + item.Width > x then
+				if item:Click(item, side, x - item.X + 1, 1) then
+					return true
+				end
+			end
+		end
+		return false
+	end
+}
+
+TextFormatPlainText = 1
+TextFormatInkText = 2
+
+Document = {
+	X = 1,
+	Y = 1,
+	PageSize = {Width = 25, Height = 21},
+	TextInput = nil,
+	Pages = {},
+	Format = TextFormatPlainText,
+	Title = '',
+	Path = nil,
+	ScrollBar = nil,
+	Lines = {},
+	CursorPos = nil,
+
+	CalculateLineWrapping = function(self)
+		local limit = self.PageSize.Width
+		local text = self.TextInput.Value
+        local lines = {''}
+        local words = {}
+
+        for word, space in text:gmatch('(%S+)(%s*)') do
+        	for i = 1, math.ceil(#word/limit) do
+        		local _space = ''
+        		if i == math.ceil(#word/limit) then
+        			_space = space
+        		end
+        		table.insert(words, {word:sub(1+limit*(i-1), limit*i), _space})
+        	end
+        end
+
+        for i, ws in ipairs(words) do
+        		local word = ws[1]
+        		local space = ws[2]
+                local temp = lines[#lines] .. word .. space:gsub('\n','')
+                if #temp > limit then
+                    table.insert(lines, '')
+                end
+                if space:find('\n') then
+                    lines[#lines] = lines[#lines] .. word
+                    
+                    space = space:gsub('\n', function()
+                            table.insert(lines, '')
+                            return ''
+                    end)
+                else
+                    lines[#lines] = lines[#lines] .. word .. space
+                end
+        end
+        return lines
+	end,
+
+	CalculateCursorPos = function(self)
+		local passedCharacters = 0
+		Current.CursorPos = nil
+		for p, page in ipairs(self.Pages) do
+			page:Draw()
+			if not Current.CursorPos then
+				for i, line in ipairs(page.Lines) do
+					local relCursor = self.TextInput.CursorPos - FindColours(self.TextInput.Value:sub(1,self.TextInput.CursorPos))
+					if passedCharacters + #StripColours(line.Text:gsub('\n','')) >= relCursor then
+						Current.CursorPos = {self.X + page.MarginX + (relCursor - passedCharacters), page.Y + 1 + i}
+						self.CursorPos = {Page = p, Line = i, Collum = relCursor - passedCharacters - FindColours(self.TextInput.Value:sub(1,self.TextInput.CursorPos-1))}
+						break
+					end
+					passedCharacters = passedCharacters + #StripColours(line.Text:gsub('\n',''))
+				end
+			end
+		end
+	end,
+
+	Draw = function(self)
+		self:CalculatePages()
+		self:CalculateCursorPos()
+		self.ScrollBar:Draw()
+	end,
+
+	CalculatePages = function(self)
+		self.Pages = {}
+		local lines = self:CalculateLineWrapping()
+		self.Lines = lines
+		local pageLines = {}
+		local totalPageHeight = (3 + self.PageSize.Height + 2 * Page.MarginY)
+		for i, line in ipairs(lines) do
+			table.insert(pageLines, TextLine:Initialise(line))
+			if i % self.PageSize.Height == 0 then
+				table.insert(self.Pages, Page:Initialise(self, pageLines, 3 - self.ScrollBar.Scroll + totalPageHeight*(#self.Pages)))
+				pageLines = {}
+			end
+		end
+		if #pageLines ~= 0 then
+			table.insert(self.Pages, Page:Initialise(self, pageLines, 3 - self.ScrollBar.Scroll + totalPageHeight*(#self.Pages)))
+		end
+
+		self.ScrollBar.MaxScroll = totalPageHeight*(#self.Pages) - Drawing.Screen.Height + 1
+	end,
+
+	ScrollToCursor = function(self)
+		self:CalculateCursorPos()
+		if Current.CursorPos and 
+			(Current.CursorPos[2] > Drawing.Screen.Height 
+			or Current.CursorPos[2] < 2) then
+			self.ScrollBar:DoScroll(Current.CursorPos[2] - Drawing.Screen.Height)
+		end
+	end,
+
+	SetSelectionColour = function(self, colour)
+		local selection = OrderSelection()
+		local text = self.TextInput:Extract(true)
+		local colChar = CharacterFromColour(colour)
+		local precedingColour = ''
+		if FindColours(self.TextInput.Value:sub(self.TextInput.CursorPos+1, self.TextInput.CursorPos+1)) == 0 then
+			for i = 1, self.TextInput.CursorPos do
+				local c = self.TextInput.Value:sub(self.TextInput.CursorPos - i,self.TextInput.CursorPos - i)
+				if FindColours(c) == 1 then
+					precedingColour = c
+					break
+				end
+			end
+			if precedingColour == '' then
+				precedingColour = CharacterFromColour(colours.black)
+			end
+		end
+
+		self.TextInput:Insert(colChar..StripColours(text)..precedingColour)
+		--text = text:gsub('['..string.char(14)..'-'..string.char(29)..']','')
+	end,
+
+	Initialise = function(self, text, title, path)
+		local new = {}    -- the new instance
+		setmetatable( new, {__index = self} )
+		new.Title = title or 'New Document'
+		new.Path = path
+		new.X = (Drawing.Screen.Width - (new.PageSize.Width + 2*(Page.MarginX)))/2
+		new.Y = 2
+		new.TextInput = TextInput:Initialise(text, function()
+			new:ScrollToCursor() 
+			Current.Modified = true
+			Draw()
+		end, false, true)
+		new.ScrollBar = ScrollBar:Initialise(Drawing.Screen.Width, new.Y, Drawing.Screen.Height-1, 0, nil, nil, nil, function()end)
+		Current.TextInput = new.TextInput
+		Current.ScrollBar = new.ScrollBar
+		return new
+	end
+}
+
+ScrollBar = {
+	X = 1,
+	Y = 1,
+	Width = 1,
+	Height = 1,
+	BackgroundColour = colours.grey,
+	BarColour = colours.lightBlue,
+	Parent = nil,
+	Change = nil,
+	Scroll = 0,
+	MaxScroll = 0,
+	ClickPoint = nil,
+
+	AbsolutePosition = function(self)
+		return self.Parent:AbsolutePosition()
+	end,
+
+	Draw = function(self)
+		local pos = GetAbsolutePosition(self)
+	    local barHeight = self.Height - self.MaxScroll
+	    if barHeight < 3 then
+	      barHeight = 3
+	    end
+	    local percentage = (self.Scroll/self.MaxScroll)
+
+	    Drawing.DrawBlankArea(pos.X, pos.Y, self.Width, self.Height, self.BackgroundColour)
+	    Drawing.DrawBlankArea(pos.X, pos.Y + round(self.Height*percentage - barHeight*percentage), self.Width, barHeight, self.BarColour)
+	end,
+
+	Initialise = function(self, x, y, height, maxScroll, backgroundColour, barColour, parent, change)
+		local new = {}    -- the new instance
+		setmetatable( new, {__index = self} )
+		new.Width = 1
+		new.Height = height
+		new.Y = y
+		new.X = x
+		new.BackgroundColour = backgroundColour or colours.grey
+		new.BarColour = barColour or colours.lightBlue
+		new.Parent = parent
+		new.Change = change or function()end
+		new.MaxScroll = maxScroll
+		new.Scroll = 0
+		return new
+	end,
+
+	DoScroll = function(self, amount)
+		amount = round(amount)
+		if self.Scroll < 0 or self.Scroll > self.MaxScroll then
+			return false
+		end
+		self.Scroll = self.Scroll + amount
+		if self.Scroll < 0 then
+			self.Scroll = 0
+		elseif self.Scroll > self.MaxScroll then
+			self.Scroll = self.MaxScroll
+		end
+		self.Change()
+		return true
+	end,
+
+	Click = function(self, side, x, y, drag)
+		local percentage = (self.Scroll/self.MaxScroll)
+		local barHeight = (self.Height - self.MaxScroll)
+		if barHeight < 3 then
+			barHeight = 3
+		end
+		local relScroll = (self.MaxScroll*(y + barHeight*percentage)/self.Height)
+		if not drag then
+			self.ClickPoint = self.Scroll - relScroll + 1
+		end
+
+		if self.Scroll-1 ~= relScroll then
+			self:DoScroll(relScroll-self.Scroll-1 + self.ClickPoint)
+		end
+		return true
+	end
+}
+
+AlignmentLeft = 1
+AlignmentCentre = 2
+AlignmentRight = 3
+
+TextLine = {
+	Text = "",
+	Alignment = AlignmentLeft,
+
+	Initialise = function(self, text, alignment)
+		local new = {}    -- the new instance
+		setmetatable( new, {__index = self} )
+		new.Text = text
+		new.Alignment = alignment or AlignmentLeft
+		return new
+	end
+}
+
+local clickPos = 1
+Page = {
+	X = 1,
+	Y = 1,
+	Width = 1,
+	Height = 1,
+	MarginX = 3,
+	MarginY = 2,
+	BackgroundColour = colours.white,
+	TextColour = colours.white,
+	ActiveBackgroundColour = colours.lightGrey,
+	Lines = {},
+	Parent = nil,
+
+	AbsolutePosition = function(self)
+		return self.Parent:AbsolutePosition()
+	end,
+
+	Draw = function(self)
+		local pos = GetAbsolutePosition(self)
+
+		if pos.Y > Drawing.Screen.Height or pos.Y + self.Height < 1 then
+			return
+		end
+
+		Drawing.DrawBlankArea(pos.X+self.Width,pos.Y -1 + 1, 1, self.Height, UIColours.Shadow)
+		Drawing.DrawBlankArea(pos.X+1, pos.Y -1 + self.Height, self.Width, 1, UIColours.Shadow)
+		Drawing.DrawBlankArea(pos.X, pos.Y -1, self.Width, self.Height, self.BackgroundColour)
+
+		local textColour = self.TextColour
+		if not Current.Selection then
+			for i, line in ipairs(self.Lines) do
+				local _c = 1
+				for c = 1, #line.Text do
+					local col = ColourFromCharacter(line.Text:sub(c,c))
+					if col then
+						textColour = col
+					else
+						Drawing.WriteToBuffer(pos.X + self.MarginX - 1 + _c, pos.Y -2 + i + self.MarginY, line.Text:sub(c,c), textColour, self.BackgroundColour)
+						_c = _c + 1
+					end
+				end
+			end
+		else
+			local selection = OrderSelection()
+			local char = 1
+			local textColour = self.TextColour
+			for i, line in ipairs(self.Lines) do
+				local _c = 1
+				for c = 1, #line.Text do
+					local col = ColourFromCharacter(line.Text:sub(c,c))
+					if col then
+						textColour = col
+					else
+						local tc = textColour
+						local colour = colours.white
+						if char >= selection[1] and char <= selection[2] then
+							colour = colours.lightBlue
+							tc = colours.white
+						end
+
+						Drawing.WriteToBuffer(pos.X + self.MarginX - 1 + _c, pos.Y -2 + i + self.MarginY, line.Text:sub(c,c), tc, colour)
+						_c = _c + 1
+					end
+					char = char + 1
+				end
+			end
+		end
+	end,
+
+	Initialise = function(self, parent, lines, y)
+		local new = {}    -- the new instanc
+		setmetatable( new, {__index = self} )
+		new.Height = parent.PageSize.Height + 2 * self.MarginY
+		new.Width = parent.PageSize.Width + 2 * self.MarginX
+		new.X = 1
+		new.Y = y or 1
+		new.Lines = lines or {}
+		new.BackgroundColour = colours.white
+		new.TextColour = colours.black
+		new.Parent = parent
+		new.ClickPos = 1
+		return new
+	end,
+
+	GetCursorPosFromPoint = function(self, x, y, rel)
+		local pos = GetAbsolutePosition(self)
+		if rel then
+			pos = {Y = 0, X = 0}
+		end
+		local row = y - pos.Y + self.MarginY - self.Parent.ScrollBar.Scroll
+		local col = x - self.MarginX - pos.X + 1
+		local cursorPos = 0
+		if row <= 0 or col <= 0 then
+			return 0
+		end
+
+		if row > #self.Lines then
+			for i, v in ipairs(self.Lines) do
+				cursorPos = cursorPos + #v.Text-- - FindColours(v.Text)
+			end
+			return cursorPos
+		end
+
+		--term.setCursorPos(1,3)
+		local prevLineCount = 0
+		for i, v in ipairs(self.Lines) do
+			if i == row then
+				if col > #v.Text then
+					col = #v.Text-- + FindColours(v.Text)
+				else
+					col = col + FindColours(v.Text:sub(1, col))
+				end
+				--term.setCursorPos(1,2)
+				--print(prevLineCount)
+				cursorPos = cursorPos + col + 2 - i - prevLineCount
+				break
+			else
+				prevLineCount = FindColours(v.Text)
+				if prevLineCount ~= 0 then
+					prevLineCount = prevLineCount
+				end
+				cursorPos = cursorPos + #v.Text + 2 - i + FindColours(v.Text)
+			end
+		end
+
+		return cursorPos - 2
+	end,
+
+	Click = function(self, side, x, y, drag)
+		local cursorPos = self:GetCursorPosFromPoint(x, y)
+		self.Parent.TextInput.CursorPos = cursorPos
+		if drag == nil then
+			Current.Selection = nil
+			clickPos = x
+		else
+			local relCursor = cursorPos-- - FindColours(self.Parent.TextInput.Value:sub(1,cursorPos)) + 1
+			if not Current.Selection then
+				local adder = 1
+				if clickPos and clickPos < x then
+					adder = 0
+				end
+				Current.Selection = {relCursor + adder, relCursor + 1 + adder}
+			else
+				Current.Selection[2] = relCursor + 1
+			end
+		end
+		Draw()
+		return true
+	end
+}
+
+function GetAbsolutePosition(object)
+	local obj = object
+	local i = 0
+	local x = 1
+	local y = 1
+	while true do
+		x = x + obj.X - 1
+		y = y + obj.Y - 1
+
+		if not obj.Parent then
+			return {X = x, Y = y}
+		end
+
+		obj = obj.Parent
+
+		if i > 32 then
+			return {X = 1, Y = 1}
+		end
+
+		i = i + 1
+	end
+
+end
+
+function Draw()
+	if not Current.Window then
+		Drawing.Clear(colours.lightGrey)
+	else
+		Drawing.DrawArea(1, 2, Drawing.Screen.Width, Drawing.Screen.Height, '|', colours.black, colours.lightGrey)
+	end
+
+	if Current.Document then
+		Current.Document:Draw()
+	end
+
+	Current.MenuBar:Draw()
+
+	if Current.Window then
+		Current.Window:Draw()
+	end
+
+	if Current.Menu then
+		Current.Menu:Draw()
+	end
+
+	Drawing.DrawBuffer()
+
+	if Current.TextInput and Current.CursorPos and not Current.Menu and not(Current.Window and Current.Document and Current.TextInput == Current.Document.TextInput) and Current.CursorPos[2] > 1 then
+		term.setCursorPos(Current.CursorPos[1], Current.CursorPos[2])
+		term.setCursorBlink(true)
+		term.setTextColour(Current.CursorColour)
+	else
+		term.setCursorBlink(false)
+	end
+end
+MainDraw = Draw
+
+LongestString = function(input, key)
+	local length = 0
+	for i = 1, #input do
+		local value = input[i]
+		if key then
+			if value[key] then
+				value = value[key]
+			else
+				value = ''
+			end
+		end
+		local titleLength = string.len(value)
+		if titleLength > length then
+			length = titleLength
+		end
+	end
+	return length
+end
+
+function LoadMenuBar()
+	Current.MenuBar = MenuBar:Initialise({
+		Button:Initialise(1, 1, nil, nil, colours.grey, Current.MenuBar, function(self, side, x, y, toggle)
+			if toggle then
+				Menu:New(1, 2, {
+					{
+						Title = "New...",
+						Click = function()
+							Current.Document = Document:Initialise('')							
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.n
+						}
+					},
+					{
+						Title = 'Open...',
+						Click = function()
+							DisplayOpenDocumentWindow()
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.o
+						}
+					},
+					{
+						Separator = true
+					},
+					{
+						Title = 'Save...',
+						Click = function()
+							SaveDocument()
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.s
+						},
+						Enabled = function()
+							return true
+						end
+					},
+					{
+						Separator = true
+					},
+					{
+						Title = 'Print...',
+						Click = function()
+							PrintDocument()
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.p
+						},
+						Enabled = function()
+							return true
+						end
+					},
+					{
+						Separator = true
+					},
+					{
+						Title = 'Quit',
+						Click = function()
+							Close()
+						end
+					},
+			--[[
+					{
+						Title = 'Save As...',
+						Click = function()
+
+						end
+					}	
+			]]--
+				}, self, true)
+			else
+				Current.Menu = nil
+			end
+			return true 
+		end, 'File', colours.lightGrey, false),
+		Button:Initialise(7, 1, nil, nil, colours.grey, Current.MenuBar, function(self, side, x, y, toggle)
+			if not self.Toggle then
+				Menu:New(7, 2, {
+			--[[
+					{
+						Title = "Undo",
+						Click = function()
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.z
+						},
+						Enabled = function()
+							return false
+						end
+					},
+					{
+						Title = 'Redo',
+						Click = function()
+							
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.y
+						},
+						Enabled = function()
+							return false
+						end
+					},
+					{
+						Separator = true
+					},
+			]]--
+					{
+						Title = 'Cut',
+						Click = function()
+							Clipboard.Cut(Current.Document.TextInput:Extract(true), 'text')
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.x
+						},
+						Enabled = function()
+							return Current.Document ~= nil and Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil
+						end
+					},
+					{
+						Title = 'Copy',
+						Click = function()
+							Clipboard.Copy(Current.Document.TextInput:Extract(), 'text')
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.c
+						},
+						Enabled = function()
+							return Current.Document ~= nil and Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil
+						end
+					},
+					{
+						Title = 'Paste',
+						Click = function()
+							local paste = Clipboard.Paste()
+							Current.Document.TextInput:Insert(paste)
+							Current.Document.TextInput.CursorPos = Current.Document.TextInput.CursorPos + #paste - 1
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.v
+						},
+						Enabled = function()
+							return Current.Document ~= nil and (not Clipboard.isEmpty()) and Clipboard.Type == 'text'
+						end
+					},
+					{
+						Separator = true,	
+					},
+					{
+						Title = 'Select All',
+						Click = function()
+							Current.Selection = {1, #Current.Document.TextInput.Value:gsub('\n','')}
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.a
+						},
+						Enabled = function()
+							return Current.Document ~= nil
+						end
+					}
+				}, self, true)
+			else
+				Current.Menu = nil
+			end
+			return true 
+		end, 'Edit', colours.lightGrey, false)
+	})
+end
+
+function LoadMenuBar()
+	Current.MenuBar = MenuBar:Initialise({
+		Button:Initialise(1, 1, nil, nil, colours.grey, Current.MenuBar, function(self, side, x, y, toggle)
+			if toggle then
+				Menu:New(1, 2, {
+					{
+						Title = "New...",
+						Click = function()
+							Current.Document = Document:Initialise('')							
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.n
+						}
+					},
+					{
+						Title = 'Open...',
+						Click = function()
+							DisplayOpenDocumentWindow()
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.o
+						}
+					},
+					{
+						Separator = true
+					},
+					{
+						Title = 'Save...',
+						Click = function()
+							SaveDocument()
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.s
+						},
+						Enabled = function()
+							return Current.Document ~= nil
+						end
+					},
+					{
+						Separator = true
+					},
+					{
+						Title = 'Print...',
+						Click = function()
+							PrintDocument()
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.p
+						},
+						Enabled = function()
+							return true
+						end
+					},
+					{
+						Separator = true
+					},
+					{
+						Title = 'Quit',
+						Click = function()
+							if Close() and OneOS then
+								OneOS.Close()
+							end
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.q
+						}
+					},
+			--[[
+					{
+						Title = 'Save As...',
+						Click = function()
+
+						end
+					}	
+			]]--
+				}, self, true)
+			else
+				Current.Menu = nil
+			end
+			return true 
+		end, 'File', colours.lightGrey, false),
+		Button:Initialise(7, 1, nil, nil, colours.grey, Current.MenuBar, function(self, side, x, y, toggle)
+			if not self.Toggle then
+				Menu:New(7, 2, {
+			--[[
+					{
+						Title = "Undo",
+						Click = function()
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.z
+						},
+						Enabled = function()
+							return false
+						end
+					},
+					{
+						Title = 'Redo',
+						Click = function()
+							
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.y
+						},
+						Enabled = function()
+							return false
+						end
+					},
+					{
+						Separator = true
+					},
+			]]--
+					{
+						Title = 'Cut',
+						Click = function()
+							Clipboard.Cut(Current.Document.TextInput:Extract(true), 'text')
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.x
+						},
+						Enabled = function()
+							return Current.Document ~= nil and Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil
+						end
+					},
+					{
+						Title = 'Copy',
+						Click = function()
+							Clipboard.Copy(Current.Document.TextInput:Extract(), 'text')
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.c
+						},
+						Enabled = function()
+							return Current.Document ~= nil and Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil
+						end
+					},
+					{
+						Title = 'Paste',
+						Click = function()
+							local paste = Clipboard.Paste()
+							Current.Document.TextInput:Insert(paste)
+							Current.Document.TextInput.CursorPos = Current.Document.TextInput.CursorPos + #paste - 1
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.v
+						},
+						Enabled = function()
+							return Current.Document ~= nil and (not Clipboard.isEmpty()) and Clipboard.Type == 'text'
+						end
+					},
+					{
+						Separator = true,	
+					},
+					{
+						Title = 'Select All',
+						Click = function()
+							Current.Selection = {1, #Current.Document.TextInput.Value:gsub('\n','')}
+						end,
+						Keys = {
+							keys.leftCtrl,
+							keys.a
+						},
+						Enabled = function()
+							return Current.Document ~= nil
+						end
+					}
+				}, self, true)
+			else
+				Current.Menu = nil
+			end
+			return true 
+		end, 'Edit', colours.lightGrey, false),
+		Button:Initialise(13, 1, nil, nil, colours.grey, Current.MenuBar, function(self, side, x, y, toggle)
+			if not self.Toggle then
+				Menu:New(13, 2, {
+					{
+						Title = 'Red',
+						Click = function(item)
+							Current.Document:SetSelectionColour(item.Colour)
+						end,
+						Colour = colours.red,
+						Enabled = function()
+							return (Current.Document ~= nil and Current.Selection ~= nil and Current.Selection[1] ~= nil and Current.Selection[2] ~= nil)
+						end
+					},
+					{
+						Title = 'Orange',
+						Click = function(item)
+							Current.Document:SetSelectionColour(item.Colour)
+						end,
+						Colour = colours.orange,
+						Enabled = function()
+							return (Current.Document ~= nil and Current.Selection ~= nil and Current.Selection[1] ~= nil and Current.Selection[2] ~= nil)
+						end
+					},
+					{
+						Title = 'Yellow',
+						Click = function(item)
+							Current.Document:SetSelectionColour(item.Colour)
+						end,
+						Colour = colours.yellow,
+						Enabled = function()
+							return (Current.Document ~= nil and Current.Selection ~= nil and Current.Selection[1] ~= nil and Current.Selection[2] ~= nil)
+						end
+					},
+					{
+						Title = 'Pink',
+						Click = function(item)
+							Current.Document:SetSelectionColour(item.Colour)
+						end,
+						Colour = colours.pink,
+						Enabled = function()
+							return (Current.Document ~= nil and Current.Selection ~= nil and Current.Selection[1] ~= nil and Current.Selection[2] ~= nil)
+						end
+					},
+					{
+						Title = 'Magenta',
+						Click = function(item)
+							Current.Document:SetSelectionColour(item.Colour)
+						end,
+						Colour = colours.magenta,
+						Enabled = function()
+							return (Current.Document ~= nil and Current.Selection ~= nil and Current.Selection[1] ~= nil and Current.Selection[2] ~= nil)
+						end
+					},
+					{
+						Title = 'Purple',
+						Click = function(item)
+							Current.Document:SetSelectionColour(item.Colour)
+						end,
+						Colour = colours.purple,
+						Enabled = function()
+							return (Current.Document ~= nil and Current.Selection ~= nil and Current.Selection[1] ~= nil and Current.Selection[2] ~= nil)
+						end
+					},
+					{
+						Title = 'Light Blue',
+						Click = function(item)
+							Current.Document:SetSelectionColour(item.Colour)
+						end,
+						Colour = colours.lightBlue,
+						Enabled = function()
+							return (Current.Document ~= nil and Current.Selection ~= nil and Current.Selection[1] ~= nil and Current.Selection[2] ~= nil)
+						end
+					},
+					{
+						Title = 'Cyan',
+						Click = function(item)
+							Current.Document:SetSelectionColour(item.Colour)
+						end,
+						Colour = colours.cyan,
+						Enabled = function()
+							return (Current.Document ~= nil and Current.Selection ~= nil and Current.Selection[1] ~= nil and Current.Selection[2] ~= nil)
+						end
+					},
+					{
+						Title = 'Blue',
+						Click = function(item)
+							Current.Document:SetSelectionColour(item.Colour)
+						end,
+						Colour = colours.blue,
+						Enabled = function()
+							return (Current.Document ~= nil and Current.Selection ~= nil and Current.Selection[1] ~= nil and Current.Selection[2] ~= nil)
+						end
+					},
+					{
+						Title = 'Green',
+						Click = function(item)
+							Current.Document:SetSelectionColour(item.Colour)
+						end,
+						Colour = colours.green,
+						Enabled = function()
+							return (Current.Document ~= nil and Current.Selection ~= nil and Current.Selection[1] ~= nil and Current.Selection[2] ~= nil)
+						end
+					},
+					{
+						Title = 'Light Grey',
+						Click = function(item)
+							Current.Document:SetSelectionColour(item.Colour)
+						end,
+						Colour = colours.lightGrey,
+						Enabled = function()
+							return (Current.Document ~= nil and Current.Selection ~= nil and Current.Selection[1] ~= nil and Current.Selection[2] ~= nil)
+						end
+					},
+					{
+						Title = 'Grey',
+						Click = function(item)
+							Current.Document:SetSelectionColour(item.Colour)
+						end,
+						Colour = colours.grey,
+						Enabled = function()
+							return (Current.Document ~= nil and Current.Selection ~= nil and Current.Selection[1] ~= nil and Current.Selection[2] ~= nil)
+						end
+					},
+					{
+						Title = 'Black',
+						Click = function(item)
+							Current.Document:SetSelectionColour(item.Colour)
+						end,
+						Colour = colours.black,
+						Enabled = function()
+							return (Current.Document ~= nil and Current.Selection ~= nil and Current.Selection[1] ~= nil and Current.Selection[2] ~= nil)
+						end
+					},
+					{
+						Title = 'Brown',
+						Click = function(item)
+							Current.Document:SetSelectionColour(item.Colour)
+						end,
+						Colour = colours.brown,
+						Enabled = function()
+							return (Current.Document ~= nil and Current.Selection ~= nil and Current.Selection[1] ~= nil and Current.Selection[2] ~= nil)
+						end
+					}
+				}, self, true)
+			else
+				Current.Menu = nil
+			end
+			return true 
+		end, 'Colour', colours.lightGrey, false)
+	})
+end
+
+function Initialise(arg)
+	if OneOS then
+		fs = OneOS.FS
+	end
+
+	if not OneOS then
+		SplashScreen()
+	end
+	EventRegister('mouse_click', TryClick)
+	EventRegister('mouse_drag', function(event, side, x, y)TryClick(event, side, x, y, true)end)
+	EventRegister('mouse_scroll', Scroll)
+	EventRegister('key', HandleKey)
+	EventRegister('char', HandleKey)
+	EventRegister('timer', Timer)
+	EventRegister('terminate', function(event) if Close() then error( "Terminated", 0 ) end end)
+	
+	term.setBackgroundColour(colours.lightGrey)
+	term.clear()
+
+	LoadMenuBar()
+
+	--Current.Document = Document:Initialise('abcdefghijklmnopqrtuvwxy')--'Hello everybody!')
+	if tArgs[1] then
+		if fs.exists(tArgs[1]) then
+			OpenDocument(tArgs[1])
+		else
+			--new
+		end
+	else
+		Current.Document = Document:Initialise('')--'Hello everybody!')
+	end
+
+	--[[
+	if arg and fs.exists(arg) then
+			OpenDocument(arg)
+		else
+			DisplayNewDocumentWindow()
+		end
+	]]--
+	Draw()
+
+	EventHandler()
+end
+
+local isControlPushed = false
+controlPushedTimer = nil
+closeWindowTimer = nil
+function Timer(event, timer)
+	if timer == closeWindowTimer then
+		if Current.Window then
+			Current.Window:Close()
+		end
+		Draw()
+	elseif timer == controlPushedTimer then
+		isControlPushed = false
+	end
+end
+
+local ignoreNextChar = false
+function HandleKey(...)
+	local args = {...}
+	local event = args[1]
+	local keychar = args[2]
+																							--Mac left command character
+	if event == 'key' and keychar == keys.leftCtrl or keychar == keys.rightCtrl or keychar == 219 then
+		isControlPushed = true
+		controlPushedTimer = os.startTimer(0.5)
+	elseif isControlPushed then
+		if event == 'key' then
+			if CheckKeyboardShortcut(keychar) then
+				isControlPushed = false
+				ignoreNextChar = true
+			end
+		end
+	elseif ignoreNextChar then
+		ignoreNextChar = false
+	elseif Current.TextInput then
+		if event == 'char' then
+			Current.TextInput:Char(keychar)
+		elseif event == 'key' then
+			Current.TextInput:Key(keychar)
+		end
+	end
+end
+
+function CheckKeyboardShortcut(key)
+	local shortcuts = {}
+	shortcuts[keys.n] = function() Current.Document = Document:Initialise('') end
+	shortcuts[keys.o] = function() DisplayOpenDocumentWindow() end
+	shortcuts[keys.s] = function() if Current.Document ~= nil then SaveDocument() end end
+	shortcuts[keys.left] = function() if Current.TextInput then Current.TextInput:Key(keys.home) end end
+	shortcuts[keys.right] = function() if Current.TextInput then Current.TextInput:Key(keys["end"]) end end
+--	shortcuts[keys.q] = function() DisplayOpenDocumentWindow() end
+	if Current.Document ~= nil then
+		shortcuts[keys.s] = function() SaveDocument() end
+		shortcuts[keys.p] = function() PrintDocument() end
+		if Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
+			shortcuts[keys.x] = function() Clipboard.Cut(Current.Document.TextInput:Extract(true), 'text') end
+			shortcuts[keys.c] = function() Clipboard.Copy(Current.Document.TextInput:Extract(), 'text') end
+		end
+		if (not Clipboard.isEmpty()) and Clipboard.Type == 'text' then
+			shortcuts[keys.v] = function() local paste = Clipboard.Paste()
+									Current.Document.TextInput:Insert(paste)
+									Current.Document.TextInput.CursorPos = Current.Document.TextInput.CursorPos + #paste - 1
+								end
+		end
+		shortcuts[keys.a] = function() Current.Selection = {1, #Current.Document.TextInput.Value:gsub('\n','')} end
+	end
+							
+	if shortcuts[key] then
+		shortcuts[key]()
+		Draw()
+		return true
+	else
+		return false
+	end
+end
+
+--[[
+	Check if the given object falls under the click coordinates
+]]--
+function CheckClick(object, x, y)
+	if object.X <= x and object.Y <= y and object.X + object.Width > x and object.Y + object.Height > y then
+		return true
+	end
+end
+
+--[[
+	Attempt to clicka given object
+]]--
+function DoClick(object, side, x, y, drag)
+	local obj = GetAbsolutePosition(object)
+	obj.Width = object.Width
+	obj.Height = object.Height
+	if object and CheckClick(obj, x, y) then
+		return object:Click(side, x - object.X + 1, y - object.Y + 1, drag)
+	end	
+end
+
+--[[
+	Try to click at the given coordinates
+]]--
+function TryClick(event, side, x, y, drag)
+	if Current.Menu then
+		if DoClick(Current.Menu, side, x, y, drag) then
+			Draw()
+			return
+		else
+			if Current.Menu.Owner and Current.Menu.Owner.Toggle then
+				Current.Menu.Owner.Toggle = false
+			end
+			Current.Menu = nil
+			Draw()
+			return
+		end
+	elseif Current.Window then
+		if DoClick(Current.Window, side, x, y, drag) then
+			Draw()
+			return
+		else
+			Current.Window:Flash()
+			return
+		end
+	end
+	local interfaceElements = {}
+
+	table.insert(interfaceElements, Current.MenuBar)
+	table.insert(interfaceElements, Current.ScrollBar)
+	for i, page in ipairs(Current.Document.Pages) do
+		table.insert(interfaceElements, page)
+	end
+
+	for i, object in ipairs(interfaceElements) do
+		if DoClick(object, side, x, y, drag) then
+			Draw()
+			return
+		end		
+	end
+	Draw()
+end
+
+function Scroll(event, direction, x, y)
+	if Current.Window and Current.Window.OpenButton then
+		Current.Document.Scroll = Current.Document.Scroll + direction
+		if Current.Window.Scroll < 0 then
+			Current.Window.Scroll = 0
+		elseif Current.Window.Scroll > Current.Window.MaxScroll then
+			Current.Window.Scroll = Current.Window.MaxScroll
+		end
+		Draw()
+	elseif Current.ScrollBar then
+		if Current.ScrollBar:DoScroll(direction*2) then
+			Draw()
+		end
+	end
+end
+
+
+--[[
+	Registers functions to run on certain events
+]]--
+function EventRegister(event, func)
+	if not Events[event] then
+		Events[event] = {}
+	end
+
+	table.insert(Events[event], func)
+end
+
+--[[
+	The main loop event handler, runs registered event functinos
+]]--
+function EventHandler()
+	while true do
+		local event, arg1, arg2, arg3, arg4 = os.pullEventRaw()
+		if Events[event] then
+			for i, e in ipairs(Events[event]) do
+				e(event, arg1, arg2, arg3, arg4)
+			end
+		end
+	end
+end
+
+
+local function Extension(path, addDot)
+	if not path then
+		return nil
+	elseif not string.find(fs.getName(path), '%.') then
+		if not addDot then
+			return fs.getName(path)
+		else
+			return ''
+		end
+	else
+		local _path = path
+		if path:sub(#path) == '/' then
+			_path = path:sub(1,#path-1)
+		end
+		local extension = _path:gmatch('%.[0-9a-z]+$')()
+		if extension then
+			extension = extension:sub(2)
+		else
+			--extension = nil
+			return ''
+		end
+		if addDot then
+			extension = '.'..extension
+		end
+		return extension:lower()
+	end
+end
+
+local RemoveExtension = function(path)
+	if path:sub(1,1) == '.' then
+		return path
+	end
+	local extension = Extension(path)
+	if extension == path then
+		return fs.getName(path)
+	end
+	return string.gsub(path, extension, ''):sub(1, -2)
+end
+
+local acknowledgedColour = false
+function PrintDocument()
+	if OneOS then
+		OneOS.LoadAPI('/System/API/Helpers.lua')
+		OneOS.LoadAPI('/System/API/Peripheral.lua')
+		OneOS.LoadAPI('/System/API/Printer.lua')
+	end
+
+	local doPrint = function()
+		local window = PrintDocumentWindow:Initialise():Show()
+	end
+
+	if Peripheral.GetPeripheral('printer') == nil then
+		ButtonDialougeWindow:Initialise('No Printer Found', 'Please place a printer next to your computer. Ensure you also insert dye (left slot) and paper (top slots)', 'Ok', nil, function(window, ok)
+			window:Close()
+		end):Show()
+	elseif not acknowledgedColour and FindColours(Current.Document.TextInput.Value) ~= 0 then
+		ButtonDialougeWindow:Initialise('Important', 'Due to the way printers work, you can\'t print in more than one colour. The dye you use will be the colour of the text.', 'Ok', nil, function(window, ok)
+			acknowledgedColour = true
+			window:Close()
+			doPrint()
+		end):Show()
+	else
+		doPrint()
+	end
+end
+
+function SaveDocument()
+	local function save()
+		local h = fs.open(Current.Document.Path, 'w')
+		if h then
+			if Current.Document.Format == TextFormatPlainText then
+				h.write(Current.Document.TextInput.Value)
+			else
+				local lines = {}
+				for p, page in ipairs(Current.Document.Pages) do
+					for i, line in ipairs(page.Lines) do
+						table.insert(lines, line)
+					end
+				end
+				h.write(textutils.serialize(lines))
+			end
+			Current.Modified = false
+		else
+			ButtonDialougeWindow:Initialise('Error', 'An error occured while saving the file, try again.', 'Ok', nil, function(window, ok)
+				window:Close()
+			end):Show()
+		end
+		h.close()
+	end
+
+	if not Current.Document.Path then
+		SaveDocumentWindow:Initialise(function(self, success, path)
+			self:Close()
+			if success then
+				local extension = ''
+				if Current.Document.Format == TextFormatPlainText then
+					extension = '.txt'
+				elseif Current.Document.Format == TextFormatInkText then
+					extension = '.ink'
+				end
+				
+				if path:sub(-4) ~= extension then
+					path = path .. extension
+				end
+
+				Current.Document.Path = path
+				Current.Document.Title = fs.getName(path)
+				save()
+			end
+			if Current.Document then
+				Current.TextInput = Current.Document.TextInput
+			end
+		end):Show()
+	else
+		save()
+	end
+end
+
+function DisplayOpenDocumentWindow()
+	OpenDocumentWindow:Initialise(function(self, success, path)
+		self:Close()
+		if success then
+			OpenDocument(path)
+		end
+	end):Show()
+end
+
+function OpenDocument(path)
+	Current.Selection = nil
+	local h = fs.open(path, 'r')
+	if h then
+		Current.Document = Document:Initialise(h.readAll(), RemoveExtension(fs.getName(path)), path)
+	else
+		ButtonDialougeWindow:Initialise('Error', 'An error occured while opening the file, try again.', 'Ok', nil, function(window, ok)
+			window:Close()
+			if Current.Document then
+				Current.TextInput = Current.Document.TextInput
+			end
+		end):Show()
+	end
+	h.close()
+end
+
+local TidyPath = function(path)
+	path = '/'..path
+	local fs = fs
+	if OneOS then
+		fs = OneOS.FS
+	end
+	if fs.isDir(path) then
+		path = path .. '/'
+	end
+
+	path, n = path:gsub("//", "/")
+	while n > 0 do
+		path, n = path:gsub("//", "/")
+	end
+	return path
+end
+
+OpenDocumentWindow = {
+	X = 1,
+	Y = 1,
+	Width = 0,
+	Height = 0,
+	CursorPos = 1,
+	Visible = true,
+	Return = nil,
+	OpenButton = nil,
+	PathTextBox = nil,
+	CurrentDirectory = '/',
+	Scroll = 0,
+	MaxScroll = 0,
+	GoUpButton = nil,
+	SelectedFile = '',
+	Files = {},
+	Typed = false,
+
+	AbsolutePosition = function(self)
+		return {X = self.X, Y = self.Y}
+	end,
+
+	Draw = function(self)
+		if not self.Visible then
+			return
+		end
+		Drawing.DrawBlankArea(self.X + 1, self.Y+1, self.Width, self.Height, colours.grey)
+		Drawing.DrawBlankArea(self.X, self.Y, self.Width, 3, colours.lightGrey)
+		Drawing.DrawBlankArea(self.X, self.Y+1, self.Width, self.Height-6, colours.white)
+		Drawing.DrawCharactersCenter(self.X, self.Y, self.Width, 1, self.Title, colours.black, colours.lightGrey)
+		Drawing.DrawBlankArea(self.X, self.Y + self.Height - 5, self.Width, 5, colours.lightGrey)
+		self:DrawFiles()
+
+		if (fs.exists(self.PathTextBox.TextInput.Value)) or (self.SelectedFile and #self.SelectedFile > 0 and fs.exists(self.CurrentDirectory .. self.SelectedFile)) then
+			self.OpenButton.TextColour = colours.black
+		else
+			self.OpenButton.TextColour = colours.lightGrey
+		end
+
+		self.PathTextBox:Draw()
+		self.OpenButton:Draw()
+		self.CancelButton:Draw()
+		self.GoUpButton:Draw()
+	end,
+
+	DrawFiles = function(self)
+		for i, file in ipairs(self.Files) do
+			if i > self.Scroll and i - self.Scroll <= 11 then
+				if file == self.SelectedFile then
+					Drawing.DrawCharacters(self.X + 1, self.Y + i - self.Scroll, file, colours.white, colours.lightBlue)
+				elseif string.find(file, '%.txt') or string.find(file, '%.text') or string.find(file, '%.ink') or fs.isDir(self.CurrentDirectory .. file) then
+					Drawing.DrawCharacters(self.X + 1, self.Y + i - self.Scroll, file, colours.black, colours.white)
+				else
+					Drawing.DrawCharacters(self.X + 1, self.Y + i - self.Scroll, file, colours.grey, colours.white)
+				end
+			end
+		end
+		self.MaxScroll = #self.Files - 11
+		if self.MaxScroll < 0 then
+			self.MaxScroll = 0
+		end
+	end,
+
+	Initialise = function(self, returnFunc)
+		local new = {}    -- the new instance
+		setmetatable( new, {__index = self} )
+		new.Width = 32
+		new.Height = 17
+		new.Return = returnFunc
+		new.X = math.ceil((Drawing.Screen.Width - new.Width) / 2)
+		new.Y = math.ceil((Drawing.Screen.Height - new.Height) / 2)
+		new.Title = 'Open Document'
+		new.Visible = true
+		new.CurrentDirectory = '/'
+		new.SelectedFile = nil
+		if OneOS and fs.exists('/Desktop/Documents/') then
+			new.CurrentDirectory = '/Desktop/Documents/'
+		end
+		new.OpenButton = Button:Initialise(new.Width - 6, new.Height - 1, nil, nil, colours.white, new, function(self, side, x, y, toggle)
+			if fs.exists(new.PathTextBox.TextInput.Value) and self.TextColour == colours.black and not fs.isDir(new.PathTextBox.TextInput.Value) then
+				returnFunc(new, true, TidyPath(new.PathTextBox.TextInput.Value))
+			elseif new.SelectedFile and self.TextColour == colours.black and fs.isDir(new.CurrentDirectory .. new.SelectedFile) then
+				new:GoToDirectory(new.CurrentDirectory .. new.SelectedFile)
+			elseif new.SelectedFile and self.TextColour == colours.black then
+				returnFunc(new, true, TidyPath(new.CurrentDirectory .. '/' .. new.SelectedFile))
+			end
+		end, 'Open', colours.black)
+		new.CancelButton = Button:Initialise(new.Width - 15, new.Height - 1, nil, nil, colours.white, new, function(self, side, x, y, toggle)
+			returnFunc(new, false)
+		end, 'Cancel', colours.black)
+		new.GoUpButton = Button:Initialise(2, new.Height - 1, nil, nil, colours.white, new, function(self, side, x, y, toggle)
+			local folderName = fs.getName(new.CurrentDirectory)
+			local parentDirectory = new.CurrentDirectory:sub(1, #new.CurrentDirectory-#folderName-1)
+			new:GoToDirectory(parentDirectory)
+		end, 'Go Up', colours.black)
+		new.PathTextBox = TextBox:Initialise(2, new.Height - 3, new.Width - 2, 1, new, new.CurrentDirectory, colours.white, colours.black)
+		new:GoToDirectory(new.CurrentDirectory)
+		return new
+	end,
+
+	Show = function(self)
+		Current.Window = self
+		return self
+	end,
+
+	Close = function(self)
+		Current.Input = nil
+		Current.Window = nil
+		self = nil
+	end,
+
+	GoToDirectory = function(self, path)
+		path = TidyPath(path)
+		self.CurrentDirectory = path
+		self.Scroll = 0
+		self.SelectedFile = nil
+		self.Typed = false
+		self.PathTextBox.TextInput.Value = path
+		local fs = fs
+		if OneOS then
+			fs = OneOS.FS
+		end
+		self.Files = fs.list(self.CurrentDirectory)
+		Draw()
+	end,
+
+	Flash = function(self)
+		self.Visible = false
+		Draw()
+		sleep(0.15)
+		self.Visible = true
+		Draw()
+		sleep(0.15)
+		self.Visible = false
+		Draw()
+		sleep(0.15)
+		self.Visible = true
+		Draw()
+	end,
+
+	Click = function(self, side, x, y)
+		local items = {self.OpenButton, self.CancelButton, self.PathTextBox, self.GoUpButton}
+		local found = false
+		for i, v in ipairs(items) do
+			if CheckClick(v, x, y) then
+				v:Click(side, x, y)
+				found = true
+			end
+		end
+
+		if not found then
+			if y <= 12 then
+				local fs = fs
+				if OneOS then
+					fs = OneOS.FS
+				end
+				self.SelectedFile = fs.list(self.CurrentDirectory)[y-1]
+				self.PathTextBox.TextInput.Value = TidyPath(self.CurrentDirectory .. '/' .. self.SelectedFile)
+				Draw()
+			end
+		end
+		return true
+	end
+}
+
+PrintDocumentWindow = {
+	X = 1,
+	Y = 1,
+	Width = 0,
+	Height = 0,
+	CursorPos = 1,
+	Visible = true,
+	Return = nil,
+	PrintButton = nil,
+	CopiesTextBox = nil,
+	Scroll = 0,
+	MaxScroll = 0,
+	PrinterSelectButton = nil,
+	Title = '',
+	Status = 0, --0 = neutral, 1 = good, -1 = error
+	StatusText = '',
+	SelectedPrinter = nil,
+
+	AbsolutePosition = function(self)
+		return {X = self.X, Y = self.Y}
+	end,
+
+	Draw = function(self)
+		if not self.Visible then
+			return
+		end
+		Drawing.DrawBlankArea(self.X + 1, self.Y+1, self.Width, self.Height, colours.grey)
+		Drawing.DrawBlankArea(self.X, self.Y, self.Width, 1, colours.lightGrey)
+		Drawing.DrawBlankArea(self.X, self.Y+1, self.Width, self.Height-1, colours.white)
+		Drawing.DrawCharactersCenter(self.X, self.Y, self.Width, 1, self.Title, colours.black, colours.lightGrey)
+		
+		self.PrinterSelectButton:Draw()
+		Drawing.DrawCharactersCenter(self.X,  self.Y + self.PrinterSelectButton.Y - 2, self.Width, 1, 'Printer', colours.black, colours.white)
+		Drawing.DrawCharacters(self.X + self.Width - 3, self.Y + self.PrinterSelectButton.Y - 1, '\\/', colours.black, colours.lightGrey)
+		Drawing.DrawCharacters(self.X + 1, self.Y + self.CopiesTextBox.Y - 1, 'Copies', colours.black, colours.white)
+		local statusColour = colours.grey
+		if self.Status == -1 then
+			statusColour = colours.red
+		elseif self.Status == 1 then
+			statusColour = colours.green
+		end
+		Drawing.DrawCharacters(self.X + 1, self.Y + self.CopiesTextBox.Y + 1, self.StatusText, statusColour, colours.white)
+
+		self.CopiesTextBox:Draw()
+		self.PrintButton:Draw()
+		self.CancelButton:Draw()
+	end,
+
+	Initialise = function(self)
+		local new = {}    -- the new instance
+		setmetatable( new, {__index = self} )
+		new.Width = 32
+		new.Height = 11
+		new.Return = returnFunc
+		new.X = math.ceil((Drawing.Screen.Width - new.Width) / 2)
+		new.Y = math.ceil((Drawing.Screen.Height - new.Height) / 2)
+		new.Title = 'Print Document'
+		new.Visible = true
+		new.PrintButton = Button:Initialise(new.Width - 7, new.Height - 1, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
+			local doPrint = true
+			if new.SelectedPrinter == nil then
+				local p = Peripheral.GetPeripheral('printer')
+				if p then
+					new.SelectedPrinter = p.Side
+					new.PrinterSelectButton.Text = p.Fullname
+				else
+					new.StatusText = 'No Connected Printer'
+					new.Status = -1
+					doPrint = false
+				end
+			end
+			if doPrint then
+				local printer = Printer:Initialise()
+				local err = printer:PrintLines(Current.Document.Lines, Current.Document.Title, tonumber(new.CopiesTextBox.TextInput.Value))
+				if not err then
+					new.StatusText = 'Document Printed!'
+					new.Status = 1
+					closeWindowTimer = os.startTimer(1)
+				else
+					new.StatusText = err
+					new.Status = -1
+				end
+			end
+		end, 'Print', colours.black)
+		new.CancelButton = Button:Initialise(new.Width - 15, new.Height - 1, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
+			new:Close()
+			Draw()
+		end, 'Close', colours.black)
+		new.PrinterSelectButton = Button:Initialise(2, 4, new.Width - 2, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
+			local printers = {
+					{
+						Title = "Automatic",
+						Click = function()
+							new.SelectedPrinter = nil
+							new.PrinterSelectButton.Text = 'Automatic'
+						end
+					},
+					{
+						Separator = true
+					}
+				}
+			for i, p in ipairs(Peripheral.GetPeripherals('printer')) do
+				table.insert(printers, {
+					Title = p.Fullname,
+					Click = function(self)
+						new.SelectedPrinter = p.Side
+						new.PrinterSelectButton.Text = p.Fullname
+					end
+				})
+			end
+			Current.Menu = Menu:New(x, y+4, printers, self, true)
+		end, 'Automatic', colours.black)
+		new.CopiesTextBox = TextBox:Initialise(9, 6, 4, 1, new, 1, colours.lightGrey, colours.black, nil, true)
+		Current.TextInput = new.CopiesTextBox.TextInput
+		new.StatusText = 'Waiting...'
+		new.Status = 0
+		return new
+	end,
+
+	Show = function(self)
+		Current.Window = self
+		return self
+	end,
+
+	Close = function(self)
+		Current.Input = nil
+		Current.Window = nil
+		self = nil
+	end,
+
+	Flash = function(self)
+		self.Visible = false
+		Draw()
+		sleep(0.15)
+		self.Visible = true
+		Draw()
+		sleep(0.15)
+		self.Visible = false
+		Draw()
+		sleep(0.15)
+		self.Visible = true
+		Draw()
+	end,
+
+	Click = function(self, side, x, y)
+		local items = {self.PrintButton, self.CancelButton, self.CopiesTextBox, self.PrinterSelectButton}
+		for i, v in ipairs(items) do
+			if CheckClick(v, x, y) then
+				v:Click(side, x, y)
+			end
+		end
+		return true
+	end
+}
+
+SaveDocumentWindow = {
+	X = 1,
+	Y = 1,
+	Width = 0,
+	Height = 0,
+	CursorPos = 1,
+	Visible = true,
+	Return = nil,
+	SaveButton = nil,
+	PathTextBox = nil,
+	CurrentDirectory = '/',
+	Scroll = 0,
+	MaxScroll = 0,
+	ScrollBar = nil,
+	GoUpButton = nil,
+	Files = {},
+	Typed = false,
+
+	AbsolutePosition = function(self)
+		return {X = self.X, Y = self.Y}
+	end,
+
+	Draw = function(self)
+		if not self.Visible then
+			return
+		end
+		Drawing.DrawBlankArea(self.X + 1, self.Y+1, self.Width, self.Height, colours.grey)
+		Drawing.DrawBlankArea(self.X, self.Y, self.Width, 3, colours.lightGrey)
+		Drawing.DrawBlankArea(self.X, self.Y+1, self.Width, self.Height-6, colours.white)
+		Drawing.DrawCharactersCenter(self.X, self.Y, self.Width, 1, self.Title, colours.black, colours.lightGrey)
+		Drawing.DrawBlankArea(self.X, self.Y + self.Height - 5, self.Width, 5, colours.lightGrey)
+		Drawing.DrawCharacters(self.X + 1, self.Y + self.Height - 5, self.CurrentDirectory, colours.grey, colours.lightGrey)
+		self:DrawFiles()
+
+		if (self.PathTextBox.TextInput.Value) then
+			self.SaveButton.TextColour = colours.black
+		else
+			self.SaveButton.TextColour = colours.lightGrey
+		end
+
+		self.PathTextBox:Draw()
+		self.SaveButton:Draw()
+		self.CancelButton:Draw()
+		self.GoUpButton:Draw()
+	end,
+
+	DrawFiles = function(self)
+		for i, file in ipairs(self.Files) do
+			if i > self.Scroll and i - self.Scroll <= 10 then
+				if file == self.SelectedFile then
+					Drawing.DrawCharacters(self.X + 1, self.Y + i - self.Scroll, file, colours.white, colours.lightBlue)
+				elseif fs.isDir(self.CurrentDirectory .. file) then
+					Drawing.DrawCharacters(self.X + 1, self.Y + i - self.Scroll, file, colours.black, colours.white)
+				else
+					Drawing.DrawCharacters(self.X + 1, self.Y + i - self.Scroll, file, colours.lightGrey, colours.white)
+				end
+			end
+		end
+		self.MaxScroll = #self.Files - 11
+		if self.MaxScroll < 0 then
+			self.MaxScroll = 0
+		end
+	end,
+
+	Initialise = function(self, returnFunc)
+		local new = {}    -- the new instance
+		setmetatable( new, {__index = self} )
+		new.Width = 32
+		new.Height = 16
+		new.Return = returnFunc
+		new.X = math.ceil((Drawing.Screen.Width - new.Width) / 2)
+		new.Y = math.ceil((Drawing.Screen.Height - new.Height) / 2)
+		new.Title = 'Save Document'
+		new.Visible = true
+		new.CurrentDirectory = '/'
+		if OneOS and fs.exists('/Desktop/Documents/') then
+			new.CurrentDirectory = '/Desktop/Documents/'
+		end
+		new.SaveButton = Button:Initialise(new.Width - 6, new.Height - 1, nil, nil, colours.white, new, function(self, side, x, y, toggle)
+			if self.TextColour == colours.black and not fs.isDir(new.CurrentDirectory ..'/' .. new.PathTextBox.TextInput.Value) then
+				returnFunc(new, true, TidyPath(new.CurrentDirectory ..'/' .. new.PathTextBox.TextInput.Value))
+			elseif new.SelectedFile and self.TextColour == colours.black and fs.isDir(new.CurrentDirectory .. new.SelectedFile) then
+				new:GoToDirectory(new.CurrentDirectory .. new.SelectedFile)
+			end
+		end, 'Save', colours.black)
+		new.CancelButton = Button:Initialise(new.Width - 15, new.Height - 1, nil, nil, colours.white, new, function(self, side, x, y, toggle)
+			returnFunc(new, false)
+		end, 'Cancel', colours.black)
+		new.GoUpButton = Button:Initialise(2, new.Height - 1, nil, nil, colours.white, new, function(self, side, x, y, toggle)
+			local folderName = fs.getName(new.CurrentDirectory)
+			local parentDirectory = new.CurrentDirectory:sub(1, #new.CurrentDirectory-#folderName-1)
+			new:GoToDirectory(parentDirectory)
+		end, 'Go Up', colours.black)
+		new.PathTextBox = TextBox:Initialise(2, new.Height - 3, new.Width - 2, 1, new, '', colours.white, colours.black, function(key)
+			if key == keys.enter then
+				new.SaveButton:Click()
+			end
+		end)
+		new.PathTextBox.Placeholder = 'Document Name'
+		Current.TextInput = new.PathTextBox.TextInput
+		new:GoToDirectory(new.CurrentDirectory)
+		return new
+	end,
+
+	Show = function(self)
+		Current.Window = self
+		return self
+	end,
+
+	Close = function(self)
+		Current.Input = nil
+		Current.Window = nil
+		self = nil
+	end,
+
+	GoToDirectory = function(self, path)
+		path = TidyPath(path)
+		self.CurrentDirectory = path
+		self.Scroll = 0
+		self.Typed = false
+		local fs = fs
+		if OneOS then
+			fs = OneOS.FS
+		end
+		self.Files = fs.list(self.CurrentDirectory)
+		Draw()
+	end,
+
+	Flash = function(self)
+		self.Visible = false
+		Draw()
+		sleep(0.15)
+		self.Visible = true
+		Draw()
+		sleep(0.15)
+		self.Visible = false
+		Draw()
+		sleep(0.15)
+		self.Visible = true
+		Draw()
+	end,
+
+	Click = function(self, side, x, y)
+		local items = {self.SaveButton, self.CancelButton, self.PathTextBox, self.GoUpButton}
+		local found = false
+		for i, v in ipairs(items) do
+			if CheckClick(v, x, y) then
+				v:Click(side, x, y)
+				found = true
+			end
+		end
+
+		if not found then
+			if y <= 11 then
+				local files = fs.list(self.CurrentDirectory)
+				if files[y-1] then
+					self:GoToDirectory(self.CurrentDirectory..files[y-1])
+					Draw()
+				end
+			end
+		end
+		return true
+	end
+}
+
+local WrapText = function(text, maxWidth)
+	local lines = {''}
+    for word, space in text:gmatch('(%S+)(%s*)') do
+            local temp = lines[#lines] .. word .. space:gsub('\n','')
+            if #temp > maxWidth then
+                    table.insert(lines, '')
+            end
+            if space:find('\n') then
+                    lines[#lines] = lines[#lines] .. word
+                    
+                    space = space:gsub('\n', function()
+                            table.insert(lines, '')
+                            return ''
+                    end)
+            else
+                    lines[#lines] = lines[#lines] .. word .. space
+            end
+    end
+	return lines
+end
+
+ButtonDialougeWindow = {
+	X = 1,
+	Y = 1,
+	Width = 0,
+	Height = 0,
+	CursorPos = 1,
+	Visible = true,
+	CancelButton = nil,
+	OkButton = nil,
+	Lines = {},
+
+	AbsolutePosition = function(self)
+		return {X = self.X, Y = self.Y}
+	end,
+
+	Draw = function(self)
+		if not self.Visible then
+			return
+		end
+		Drawing.DrawBlankArea(self.X + 1, self.Y+1, self.Width, self.Height, colours.grey)
+		Drawing.DrawBlankArea(self.X, self.Y, self.Width, 1, colours.lightGrey)
+		Drawing.DrawBlankArea(self.X, self.Y+1, self.Width, self.Height-1, colours.white)
+		Drawing.DrawCharactersCenter(self.X, self.Y, self.Width, 1, self.Title, colours.black, colours.lightGrey)
+
+		for i, text in ipairs(self.Lines) do
+			Drawing.DrawCharacters(self.X + 1, self.Y + 1 + i, text, colours.black, colours.white)
+		end
+
+		self.OkButton:Draw()
+		if self.CancelButton then
+			self.CancelButton:Draw()
+		end
+	end,
+
+	Initialise = function(self, title, message, okText, cancelText, returnFunc)
+		local new = {}    -- the new instance
+		setmetatable( new, {__index = self} )
+		new.Width = 28
+		new.Lines = WrapText(message, new.Width - 2)
+		new.Height = 5 + #new.Lines
+		new.Return = returnFunc
+		new.X = math.ceil((Drawing.Screen.Width - new.Width) / 2)
+		new.Y = math.ceil((Drawing.Screen.Height - new.Height) / 2)
+		new.Title = title
+		new.Visible = true
+		new.Visible = true
+		new.OkButton = Button:Initialise(new.Width - #okText - 2, new.Height - 1, nil, 1, nil, new, function()
+			returnFunc(new, true)
+		end, okText)
+		if cancelText then
+			new.CancelButton = Button:Initialise(new.Width - #okText - 2 - 1 - #cancelText - 2, new.Height - 1, nil, 1, nil, new, function()
+				returnFunc(new, false)
+			end, cancelText)
+		end
+
+		return new
+	end,
+
+	Show = function(self)
+		Current.Window = self
+		return self
+	end,
+
+	Close = function(self)
+		Current.Window = nil
+		self = nil
+	end,
+
+	Flash = function(self)
+		self.Visible = false
+		Draw()
+		sleep(0.15)
+		self.Visible = true
+		Draw()
+		sleep(0.15)
+		self.Visible = false
+		Draw()
+		sleep(0.15)
+		self.Visible = true
+		Draw()
+	end,
+
+	Click = function(self, side, x, y)
+		local items = {self.OkButton, self.CancelButton}
+		local found = false
+		for i, v in ipairs(items) do
+			if CheckClick(v, x, y) then
+				v:Click(side, x, y)
+				found = true
+			end
+		end
+		return true
+	end
+}
+
+TextDialougeWindow = {
+	X = 1,
+	Y = 1,
+	Width = 0,
+	Height = 0,
+	CursorPos = 1,
+	Visible = true,
+	CancelButton = nil,
+	OkButton = nil,
+	Lines = {},
+	TextInput = nil,
+
+	AbsolutePosition = function(self)
+		return {X = self.X, Y = self.Y}
+	end,
+
+	Draw = function(self)
+		if not self.Visible then
+			return
+		end
+		Drawing.DrawBlankArea(self.X + 1, self.Y+1, self.Width, self.Height, colours.grey)
+		Drawing.DrawBlankArea(self.X, self.Y, self.Width, 1, colours.lightGrey)
+		Drawing.DrawBlankArea(self.X, self.Y+1, self.Width, self.Height-1, colours.white)
+		Drawing.DrawCharactersCenter(self.X, self.Y, self.Width, 1, self.Title, colours.black, colours.lightGrey)
+
+		for i, text in ipairs(self.Lines) do
+			Drawing.DrawCharacters(self.X + 1, self.Y + 1 + i, text, colours.black, colours.white)
+		end
+
+
+		Drawing.DrawBlankArea(self.X + 1, self.Y + self.Height - 4, self.Width - 2, 1, colours.lightGrey)
+		Drawing.DrawCharacters(self.X + 2, self.Y + self.Height - 4, self.TextInput.Value, colours.black, colours.lightGrey)
+		Current.CursorPos = {self.X + 2 + self.TextInput.CursorPos, self.Y + self.Height - 4}
+		Current.CursorColour = colours.black
+
+		self.OkButton:Draw()
+		if self.CancelButton then
+			self.CancelButton:Draw()
+		end
+	end,
+
+	Initialise = function(self, title, message, okText, cancelText, returnFunc, numerical)
+		local new = {}    -- the new instance
+		setmetatable( new, {__index = self} )
+		new.Width = 28
+		new.Lines = WrapText(message, new.Width - 2)
+		new.Height = 7 + #new.Lines
+		new.Return = returnFunc
+		new.X = math.ceil((Drawing.Screen.Width - new.Width) / 2)
+		new.Y = math.ceil((Drawing.Screen.Height - new.Height) / 2)
+		new.Title = title
+		new.Visible = true
+		new.Visible = true
+		new.OkButton = Button:Initialise(new.Width - #okText - 2, new.Height - 1, nil, 1, nil, new, function()
+			if #new.TextInput.Value > 0 then
+				returnFunc(new, true, new.TextInput.Value)
+			end
+		end, okText)
+		if cancelText then
+			new.CancelButton = Button:Initialise(new.Width - #okText - 2 - 1 - #cancelText - 2, new.Height - 1, nil, 1, nil, new, function()
+				returnFunc(new, false)
+			end, cancelText)
+		end
+		new.TextInput = TextInput:Initialise('', function(enter)
+			if enter then
+				new.OkButton:Click()
+			end
+			Draw()
+		end, numerical)
+
+		Current.Input = new.TextInput
+
+		return new
+	end,
+
+	Show = function(self)
+		Current.Window = self
+		return self
+	end,
+
+	Close = function(self)
+		Current.Window = nil
+		Current.Input = nil
+		self = nil
+	end,
+
+	Flash = function(self)
+		self.Visible = false
+		Draw()
+		sleep(0.15)
+		self.Visible = true
+		Draw()
+		sleep(0.15)
+		self.Visible = false
+		Draw()
+		sleep(0.15)
+		self.Visible = true
+		Draw()
+	end,
+
+	Click = function(self, side, x, y)
+		local items = {self.OkButton, self.CancelButton}
+		local found = false
+		for i, v in ipairs(items) do
+			if CheckClick(v, x, y) then
+				v:Click(side, x, y)
+				found = true
+			end
+		end
+		return true
+	end
+}
+
+function DoVanillaClose()
+	term.setBackgroundColour(colours.black)
+	term.setTextColour(colours.white)
+	term.clear()
+	term.setCursorPos(1, 1)
+	PrintCentered("Thanks for using Sketch!", (Drawing.Screen.Height/2)-1)
+	term.setTextColour(colours.lightGrey)
+	PrintCentered("Photoshop Inspired Image Editor for ComputerCraft", (Drawing.Screen.Height/2))
+	term.setTextColour(colours.white)
+	PrintCentered("(c) oeed 2013 - 2014", (Drawing.Screen.Height/2)+3)
+	term.setCursorPos(1, Drawing.Screen.Height)
+	error('', 0)
+end
+
+function Close()
+	if isQuitting or not Current.Document or not Current.Modified then
+		if not OneOS then
+			DoVanillaClose()
+		end
+		return true
+	else
+		local _w = ButtonDialougeWindow:Initialise('Quit Ink?', 'You have unsaved changes, do you want to quit anyway?', 'Quit', 'Cancel', function(window, success)
+			if success then
+				if OneOS then
+					OneOS.Close(true)
+				else
+					DoVanillaClose()
+				end
+			end
+			window:Close()
+			Draw()
+		end):Show()
+		--it's hacky but it works
+		os.queueEvent('mouse_click', 1, _w.X, _w.Y)
+		return false
+	end
+end
+
+if OneOS then
+	OneOS.CanClose = function()
+		return Close()
+	end
+end
+
+Initialise()

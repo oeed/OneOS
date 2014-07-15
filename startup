@@ -11,23 +11,12 @@ term.clear()
 --local _, err = pcall(function()
 
 
-if fs.exists('/System/OneOS.log') then
-	fs.delete('/System/OneOS.log')
-end
 
-local h = fs.open('/System/OneOS.log', 'w')
-h.write('-- OneOS Log --\n')
-h.close()
-
-function l(...)
-	local h = fs.open('/System/OneOS.log', 'a')
-	h.write('['..os.clock()..'] '..tostring(...)..'\n')
-	h.close()
-end
-l('Starting OneOS')
 
 local function log(...)
-	l(...)
+	if Log then
+		Log.i(...)
+	end
 	if isDebug then
 		print(...)
 	end
@@ -130,6 +119,12 @@ function PrintCentered(text, y)
     term.setCursorPos(x, y)
     write(text)
 end
+
+LoadAPI('System/API/Log.lua')
+Log.Initialise()
+Log.i('Starting OneOS')
+Log.i(os.version())
+Log.i('Free space: '..fs.getFreeSpace('/'))
 
 LoadAPI('System/API/Settings.lua')
 LoadAPI('System/API/Object.lua')
@@ -418,7 +413,7 @@ function IsSystemModified()
 			return false
 		end		
 	end
-	log('System is modified.')
+	log('System is modified, not submitting report.')
 	return true
 end
 

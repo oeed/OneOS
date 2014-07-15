@@ -6,7 +6,7 @@ Running = true
 Hidden = false
 local _args = {}
 Initialise = function(self, shell, path, title, args)
-	l('Starting program: '..title..' ('..path..')')
+	Log.i('Starting program: '..title..' ('..path..')')
 	local new = {}    -- the new instance
 	setmetatable( new, {__index = self} )
 	_args = args
@@ -170,7 +170,7 @@ end
 
 Close = function(self, force)
 	if force or not self.Environment.OneOS.CanClose or self.Environment.OneOS.CanClose() ~= false then
-		l('Closing program: '..self.Title)
+		Log.i('Closing program: '..self.Title)
 		if self == Current.Program then
 			Current.Program = nil
 		end
@@ -184,7 +184,7 @@ Close = function(self, force)
 		Current.ProgramView:ForceDraw()
 		return true
 	else
-		l('Closing program aborted: '..self.Title)
+		Log.i('Closing program aborted: '..self.Title)
 		return false
 	end
 end

@@ -12,7 +12,7 @@ OnUpdate = function(self, value)
 end
 
 OnDraw = function(self, x, y)
-	local barHeight = self.MaxScroll / self.Height
+	local barHeight = self.Height * (self.Height / (self.Height + self.MaxScroll))
     if barHeight < 3 then
       barHeight = 3
     end
@@ -43,10 +43,26 @@ OnScroll = function(self, event, direction, x, y)
 end
 
 OnClick = function(self, event, side, x, y)
-	local percentage = (self.Scroll/self.MaxScroll)
-	local barHeight = self.MaxScroll / self.Height
-	if barHeight < 3 then
-		barHeight = 3
+	if event == 'mouse_click' then
+		self.ClickPoint = y
+	else
+		local gapHeight = self.Height - (self.Height * (self.Height / (self.Height + self.MaxScroll)))
+	local barHeight = self.Height * (self.Height / (self.Height + self.MaxScroll))
+		--local delta = (self.Height + self.MaxScroll) * ((y - self.ClickPoint) / barHeight)
+		local delta = ((y - self.ClickPoint)/gapHeight)*self.MaxScroll
+		l(((y - self.ClickPoint)/gapHeight))
+		l(delta)
+		self.Scroll = delta
+		l(self.Scroll)
+		l('----')
+		if self.Scroll < 0 then
+			self.Scroll = 0
+		elseif self.Scroll > self.MaxScroll then
+			self.Scroll = self.MaxScroll
+		end
+		if self.OnChange then
+			self:OnChange()
+		end
 	end
 
 	local relScroll = self.MaxScroll * ((y-1)/self.Height)
@@ -55,9 +71,7 @@ OnClick = function(self, event, side, x, y)
 	end
 	self.Scroll = self.Bedrock.Helpers.Round(relScroll)
 
-	if self.OnChange then
-		self:OnChange()
-	end
+
 end
 
 OnDrag = OnClick
@@ -98,3 +112,43 @@ OnDrag = OnClick
 		return true
 	end
 ]]--
+
+--[[
+OnClick = function(self, event, side, x, y)
+	local percentage = (self.Scroll/self.MaxScroll)
+	local barHeight = self.Height * (self.Height / (self.Height + self.MaxScroll))
+	if barHeight < 3 then
+		barHeight = 3
+	end
+
+	local relScroll = self.MaxScroll * ((y-1)/self.Height)
+	if y == self.Height then
+		relScroll = self.MaxScroll
+	end
+	self.Scroll = self.Bedrock.Helpers.Round(relScroll)
+
+	if self.OnChange then
+		self:OnChange()
+	end
+end
+]]--
+
+
+
+--[[
+
+
+h = 15
+c = 20
+m = 5
+b = 11.25 = 15 * (15/20)‎
+
+cp = 5 - 33%
+y = 10 - 66%
+6.6
+
+5/15 
+]]--
+
+
+
