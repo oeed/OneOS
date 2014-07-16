@@ -123,11 +123,18 @@ function FileClick(item, event, side, x, y)
 
 			program:GetObject('CopyMenuItem').OnClick = function(_item)
 				--TODO: clipboard
-				Current.Clipboard.Copy(item.Path, 'filepath')
+				OneOS.Clipboard.Copy(item.Path, 'filepath')
 			end
 
 			program:GetObject('CutMenuItem').OnClick = function(_item)
-				Current.Clipboard.Cut(item.Path, 'filepath')
+				OneOS.Clipboard.Cut(item.Path, 'filepath')
+			end
+
+			if OneOS.Clipboard.Content and OneOS.Clipboard.Type == 'filepath' then
+				program:GetObject('PasteMenuItem').Enabled = true
+				program:GetObject('PasteMenuItem').OnClick = function(btn, event, side, x, y)
+					PasteFile()
+				end
 			end
 
 			program:GetObject('NewFolderMenuItem').OnClick = function(_item)
@@ -151,6 +158,45 @@ function FileClick(item, event, side, x, y)
 				program:RemoveObject('OpenWithMenuItem')
 			end
 		end
+	end
+end
+
+function NoFileClick(self, event, side, x, y)
+	if self:ToggleMenu('nofilemenu', x, y) then
+		if OneOS.Clipboard.Content and OneOS.Clipboard.Type == 'filepath' then
+			program:GetObject('PasteMenuItem').Enabled = true
+			program:GetObject('PasteMenuItem').OnClick = function(btn, event, side, x, y)
+				PasteFile()
+			end
+		end
+
+		program:GetObject('NewFolderMenuItem').OnClick = function(_item)
+			OneOS.Helpers.NewFolder(OneOS.Helpers.ParentFolder(item.Path)..'/', RefreshFiles, program)
+		end
+
+		program:GetObject('NewFileMenuItem').OnClick = function(_item)
+			OneOS.Helpers.NewFile(OneOS.Helpers.ParentFolder(item.Path)..'/', RefreshFiles, program)
+		end
+			
+	end
+end
+
+function PasteFile()				
+	local destName = OneOS.FS.getName(OneOS.Clipboard.Content)
+	local copyNumber = 1
+	while OneOS.FS.exists(Current.Path..'/'..destName) do
+		destName = program.Helpers.RemoveExtension(OneOS.FS.getName(OneOS.Clipboard.Content)).. ' ' .. copyNumber .. program.Helpers.Extension(OneOS.FS.getName(OneOS.Clipboard.Content), true)
+		copyNumber = copyNumber + 1
+	end
+	local destPath = program.Helpers.TidyPath(Current.Path..'/'..destName)
+
+	if not OneOS.Clipboard.IsCut then
+		OneOS.FS.copy(OneOS.Clipboard.Content, destPath)
+		RefreshFiles()
+	elseif OneOS.Clipboard.IsCut then
+		local content = OneOS.Clipboard.Paste()
+		OneOS.FS.move(content, destPath)
+		RefreshFiles()
 	end
 end
 
@@ -248,6 +294,9 @@ program:Run(function()
 	program:GetObject('OptionsButton').OnClick = OptionsButtonClick
 	program:GetObject('Sidebar').OnChildClick = SidebarClick
 
+	program:GetObject('FilesListView').OnClick = NoFileClick
+	program:GetObject('FilesCollectionView').OnClick = NoFileClick
+
 	program:GetObject('BackButton').OnClick = function(self)
 		if Current.History[Current.HistoryItem-1] then
 			table.insert(Current.History, Current.Path)
@@ -257,7 +306,9 @@ program:Run(function()
 	end
 
 	program:GetObject('GoUpButton').OnClick = function(self)
-		GoToPath(OneOS.Helpers.ParentFolder(Current.Path))
+		if Current.Path:sub(1,12) ~= '/Peripheral/' then
+			GoToPath(OneOS.Helpers.ParentFolder(Current.Path))
+		end
 	end
 
 	program:GetObject('ForwardButton').OnClick = function(self)

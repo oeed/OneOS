@@ -1,0 +1,25 @@
+{
+  ["Type"]="Menu",
+  ["Children"]={
+    [1]={
+      ["Name"]="PasteMenuItem",
+      ["Type"]="Button",
+      ["Text"]="Paste",
+      ["Enabled"]=false
+    },
+    [2]={
+      ["Name"]="Separator",
+      ["Type"]="Separator"
+    },
+    [3]={
+      ["Name"]="NewFolderMenuItem",
+      ["Type"]="Button",
+      ["Text"]="New Folder..."
+    },
+    [4]={
+      ["Name"]="NewFileMenuItem",
+      ["Type"]="Button",
+      ["Text"]="New File..."
+    },
+  },
+}

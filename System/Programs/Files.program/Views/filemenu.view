@@ -69,15 +69,21 @@
       ["Text"]="Cut"
     },
     [15]={
+      ["Name"]="PasteMenuItem",
+      ["Type"]="Button",
+      ["Text"]="Paste",
+      ["Enabled"]=false
+    },
+    [16]={
       ["Name"]="Separator",
       ["Type"]="Separator"
     },
-    [16]={
+    [17]={
       ["Name"]="NewFolderMenuItem",
       ["Type"]="Button",
       ["Text"]="New Folder..."
     },
-    [17]={
+    [18]={
       ["Name"]="NewFileMenuItem",
       ["Type"]="Button",
       ["Text"]="New File..."
