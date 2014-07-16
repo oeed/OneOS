@@ -56,6 +56,8 @@ bedrock.EventHandler = function(self)
 		for i, e in ipairs(self.EventHandlers[event[1]]) do
 			e(self, unpack(event))
 		end
+	else
+		Current.Program:QueueEvent(unpack(event))
 	end
 end
 

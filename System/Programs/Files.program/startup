@@ -1,6 +1,7 @@
 tArgs = {...}
 
 OneOS.LoadAPI('/System/API/Bedrock.lua', false)
+OneOS.LoadAPI('/System/API/Peripheral.lua')
 
 local program = Bedrock:Initialise()
 
@@ -40,6 +41,18 @@ function OptionsButtonClick(self, event, side, x, y)
 
 		if Settings.ShowHidden then
 			program:GetObject('HiddenFilesMenuItem').Text = 'Hide Hidden Files'
+		end
+
+		program:GetObject('ViewModeMenuItem').Click = function()
+			Settings.ListMode = not Settings.ListMode
+			RefreshFiles()
+			WriteSettings()
+		end
+
+		program:GetObject('HiddenFilesMenuItem').Click = function()
+			Settings.ShowHidden = not Settings.ShowHidden
+			RefreshFiles()
+			WriteSettings()
 		end
 	end
 end
@@ -141,30 +154,57 @@ function FileClick(item, event, side, x, y)
 	end
 end
 
-
 function RefreshFiles()
 	diskOpenButton = nil
-	if Settings.ListMode then
-		program:GetObject('FilesListView').Items = {}
+	if Current.Path:sub(1,12) == '/Peripheral/' and peripheral.isPresent(Current.Path:sub(13)) then
+		program:GetObject('FilesPeripheralView').Side = nil
+		program:GetObject('FilesPeripheralView').Side = Current.Path:sub(13)
+		program:GetObject('FilesPeripheralView').Visible = true
+		program:GetObject('FilesListView').Visible = false
+		program:GetObject('FilesCollectionView').Visible = false
 	else
-		program:GetObject('FilesCollectionView').Items = {}
-	end
+		if Current.Path:sub(1,12) == '/Peripheral/' then
+			GoToPath('/Desktop/')
+			return
+		end
+		if Settings.ListMode then
+			program:GetObject('FilesListView').Items = {}
+			program:GetObject('FilesListView').Visible = true
+			program:GetObject('FilesCollectionView').Visible = false
+			program:GetObject('FilesPeripheralView').Visible = false
+		else
+			program:GetObject('FilesCollectionView').Items = {}
+			program:GetObject('FilesCollectionView').Visible = true
+			program:GetObject('FilesListView').Visible = false
+			program:GetObject('FilesPeripheralView').Visible = false
+		end
 
-	for i, v in ipairs(OneOS.FS.list(Current.Path)) do
-		if Settings.ShowHidden or string.sub( v, 1, 1 ) ~= '.' then
-			local path = OneOS.Helpers.TidyPath(Current.Path .. '/' .. v)
-			if path == '/rom/' then
-				break
-			end
+		for i, v in ipairs(OneOS.FS.list(Current.Path)) do
+			if Settings.ShowHidden or string.sub( v, 1, 1 ) ~= '.' then
+				local path = OneOS.Helpers.TidyPath(Current.Path .. '/' .. v)
+				if path == '/rom/' then
+					break
+				end
 
-			if Settings.ListMode then
-				table.insert(program:GetObject('FilesListView').Items, {["Text"] = OneOS.FS.getName(path), ["Path"] = path, ["TextColour"] = OneOS.Helpers.IsDirectory(path) and colours.grey or colours.black, OnClick = FileClick})
-			else
-				table.insert(program:GetObject('FilesCollectionView').Items, {["Type"] = 'FileView', ["Path"] = path, OnClick = FileClick, ["Height"]=FileView.Height, ["Width"]=FileView.Width})
+				if Settings.ListMode then
+					table.insert(program:GetObject('FilesListView').Items, {["Text"] = OneOS.FS.getName(path), ["Path"] = path, ["TextColour"] = OneOS.Helpers.IsDirectory(path) and colours.grey or colours.black, OnClick = FileClick})
+				else
+					table.insert(program:GetObject('FilesCollectionView').Items, {["Type"] = 'FileView', ["Path"] = path, OnClick = FileClick, ["Height"]=FileView.Height, ["Width"]=FileView.Width})
+				end
 			end
 		end
 	end
 	--Current.SidebarList.Peripherals = Peripheral.GetPeripherals()
+end
+
+function RefreshPeripherals(self, event)
+	local items = {}
+	for i, p in ipairs(Peripheral.GetPeripherals()) do
+        table.insert(items, {["Text"] = p.Name, ["Path"] = '/Peripheral/'..p.Side})
+	end
+	program:GetObject('Sidebar').Items.Peripherals = items
+	program:GetObject('Sidebar'):UpdateItems()
+	RefreshFiles()
 end
 
 function GoToPath(path, history)
@@ -196,6 +236,11 @@ function GoToPath(path, history)
 	RefreshFiles()
 end
 
+program:RegisterEvent('disk', RefreshPeripherals)
+program:RegisterEvent('disk_eject', RefreshPeripherals)
+program:RegisterEvent('peripheral', RefreshPeripherals)
+program:RegisterEvent('peripheral_detach', RefreshPeripherals)
+
 program:Run(function()
 	program:LoadView('main')
 	ReadSettings()
@@ -221,5 +266,7 @@ program:Run(function()
 			GoToPath(Current.History[Current.HistoryItem], true)
 		end
 	end
+
+	RefreshPeripherals()
 end)
 

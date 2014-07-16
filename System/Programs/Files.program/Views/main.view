@@ -54,6 +54,28 @@
       ["BackgroundColour"]=-1,
       ["Items"]={}
     },
+    [6]={
+      ["Y"]=5,
+      ["X"]=13,
+      ["Height"]="100%,-4",
+      ["Width"]="100%,-12",
+      ["Name"]="FilesListView",
+      ["Type"]="ListView",
+      ["TextColour"]=128,
+      ["BackgroundColour"]=-1,
+      ["Items"]={}
+    },
+    [7]={
+      ["Y"]=5,
+      ["X"]=13,
+      ["Height"]="100%,-4",
+      ["Width"]="100%,-12",
+      ["Name"]="FilesPeripheralView",
+      ["Type"]="PeripheralView",
+      ["TextColour"]=128,
+      ["BackgroundColour"]=-1,
+      ["Items"]={}
+    },
   },
   ["BackgroundColour"]=1,
   ["ToolBarColour"]=256,

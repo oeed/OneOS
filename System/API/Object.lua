@@ -59,7 +59,8 @@ Draw = function(self)
 		return
 	end
 
-	if self:NeedsDraw() then
+	--TODO: looks like caching actually just slows everything down
+	if true then -- self:NeedsDraw() then
 		self.DrawCache.NeedsDraw = false
 		local pos = self:GetPosition()
 		Drawing.StartCopyBuffer()
@@ -135,10 +136,10 @@ Initialise = function(self, values)
 
 		__newindex = function (t,k,v)
 			if v ~= _new[k] then
+				_new[k] = v
 				if t.OnUpdate then
 					t:OnUpdate(k)
 				end
-				_new[k] = v
 
 				if t.UpdateDrawBlacklist[k] == nil then
 					t:ForceDraw()
