@@ -1,6 +1,15 @@
 {
   ["Children"]={
     [1]={
+      ["Name"]="ClickCatcherView",
+      ["Type"]="View",
+      ["X"]=1,
+      ["Y"]=1,
+      ["Width"]="100%",
+      ["Height"]="100%",
+      ["BackgroundColour"]=-1,
+    },
+    [2]={
       ["Y"]=2,
       ["X"]=1,
       ["Width"]="100%",
@@ -9,10 +18,19 @@
       ["Type"]="ProgramView",
       ["Active"]=true
     },
-    [2]={
+    [3]={
       ["Name"]="Overlay",
       ["Type"]="Overlay",
       ["InheritView"]="overlay"
-    }
-  }
+    },
+    [4]={
+      ["Name"]="SearchView",
+      ["Type"]="SearchView",
+      ["X"]="100%,1",
+      ["Y"]=1,
+      ["Width"]=20,
+      ["Height"]="100%"
+    },
+  },
+  ["ChildOffset"] = {["X"] = 0, ["Y"] = 0}
 }

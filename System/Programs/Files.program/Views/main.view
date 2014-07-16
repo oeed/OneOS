@@ -24,6 +24,7 @@
       ["Type"]="ListView",
       ["TextColour"]=128,
       ["BackgroundColour"]=-1,
+      ["TopMargin"]=1,
       ["Items"]={
         ["Places"]={
           {["Text"] = 'Desktop', ["Path"] = '/Desktop/'},

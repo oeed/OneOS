@@ -15,7 +15,8 @@ Current = {
 	Programs = {},
 	Program = nil,
 	Desktop = nil,
-	Bedrock = bedrock
+	Bedrock = bedrock,
+	SearchActive = true
 }
 
 function UpdateOverlay()
@@ -144,10 +145,19 @@ function Initialise()
 	bedrock:Run(function()
 		Log.i('Reached GUI')
 		bedrock:LoadView('main', false)
-		Log.i('GUI Loaded')		
+		bedrock.View.ChildOffset = {X = 0, Y = 0}
+		Log.i('GUI Loaded')
+
 		Current.ProgramView = bedrock:GetObject('ProgramView')
 		Current.Overlay = bedrock:GetObject('Overlay')
 		Indexer.RefreshIndex() --TODO: finish the search. this needs to be done before starting the desktop
+
+		bedrock:GetObject('ClickCatcherView').OnClick = function()
+			if Current.SearchActive then
+				Search.Close()
+			end
+		end
+
 		Current.Desktop = Helpers.OpenFile('System/Programs/Desktop.program', {isHidden = true})
 
 		if Settings:GetValues()['StartupProgram'] then
@@ -159,7 +169,9 @@ function Initialise()
 		--Helpers.OpenFile('System/Programs/Files.program')
 		--Helpers.OpenFile('Programs/Games/Gold Runner.program')
 		--Helpers.OpenFile('Programs/Shell.program')
-		Helpers.OpenFile('Programs/Transmit.program')--, {'r'})
+		--Helpers.OpenFile('Programs/Transmit.program')--, {'r'})
 		UpdateOverlay()
+		Search.bedrock = bedrock
+		Search.Open()
 	end)
 end

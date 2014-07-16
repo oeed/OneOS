@@ -1,6 +1,6 @@
 BackgroundColour = colours.lightGrey
 TextColour = colours.black
-PlaceholderTextColour = colours.lightGrey
+PlaceholderTextColour = colours.grey
 Placeholder = ''
 AutoWidth = false
 Text = ""
@@ -60,14 +60,14 @@ OnKeyChar = function(self, event, keychar)
 		end
 		
 		self.CursorPos = self.CursorPos + 1
-		if self.OnUpdate then
-			self:OnUpdate(keychar)
+		if self.OnChange then
+			self:OnChange(event, keychar)
 		end
 		return false
 	elseif event == 'key' then
 		if keychar == keys.enter then
-			if self.OnUpdate then
-				self:OnUpdate(keychar)
+			if self.OnChange then
+				self:OnChange(event, keychar)
 			end
 		elseif keychar == keys.left then
 			--[[
@@ -76,8 +76,8 @@ TODO: behaves odly when the text is too long and arrow keys are pushed
 			-- Left
 			if self.CursorPos > 0 then
 				self.CursorPos = self.CursorPos - 1
-				if self.OnUpdate then
-					self:OnUpdate(keychar)
+				if self.OnChange then
+					self:OnChange(event, keychar)
 				end
 			end
 			
@@ -85,8 +85,8 @@ TODO: behaves odly when the text is too long and arrow keys are pushed
 			-- Right				
 			if self.CursorPos < string.len(self.Text) then
 				self.CursorPos = self.CursorPos + 1
-				if self.OnUpdate then
-					self:OnUpdate(keychar)
+				if self.OnChange then
+					self:OnChange(event, keychar)
 				end
 			end
 		
@@ -101,15 +101,15 @@ TODO: behaves odly when the text is too long and arrow keys are pushed
 						self.Text = '1'
 					end
 				end
-				if self.OnUpdate then
-					self:OnUpdate(keychar)
+				if self.OnChange then
+					self:OnChange(event, keychar)
 				end
 			end
 		elseif keychar == keys.home then
 			-- Home
 			self.CursorPos = 0
-			if self.OnUpdate then
-				self:OnUpdate(keychar)
+			if self.OnChange then
+				self:OnChange(event, keychar)
 			end
 		elseif keychar == keys.delete then
 			if self.CursorPos < string.len(self.Text) then
@@ -120,17 +120,18 @@ TODO: behaves odly when the text is too long and arrow keys are pushed
 						self.Text = '1'
 					end
 				end
-				if self.OnUpdate then
-					self:OnUpdate(keychar)
+				if self.OnChange then
+					self:OnChange(keychar)
 				end
 			end
 		elseif keychar == keys["end"] then
 			-- End
 			self.CursorPos = string.len(self.Text)
-			if self.OnUpdate then
-				self:OnUpdate(keychar)
+		else
+			if self.OnChange then
+				self:OnChange(event, keychar)
 			end
+			return false
 		end
-		return false
 	end
 end

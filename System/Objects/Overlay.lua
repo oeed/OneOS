@@ -37,7 +37,7 @@ OnLoad = function(self)
 
 	self:GetObject('SearchButton').OnClick = function(btn, event, side, x, y, toggle)
 		if toggle then
-			Search.Activate()
+			Search.Open()
 		end
 	end
 

@@ -174,3 +174,9 @@ end
 ToggleMenu = function(self, name, x, y)
 	return self.Bedrock:ToggleMenu(name, self, x, y)
 end
+
+function OnUpdate(self, value)
+	if value == 'Z' then
+		self.Bedrock:ReorderObjects()
+	end
+end
