@@ -39,9 +39,9 @@ OnDraw = function(self, x, y)
 	for i, v in ipairs(wrapText(self.Text, self.Width)) do
         local _x = 0
         if self.Align == 'Right' then
-            _x = self.Width - #self.Text
+            _x = self.Width - #v
         elseif self.Align == 'Center' then
-            _x = math.floor((self.Width - #self.Text) / 2)
+            _x = math.floor((self.Width - #v) / 2)
         end
 		Drawing.DrawCharacters(x + _x, y + i - 1, v, self.TextColour, self.BackgroundColour)
 	end

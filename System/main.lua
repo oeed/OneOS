@@ -156,10 +156,10 @@ function Initialise()
 		end
 
 		sleep(0)
-		Helpers.OpenFile('System/Programs/Files.program')
+		--Helpers.OpenFile('System/Programs/Files.program')
 		--Helpers.OpenFile('Programs/Games/Gold Runner.program')
 		--Helpers.OpenFile('Programs/Shell.program')
-		--Helpers.OpenFile('Programs/Test2.program')
+		Helpers.OpenFile('Programs/Transmit.program')--, {'r'})
 		UpdateOverlay()
 	end)
 end

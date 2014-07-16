@@ -1,0 +1,43 @@
+{
+  ["Children"]={
+    [1]={
+      ["Y"]=1,
+      ["X"]=1,
+      ["Name"]="DiscoverView",
+      ["Type"]="DiscoverView",
+      ["Width"]="100%",
+      ["Height"]="100%"
+    },
+    [2]={
+      ["Y"]="100%,-2",
+      ["X"]=1,
+      ["Name"]="HelpLabel",
+      ["Width"]="100%",
+      ["Height"]=2,
+      ["Type"]="Label",
+      ["Align"]="Center",
+      ["TextColour"]=128,
+      ["Text"]="Open Transmit on another computer then select it."
+    },
+    [3]={
+      ["Y"]="100%",
+      ["X"]=1,
+      ["Name"]="ComputerLabel",
+      ["Width"]="100%",
+      ["Type"]="Label",
+      ["Align"]="Center",
+      ["TextColour"]=256,
+      ["Text"]=""
+    },
+    [4]={
+      ["Y"]="100%,-8",
+      ["X"]="50%,-5",
+      ["Name"]="StatusImageView",
+      ["Type"]="ImageView",
+      ["Width"]=10,
+      ["Height"]=5,
+      ["Path"]='/Images/anm1'
+    },
+  },
+  ["BackgroundColour"]=1
+}

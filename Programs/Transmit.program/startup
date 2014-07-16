@@ -1,50 +1,156 @@
-tArgs = {...}
-
-OneOS.LoadAPI('/System/API/Drawing.lua', true)
-OneOS.LoadAPI('/System/API/Button.lua', true)
-OneOS.LoadAPI('/System/API/Helpers.lua', true)
+OneOS.LoadAPI('/System/API/Bedrock.lua', false)
 OneOS.LoadAPI('/System/API/Peripheral.lua', true)
 OneOS.LoadAPI('/System/API/Wireless.lua', true)
-OneOS.LoadAPI('/System/API/ButtonDialogueWindow.lua', true)
 
+tArgs = {...}
 
-Current = {
-	Clicks = {},
-	Image = 'disabled',
-	Status = 0,
-	DiscoverdComputers = {},
-	Destination = {},
-	RecievingFile = {}
-}
+local program = Bedrock:Initialise()
+local animate = false
 
-local savedFile = nil
-
-Events = {
-	
-}
-
-InterfaceElements = {
-	
-}
-
-local imageCache = {}
-
-function Initialise()
-	EventRegister('mouse_click', TryClick)
-	EventRegister('mouse_drag', TryClick)
-	EventRegister('monitor_touch', TryClick)
-	EventRegister('mouse_scroll', Scroll)
-	EventRegister('key', HandleKey)
-	EventRegister('char', HandleKey)
-	EventRegister('timer', Update)
-	EventRegister('modem_message', function(...)Wireless.HandleMessage(...) end)
-
-	for i, file in ipairs(fs.list('/images/')) do
-		imageCache[Helpers.RemoveExtension(file)] = Drawing.LoadImage('/Programs/Transmit.program/images/'..file)
+function SetStatus(label1, label2, image, yesFunc, noFunc)
+	label2 = label2 or ''
+	if not program.View or program.View.Name ~= 'message' then
+		program:LoadView('message')
+	end
+	program:GetObject('StatusLabel').Text = label1
+	program:GetObject('StatusLabel').TextColour = colours.black
+	program:GetObject('SecondaryStatusLabel').Text = label2
+	program:GetObject('SecondaryStatusLabel').TextColour = colours.lightGrey
+	animate = false
+	if image then
+		if image == 'anm' then
+			animate = true
+			UpdateAnimation()
+		else
+			program:GetObject('StatusImageView').Path = 'Images/'..image
+		end
+	else
+		program:GetObject('StatusImageView').Visible = false
 	end
 
+	if yesFunc and noFunc then
+		program:GetObject('YesButton').Visible = true
+		program:GetObject('YesButton').OnClick = yesFunc
+		program:GetObject('NoButton').Visible = true
+		program:GetObject('NoButton').OnClick = noFunc
+	else
+		program:GetObject('YesButton').Visible = false
+		program:GetObject('NoButton').Visible = false
+	end
+end
+
+function UpdateStatus(id, replyChannel, message, savedFile)
+	if id == 0 then
+		SetStatus('No Wireless Modem', 'Attach a wireless modem and reopen Transmit', 'disabled')
+	elseif id == 1 then
+		SetStatus('Waiting For File', 'Waiting for another computer to send a file', 'anm')
+	elseif id == 2 then
+		SetStatus('Waiting For Reciever To Accept', 'The reciever needs to accept the file', 'anm')
+	elseif id == 3 then
+		if savedFile then
+			SetStatus('Complete!', 'The file was saved to: '..savedFile, 'anm4')
+		else
+			SetStatus('Complete!', 'The file transfer completed successfully', 'anm4')
+		end
+	elseif id == 4 then
+		SetStatus('Rejected', 'The reciever did not accept the file', 'anm4')
+	elseif id == 5 then
+		SetStatus('Accept File?', message.content.senderName..' would like to send you the file "'..message.content.fileName..'" Do you want to accept it?', 'anm1', function()
+			Wireless.SendMessage(replyChannel, {accept = true}, nil, message.messageID, message.senderID)
+		end, function()
+			Wireless.SendMessage(replyChannel, {accept = false}, nil, message.messageID, message.senderID)
+			UpdateStatus(1)
+		end)
+	elseif id == 6 then
+		SetStatus('Waiting For File', 'Waiting for another computer to send a file', 'anm')
+	end
+end
+
+function UpdateAnimation()
+	if animate then
+		local path = program:GetObject('StatusImageView').Path
+		if path == 'Images/anm0' then
+			program:GetObject('StatusImageView').Path = 'Images/'..'anm1'
+		elseif path == 'Images/anm1' then
+			program:GetObject('StatusImageView').Path = 'Images/'..'anm2'
+		elseif path == 'Images/anm2' then
+			program:GetObject('StatusImageView').Path = 'Images/'..'anm3'
+		else
+			program:GetObject('StatusImageView').Path = 'Images/'..'anm0'
+		end
+	end
+	program:Draw()
+end
+
+function RecieveFile()
+	Wireless.Responder = function(event, side, channel, replyChannel, message, distance)
+		if channel == Wireless.Channels.TransmitDiscovery then
+			if replyChannel and message.content == 'Discover' then
+				Wireless.SendMessage(replyChannel, {id = os.getComputerID(), name = os.getComputerLabel()}, nil, message.messageID, message.senderID)
+			end
+		elseif channel == Wireless.Channels.TransmitRequest then
+			if replyChannel and message.content.senderName and message.content.fileName then
+				UpdateStatus(5, replyChannel, message)
+			end
+		elseif channel == Wireless.Channels.TransmitSend then
+			if replyChannel and message.content.fileName and message.content.data then
+				local h = OneOS.FS.open('/Desktop/Documents/'..message.content.fileName, 'w')
+				h.write(message.content.data)
+				h.close()
+				UpdateStatus(3, nil, nil, '/Desktop/Documents/'..message.content.fileName)
+			end
+		end
+	end
+end
+
+function DiscoverComputers()
+	Wireless.Responder = function(event, side, channel, replyChannel, message, distance)
+		if channel == Wireless.Channels.TransmitDiscoveryReply then
+			local computers = program:GetObject('DiscoverView').Computers
+			local duplicate = false
+			for i, v in ipairs(computers) do
+				if v.ID == message.content.id then
+					duplicate = true
+					break
+				end
+			end
+
+			if not duplicate then
+				table.insert(computers, {
+					ID = message.content.id,
+					Name = message.content.name
+				})
+			end
+			program:GetObject('DiscoverView').Computers = computers
+			program:GetObject('DiscoverView'):OnUpdate('Computers')
+		end
+	end
+end
+
+function SendToComputer(computer)
+	UpdateStatus(2)
+	program:Draw()
+	local h = OneOS.FS.open(tArgs[1], 'r')
+	local f = h.readAll()
+	h.close()
+
+	Wireless.Responder = nil
+	local _m = Wireless.SendMessage(Wireless.Channels.TransmitRequest, {senderName = os.getComputerLabel(), fileName = fs.getName(tArgs[1])}, Wireless.Channels.TransmitRequestReply, nil, computer.ID)
+	local event, side, channel, replyChannel, message = Wireless.RecieveMessage(Wireless.Channels.TransmitRequestReply, _m.messageID, 20)
+	if message and message.content and message.content.accept == true then
+		Wireless.SendMessage(Wireless.Channels.TransmitSend, {data = f, fileName = fs.getName(tArgs[1])}, Wireless.Channels.TransmitRequestReply, nil, computer.ID)
+		UpdateStatus(3)
+	else
+		UpdateStatus(2)
+	end
+end
+
+program:RegisterEvent('modem_message', function(self, ...)l('well well well')Wireless.HandleMessage(...) end)
+
+program:Run(function()
+
 	if not Wireless.Present() then
-		Current.Status = 0
+		UpdateStatus(0)
 	else
 		Wireless.Initialise()
 		local channels = {
@@ -57,321 +163,28 @@ function Initialise()
 		for i, v in ipairs(channels) do
 			Wireless.Open(v)
 		end
+
+		if not os.getComputerLabel() then
+			os.setComputerLabel('OneOS Computer')
+		end
+
 		if tArgs[1] then
-			Current.Status = 1
+			program:LoadView('discover')
+			program:GetObject('DiscoverView').Computers = {}
+			program:StartRepeatingTimer(function()Wireless.SendMessage(Wireless.Channels.TransmitDiscovery, 'Discover')end, 1)
 		else
-			Current.Status = 2
+			UpdateStatus(1)
 		end
-	end
+		program:GetObject('ComputerLabel').Text = 'This computer is: '..os.getComputerLabel()
+		program:StartRepeatingTimer(UpdateAnimation, 0.25)
+		program:Draw()
 
-	if not os.getComputerLabel() then
-		os.setComputerLabel('OneOS Computer')
-	end
-
-	Update()
-	if Current.Status == 2 then
-		parallel.waitForAll(RecieveFile, EventHandler)
-	elseif Current.Status == 1 then
-		parallel.waitForAll(DiscoverComputers, EventHandler)
-	else
-		EventHandler()
-	end
-end
-
-function UpdateImage()
-	if Current.Status == 0 then
-		Current.Image = 'disabled'
-	elseif Current.Status == 1 or Current.Status == 2 or Current.Status == 3 then
-		if Current.Image == 'anm0' then
-			Current.Image = 'anm1'
-		elseif Current.Image == 'anm1' then
-			Current.Image = 'anm2'
-		elseif Current.Image == 'anm2' then
-			Current.Image = 'anm3'
+		if program.View.Name == 'discover' then
+			DiscoverComputers()
 		else
-			Current.Image = 'anm0'
+			RecieveFile()
 		end
-	elseif Current.Status == 4 then
-		Current.Image = 'anm3'
-	elseif Current.Status == 5 or Current.Status == 6 then
-		Current.Image = nil
+
+
 	end
-end
-
-function DiscoverComputers()
-	Wireless.Responder = function(event, side, channel, replyChannel, message, distance)
-		if channel == Wireless.Channels.TransmitDiscoveryReply then
-			local duplicate = false
-			for i, v in ipairs(Current.DiscoverdComputers) do
-				if v.ID == message.content.id then
-					duplicate = true
-					break
-				end
-			end
-
-			if not duplicate then
-				table.insert(Current.DiscoverdComputers, {
-					ID = message.content.id,
-					Name = message.content.name
-				})
-				Update()
-			end
-		end
-	end
-	while Current.Status == 1 do
-		Wireless.SendMessage(Wireless.Channels.TransmitDiscovery, 'Discover')
-		sleep(1)
-	end
-end
-
-function RecieveFile()
-	Wireless.Responder = function(event, side, channel, replyChannel, message, distance)
-		if channel == Wireless.Channels.TransmitDiscovery then
-			if replyChannel and message.content == 'Discover' then
-				Wireless.SendMessage(replyChannel, {id = os.getComputerID(), name = os.getComputerLabel()}, nil, message.messageID, message.senderID)
-			end
-		elseif channel == Wireless.Channels.TransmitRequest then
-			if replyChannel and message.content.senderName and message.content.fileName then
-				Current.NoButton = Button:Initialise(math.ceil(Drawing.Screen.Width/2)+5, math.ceil(Drawing.Screen.Height/2)+3, nil, nil, colours.lightGrey, nil, nil, nil, nil, function()
-					Wireless.SendMessage(replyChannel, {accept = false}, nil, message.messageID, message.senderID)
-					Current.Status = 2
-				end, 'No')
-				Current.YesButton = Button:Initialise(math.ceil(Drawing.Screen.Width/2)+10, math.ceil(Drawing.Screen.Height/2)+3, nil, nil, colours.lightGrey, nil, nil, nil, nil, function()
-					Wireless.SendMessage(replyChannel, {accept = true}, nil, message.messageID, message.senderID)
-				end, 'Yes')
-				Current.Status = 5
-				Current.RecievingFile = message.content
-				Update()
-			end
-		elseif channel == Wireless.Channels.TransmitSend then
-			if replyChannel and message.content.fileName and message.content.data then
-				local h = OneOS.FS.open('/Desktop/Documents/'..message.content.fileName, 'w')
-				h.write(message.content.data)
-				h.close()
-				savedFile = '/Desktop/Documents/'..message.content.fileName
-				Current.Status = 4
-				Update()
-				Wireless.Responder = nil
-			end
-		end
-	end
-end
-
-function SendToComputer(computer)
-	Current.Destination = computer
-
-	local h = OneOS.FS.open(tArgs[1], 'r')
-	local f = h.readAll()
-	h.close()
-
-	Wireless.Responder = nil
-	local _m = Wireless.SendMessage(Wireless.Channels.TransmitRequest, {senderName = os.getComputerLabel(), fileName = fs.getName(tArgs[1])}, Wireless.Channels.TransmitRequestReply, nil, computer.ID)
-	Current.Image = 'anm2'
-	Draw()
-	local event, side, channel, replyChannel, message = Wireless.RecieveMessage(Wireless.Channels.TransmitRequestReply, _m.messageID, 20)
-	if message.content.accept == true then
-		Wireless.SendMessage(Wireless.Channels.TransmitSend, {data = f, fileName = fs.getName(tArgs[1])}, Wireless.Channels.TransmitRequestReply, nil, computer.ID)
-		Current.Status = 4
-		Update()
-	else
-		Current.Status = 6
-		Update()		
-	end
-end
-
-function Update(e, timer)
-	if e == nil or timer == updateTimer then
-		Draw()
-		updateTimer = os.startTimer(0.5)
-	end
-end
-
-function DrawComputer(computer, angle, radius)
-	--sohcahtoa
-	local vertexX, vertexY = Drawing.Screen.Width/2, Drawing.Screen.Height - 2
-	width = (radius * math.sin(-angle/90)) * 1.5 -- to fix the pixel ratio
-	height = radius * math.cos(-angle/90)
-
-	local centerX = (Drawing.Screen.Width/2) - width
-	local centerY = vertexY - height
-	local name = Helpers.TruncateString(computer.Name,13)
-	Drawing.DrawImage(centerX-3, centerY-2, imageCache['computer'], 5, 4)
-
-	Drawing.DrawCharacters(math.floor(centerX - (#name / 2)), centerY+3, name, colours.black, colours.white)
-
-	RegisterClick(centerX-3, centerY-2, 5, 4, function() 
-		Current.Status = 3
-		Update()
-		SendToComputer(computer)
-	end)
-	RegisterClick(math.floor(centerX - (#name / 2)), centerY+3, #name, 1, function() 
-		Current.Status = 3
-		Update()
-		SendToComputer(computer)
-	end)
-end
-
-function DrawComputers()
-	--max of 4, with 75?? between them
-	while #Current.DiscoverdComputers > 4 do
-		table.remove(Current.DiscoverdComputers, #Current.DiscoverdComputers)
-	end
-
-	local max = #Current.DiscoverdComputers
-	local separationAngle = 75
-	for i, computer in ipairs(Current.DiscoverdComputers) do
-		local angle = 0
-		if max % 2 == 0 then
-			if max/2 == i then
-				angle = separationAngle/2
-			elseif max/2 == i - 1 then
-				angle = -separationAngle/2
-			else
-				angle = separationAngle * (i - max/2) - separationAngle/2
-			end
-		else
-			if math.ceil(max/2) == i then
-				angle = 0
-			else
-				angle = separationAngle * (i - math.ceil(max/2))
-			end
-		end
-		DrawComputer(computer, angle, 12)
-	end
-	Drawing.DrawCharactersCenter(1, math.ceil(Drawing.Screen.Height/2)-1, nil, nil, 'Open Transmit on a computer, then', colours.grey, colours.white)
-	Drawing.DrawCharactersCenter(1, math.ceil(Drawing.Screen.Height/2), nil, nil, 'select it to send the file.', colours.grey, colours.white)
-end
-
-function Draw()
-	UpdateImage()
-	Current.Clicks = {}
-	Drawing.Clear(colours.white)
-	local imgY = 0
-	if Current.Status ==  1 then
-		imgY = 1
-	end
-	if Current.Image then
-		Drawing.DrawImage((Drawing.Screen.Width-10)/2, Drawing.Screen.Height-5-imgY, imageCache[Current.Image], 10, 5)
-	end
-	if Current.Status == 0 then
-		Drawing.DrawCharactersCenter(nil, -2, nil, nil, 'Connect a Wireless Modem on any', colours.grey, colours.white)		
-		Drawing.DrawCharactersCenter(nil, -1, nil, nil, 'side to use Transmit', colours.grey, colours.white)		
-	else
-		if Current.Status ==  1 then
-			DrawComputers()
-		elseif Current.Status == 2 then
-			Drawing.DrawCharactersCenter(nil, -1, nil, nil, 'Waiting to be sent a file...', colours.grey, colours.white)
-		elseif Current.Status == 3 then
-			Drawing.DrawCharactersCenter(nil, -1, nil, nil, 'Waiting for reciever to accept...', colours.grey, colours.white)
-		elseif Current.Status == 4 then
-			Drawing.DrawCharactersCenter(nil, -4, nil, nil, 'File transfer complete!', colours.grey, colours.white)
-			if savedFile then
-				Drawing.DrawCharactersCenter(nil, -3, nil, nil, 'The file was saved to: ', colours.grey, colours.white)
-				Drawing.DrawCharactersCenter(nil, -1, nil, nil, savedFile, colours.black, colours.white)
-			end
-			Drawing.DrawCharactersCenter(nil, 1, nil, nil, 'Click anywhere to quit.', colours.grey, colours.white)
-		elseif Current.Status == 5 then
-			Drawing.DrawCharactersCenter(nil, -3, nil, nil, Current.RecievingFile.senderName..' would like to send you', colours.grey, colours.white)
-			Drawing.DrawCharactersCenter(nil, -2, nil, nil, 'the file: ' .. Current.RecievingFile.fileName, colours.grey, colours.white)
-			Drawing.DrawCharactersCenter(nil, 0, nil, nil, 'Do you accept?', colours.grey, colours.white)
-			Current.NoButton:Draw()
-			Current.YesButton:Draw()
-		elseif Current.Status == 6 then
-			Drawing.DrawCharactersCenter(nil, -1, nil, nil, 'The reciever rejected the file.', colours.grey, colours.white)
-		end
-		Drawing.DrawCharactersCenter(nil, -math.ceil(Drawing.Screen.Height/2) + 1, nil, nil, 'This computer is: '..os.getComputerLabel(), colours.grey, colours.white)
-	end
-	Drawing.DrawBuffer()
-end
-
-MainDraw = Draw
-function RegisterElement(elem)
-	table.insert(InterfaceElements, elem)
-end
-
-function UnregisterElement(elem)
-	for i, e in ipairs(InterfaceElements) do
-		if elem == e then
-			InterfaceElements[i] = nil
-		end
-	end
-end
-
-function RegisterClick(x, y, width, height, click)
-	if type(x) == 'table' then
-		table.insert(Current.Clicks, x)
-	else
-		table.insert(Current.Clicks,{
-			X = x,
-			Y = y,
-			Width = width,
-			Height = height,
-			Click = click
-		})
-	end
-end
-
-function CheckClick(object, x, y)
-	local pos = GetAbsolutePosition(object)
-	if pos.X <= x and pos.Y <= y and  pos.X + object.Width > x and pos.Y + object.Height > y then
-		return true
-	end
-end
-
-function DoClick(event, object, side, x, y)
-	if object and CheckClick(object, x, y) then
-		return object:Click(side, x - object.X + 1, y - object.Y + 1)
-	end	
-end
-
-function TryClick(event, side, x, y)
-	if Current.Status == 4 then
-		OneOS.Close()
-		return
-	end
-	for i, object in ipairs(Current.Clicks) do
-		if DoClick(event, object, side, x, y) then
-			Draw()
-			return
-		end		
-	end
-end
-
-function HandleKey(...)
-	local args = {...}
-	local event = args[1]
-	local keychar = args[2]
-	
-end
-
-function GetAbsolutePosition(obj)
-	if not obj.Parent then
-		return {X = obj.X, Y = obj.Y}
-	else
-		local pos = GetAbsolutePosition(obj.Parent)
-		local x = pos.X + obj.X - 1
-		local y = pos.Y + obj.Y - 1
-		return {X = x, Y = y}
-	end
-end
-
-function EventRegister(event, func)
-	if not Events[event] then
-		Events[event] = {}
-	end
-
-	table.insert(Events[event], func)
-end
-
-function EventHandler()
-	while true do
-		local event = { coroutine.yield() }
-		if Events[event[1]] then
-			for i, e in ipairs(Events[event[1]]) do
-				e(event[1], event[2], event[3], event[4], event[5])
-			end
-		end
-	end
-end
-
-Initialise()
+end)

@@ -9,3 +9,11 @@ OnLoad = function(self)
 		self.Image = Drawing.LoadImage(self.Path)
 	end
 end
+
+OnUpdate = function(self, value)
+	if value == 'Path' then
+		if self.Path and fs.exists(self.Path) then
+			self.Image = Drawing.LoadImage(self.Path)
+		end
+	end
+end
