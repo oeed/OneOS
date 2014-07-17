@@ -205,8 +205,8 @@ Drawing = {
   end,
 
   WriteStringToBuffer = function (x, y, characters, textColour,bgColour)
-    for i = 1, #characters do
-        local character = characters:sub(i,i)
+    for i = 1, #tostring(characters) do
+        local character = tostring(characters):sub(i,i)
         Drawing.WriteToBuffer(x + i - 1, y, character, textColour, bgColour)
     end
   end,
@@ -359,16 +359,13 @@ ListItem = {
 
     Drawing.DrawBlankArea(self.X+1, self.Y+1, self.Width, self.Height, colours.grey)
     Drawing.DrawBlankArea(self.X, self.Y, self.Width, self.Height, colours.white)
-    
     --Drawing.DrawBlankArea(self.X+1, self.Y+1, 6, 4, colours.green)
     Drawing.DrawCharacters(self.X + 8, self.Y + 1, self.Title, colours.black, colours.white)
     if self.Type ~= 2 then
       Drawing.DrawCharacters(self.X + 8, self.Y + 2, "by "..self.Author, colours.grey, colours.white)
       Drawing.DrawCharacters(self.Width - 8, self.Y + installPos - 1, " Install ", colours.white, colours.green)
     end
-
     Drawing.DrawImage(self.X+1, self.Y+1, self.Icon, 4, 3)
-    
 
     if self.Type == 1 then
       Drawing.DrawCharacters(self.X, self.Y + 6, "Category", colours.grey, colours.white)
@@ -1165,7 +1162,10 @@ if term.isColor and term.isColor() then
         print("Try repeating what you just did, if this is the second time you've seen this message go to")
         term.setTextColour(colours.black)
         print("http://ccappstore.com/help#crash/\n")
-        term.setTextColour(colours.white)    
+        term.setTextColour(colours.white)
+        if OneOS then
+          OneOS.Log.e(tostring(err))
+        end
         print("The error was:")
 
         term.setTextColour(colours.black)

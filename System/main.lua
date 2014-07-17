@@ -206,9 +206,9 @@ function Initialise()
 		end
 
 		--Helpers.OpenFile('System/Programs/Files.program')
-		Helpers.OpenFile('Programs/Games 2/Lasers.program')
+
 		-- Helpers.OpenFile('Programs/Test2.program')
-		--Helpers.OpenFile('Programs/Door Lock.program')
+		Helpers.OpenFile('Programs/App Store.program')
 		--Helpers.OpenFile('Programs/Transmit.program')--, {'r'})
 		UpdateOverlay()
 		--Search.Open()
