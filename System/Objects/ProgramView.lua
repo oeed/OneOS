@@ -161,7 +161,6 @@ DrawProgram = function(self, program, x, y)
 end
 
 OnClick = function(self, event, side, x, y)
-	Log.i('click '..side)
 	if Current.Program then
 		Current.Program:Click(event, side, x, y)
 	end

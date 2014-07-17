@@ -239,10 +239,6 @@ program.OnKeyChar = function(self, event, key)
 	end
 end
 
-program.OnClick = function(self, event)
-	l(event)
-end
-
 program:Run(function()
 	program:LoadView('main', false)
 	UpdateBackground()

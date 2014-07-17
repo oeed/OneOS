@@ -150,12 +150,10 @@ function HandleClick(self, event, side, x, y)
 			self.View:DoClick(self.Window, event, side, x, y)
 		end
 	elseif self.Menu then
-		if OneOS then l('menu click') end
 		if not self.View:DoClick(self.Menu, event, side, x, y) then
 			self.Menu:Close()
 		end
 	elseif self.View then
-		if OneOS then l('view click') end
 		if self.View:Click(event, side, x, y) ~= false then
 		end		
 	end
@@ -420,7 +418,10 @@ end
 
 function ForceDraw(self)
 	if not self.DrawTimer then
-		self.DrawTimer = self:StartTimer(function()self.DrawTimer = nil self:Draw()end, 0.05)
+		self.DrawTimer = self:StartTimer(function()
+			self.DrawTimer = nil
+			self:Draw()
+		end, 0.05)
 	end
 end
 
@@ -666,6 +667,7 @@ function Draw(self)
 		self:OnDraw()
 	end
 
+
 	if self.View and self.View:NeedsDraw() then
 		self.View:Draw()
 		Drawing.DrawBuffer()
@@ -676,7 +678,7 @@ function Draw(self)
 		print('No loaded view. You need to do program:LoadView first.')
 	elseif isDebug then
 		ignored = ignored + 1
-	end
+	end	
 
 	if isDebug then
 		local pos = -2

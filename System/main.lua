@@ -48,7 +48,7 @@ bedrock.EventHandler = function(self)
 		program.EventQueue = {}
 	end
 	local event = { os.pullEventRaw() }
-	Log.i('Event: '..table.concat(event, ', ')) --TODO: enable at release
+	-- Log.i('Event: '..table.concat(event, ', ')) --TODO: enable at release
 
 	if self.EventHandlers[event[1]] then
 		for i, e in ipairs(self.EventHandlers[event[1]]) do

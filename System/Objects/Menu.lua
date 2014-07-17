@@ -68,11 +68,11 @@ end
 
 Close = function(self, isBedrockCall)
 	self.Bedrock.Menu = nil
-	self.Bedrock:RemoveObject(self)
+	self.Parent:RemoveObject(self)
 	if self.Owner and self.Owner.Toggle then
 		self.Owner.Toggle = false
 	end
-	self.Bedrock:ForceDraw()
+	self.Parent:ForceDraw()
 	self = nil
 end
 
