@@ -68,7 +68,6 @@ WriteToBuffer = function(self, character, textColour, backgroundColour)
 		return
 	end
 	
-	--TODO: this isn't skipping when it hasn't changed
 	if Current.Program == self.Program and (not self.Buffer[y] or (self.Buffer[y][x][1] ~= character or self.Buffer[y][x][2] ~= textColour or self.Buffer[y][x][3] ~= backgroundColour)) then
 		Current.ProgramView:ForceDraw()
 	end
@@ -119,8 +118,6 @@ _term = function(self)
 	_term.setCursorPos = function(x, y)
 		self.CursorPos[1] = math.floor( tonumber(x) ) or self.CursorPos[1]
 		self.CursorPos[2] = math.floor( tonumber(y) ) or self.CursorPos[2]
-		--TODO
-		--Current.CursorPos = {pos.X+self.CursorPos[1]-1, pos.Y+self.CursorPos[2]-1}
 	end
 
 	_term.setCursorBlink = function(blink)

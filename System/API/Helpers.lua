@@ -240,7 +240,7 @@ RenameFile = function(path, done, bedrock)
 		end
 		bedrock:DisplayTextBoxWindow('Rename '..fs.getName(path), "Enter the new file name.", function(success, value)
 			if success and #value ~= 0 then
-				--TODO: doIndex()
+				Indexer.RefreshIndex()
 				local _, err = pcall(function()fs.move(path, RemoveFileName(path)..value) if done then done() end end)
 				if err then
 					bedrock:DisplayAlertWindow('Rename Failed!', 'Error: '..err, {'Ok'})
@@ -264,7 +264,7 @@ DeleteFile = function(path, done, bedrock)
 	bedrock = bedrock or Current.Bedrock
 	path = TidyPath(path)
 	local function doDelete()
-		local _, err = pcall(function()fs.delete(path) if done then done() end end)
+		local _, err = pcall(function()fs.delete(path) Indexer.RefreshIndex() if done then done() end end)
 		if err then
 			bedrock:DisplayAlertWindow('Delete Failed!', 'Error: '..err, {'Ok'})
 		end
@@ -290,7 +290,7 @@ NewFile = function(basePath, done, bedrock)
 	basePath = TidyPath(basePath)
 	bedrock:DisplayTextBoxWindow('Create New File', "Enter the new file name.", function(success, value)
 		if success and #value ~= 0 then
-			--TODO: doIndex()
+			Indexer.RefreshIndex()
 			local _, err = pcall(function()
 				local h = fs.open(basePath..value, 'w')
 				h.close()
@@ -308,7 +308,7 @@ NewFolder = function(basePath, done, bedrock)
 	basePath = TidyPath(basePath)
 	bedrock:DisplayTextBoxWindow('Create New Folder', "Enter the new folder name.", function(success, value)
 		if success and #value ~= 0 then
-			--TODO: doIndex()
+			Indexer.RefreshIndex()
 			local _, err = pcall(function()
 				fs.makeDir(basePath..value)
 				if done then done() end

@@ -145,7 +145,7 @@ function SendToComputer(computer)
 	end
 end
 
-program:RegisterEvent('modem_message', function(self, ...)l('well well well')Wireless.HandleMessage(...) end)
+program:RegisterEvent('modem_message', function(self, ...)Wireless.HandleMessage(...) end)
 
 program:Run(function()
 

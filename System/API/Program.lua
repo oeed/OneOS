@@ -97,7 +97,7 @@ Restart = function(self)
 	local path = self.Path
 	local title = self.Title
 	self:Close()
-	LaunchProgram(path, {}, title) --TODO: this probably wont' work
+	Helpers.LaunchProgram(path, {}, title)
 end
 
 QueueEvent = function(self, ...)

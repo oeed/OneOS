@@ -271,6 +271,10 @@ function LoadView(self, name, draw)
 		self:Draw()
 	end
 
+	if not success then
+		error('Failed to load view: '..name..'. It probably isn\'t formatted correctly.')
+	end
+
 	return success
 end
 

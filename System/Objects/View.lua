@@ -142,21 +142,27 @@ function GetObject(self, name)
 	return findObjectNamed(self, name)
 end
 
-function GetObjects(self, name)
+local function findObjects(view, name)
 	local objects = {}
-	local minI = 0
-	while true do
-		local obj, index, view = findObjectNamed(self, name, minI)
-		if not obj then
-			break
+	if view and view.Children then
+		for i, child in ipairs(view.Children) do
+			if child.Name == name or child == name then
+				table.insert(objects, child)
+			elseif child.Children then
+				local objs = findObjects(child, name)
+				if objs then
+					for i2, v in ipairs(objs) do
+						table.insert(objects, v)
+					end
+				end
+			end
 		end
-		table.insert(objects, obj)
-		if view.OnUpdate then
-			view:OnUpdate('Children')
-		end
-		minI = index
 	end
 	return objects
+end
+
+function GetObjects(self, name)
+	return findObjects(self, name)
 end
 
 function RemoveObject(self, name)

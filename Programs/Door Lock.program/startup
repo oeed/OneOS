@@ -541,79 +541,92 @@ local Capitalise = function(str)
 	return str:sub(1, 1):upper() .. str:sub(2, -1)
 end
 
+
+local getNames = peripheral.getNames or function()
+    local tResults = {}
+    for n,sSide in ipairs( rs.getSides() ) do
+        if peripheral.isPresent( sSide ) then
+            table.insert( tResults, sSide )
+            local isWireless = false
+            if not pcall(function()isWireless = peripheral.call(sSide, 'isWireless') end) then
+                isWireless = true
+            end     
+            if peripheral.getType( sSide ) == "modem" and not isWireless then
+                local tRemote = peripheral.call( sSide, "getNamesRemote" )
+                for n,sName in ipairs( tRemote ) do
+                    table.insert( tResults, sName )
+                end
+            end
+        end
+    end
+    return tResults
+end
+
 Peripheral = {
-	GetPeripheral = function(_type)
-		for i, p in ipairs(Peripheral.GetPeripherals()) do
-			if p.Type == _type then
-				return p
-			end
-		end
-	end,
+    GetPeripheral = function(_type)
+        for i, p in ipairs(Peripheral.GetPeripherals()) do
+            if p.Type == _type then
+                return p
+            end
+        end
+    end,
 
-	Call = function(type, ...)
-		local tArgs = {...}
-		local p = GetPeripheral(type)
-		peripheral.call(p.Side, unpack(tArgs))
-	end,
+    Call = function(type, ...)
+        local tArgs = {...}
+        local p = Peripheral.GetPeripheral(type)
+        peripheral.call(p.Side, unpack(tArgs))
+    end,
 
-	GetPeripherals = function(filterType)
-		local peripherals = {}
-		for i, side in ipairs(peripheral.getNames()) do
-			local name = peripheral.getType(side):gsub("^%l", string.upper)
-			local code = string.upper(side:sub(1,1))
-			if side:find('_') then
-				code = side:sub(side:find('_')+1)
-			end
+    GetPeripherals = function(filterType)
+        local peripherals = {}
+        for i, side in ipairs(getNames()) do
+            local name = peripheral.getType(side):gsub("^%l", string.upper)
+            local code = string.upper(side:sub(1,1))
+            if side:find('_') then
+                code = side:sub(side:find('_')+1)
+            end
 
-			local dupe = false
-			for i, v in ipairs(peripherals) do
-				if v[1] == name .. ' ' .. code then
-					dupe = true
-				end
-			end
+            local dupe = false
+            for i, v in ipairs(peripherals) do
+                if v[1] == name .. ' ' .. code then
+                    dupe = true
+                end
+            end
 
-			if not dupe then
-				local _type = peripheral.getType(side)
-				local isWireless = false
-				if _type == 'modem' then
-					if pcall(function()isWireless = peripheral.call(sSide, 'isWireless') end) then
-						isWireless = true
-					end     
-					if isWireless then
-						_type = 'wireless_modem'
-						name = 'W '..name
-					end
-				end
-				if not filterType or _type == filterType then
-					table.insert(peripherals, {Name = name:sub(1,8) .. ' '..code, Fullname = name .. ' ('..Capitalise(side)..')', Side = side, Type = _type, Wireless = isWireless})
-				end
-			end
-		end
-		return peripherals
-	end,
+            if not dupe then
+                local _type = peripheral.getType(side)
+                local isWireless = false
+                if _type == 'modem' then
+                    if not pcall(function()isWireless = peripheral.call(sSide, 'isWireless') end) then
+                        isWireless = true
+                    end     
+                    if isWireless then
+                        _type = 'wireless_modem'
+                        name = 'W '..name
+                    end
+                end
+                if not filterType or _type == filterType then
+                    table.insert(peripherals, {Name = name:sub(1,8) .. ' '..code, Fullname = name .. ' ('..side:sub(1, 1):upper() .. side:sub(2, -1)..')', Side = side, Type = _type, Wireless = isWireless})
+                end
+            end
+        end
+        return peripherals
+    end,
 
-	GetPeripheral = function(_type)
-		for i, p in ipairs(Peripheral.GetPeripherals()) do
-			if p.Type == _type then
-				return p
-			end
-		end
-	end,
+    PresentNamed = function(name)
+        return peripheral.isPresent(name)
+    end,
 
-	PresentNamed = function(name)
-		return peripheral.isPresent(name)
-	end,
+    CallType = function(type, ...)
+        local tArgs = {...}
+        local p = Peripheral.GetPeripheral(type)
+        return peripheral.call(p.Side, unpack(tArgs))
+    end,
 
-	CallType = function(type, ...)
-		local tArgs = {...}
-		local p = Peripheral.GetPeripheral(type)
-		return peripheral.call(p.Side, unpack(tArgs))
-	end,
-
-	CallNamed = function(name, ...)
-		local tArgs = {...}
-		return peripheral.call(name, unpack(tArgs))
-	end
+    CallNamed = function(name, ...)
+        local tArgs = {...}
+        return peripheral.call(name, unpack(tArgs))
+    end
 }
 
 Wireless = {
@@ -961,7 +974,7 @@ function RegisterPDA(event, drive)
 			h.write(fingerprint)
 			h.close()
 			if addStartup then
-				local h = _fs.open(shell.getRunningProgram(), 'r')
+				local h = fs.open(shell.getRunningProgram(), 'r')
 				local startup = h.readAll()
 				h.close()
 				local h = _fs.open(path..'/startup', 'w')

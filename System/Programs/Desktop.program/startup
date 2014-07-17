@@ -31,12 +31,11 @@ local function FilesHaveChanged()
 end
 
 local function MaxIcons()
-	local y, x = 2, 5
 	local slotHeight = 5
 	local slotWidth = 11
 	local maxX = math.floor((Drawing.Screen.Width - 2) / slotWidth)
 	local maxY = math.floor((Drawing.Screen.Height - 2) / slotHeight)
-	x = 1 + math.floor(((Drawing.Screen.Width - (maxX * slotWidth))) / 2)
+	local y, x = 2, math.floor(((Drawing.Screen.Width - (maxX * slotWidth))) / 2)
 	return x, y, maxX, maxY, maxX * maxY
 end
 
@@ -62,7 +61,7 @@ end
 
 function ReloadIndicators()
 	local indicatorWidth = (totalPages * 2) - 2
-	local indicatorPos = math.ceil((Drawing.Screen.Width/2)) - totalPages - 1
+	local indicatorPos = math.ceil((Drawing.Screen.Width/2)) - totalPages
 	program:RemoveObjects('IndicatorButton')
 	for i = 1, totalPages do
 		local col = colours.grey
@@ -168,7 +167,7 @@ function AnimatePageChange(from, to)
 		if relOffset < 0 then
 			relOffset = relOffset * -1
 		end
-		local speed = math.ceil(relOffset / Drawing.Screen.Width * 10)
+		local speed = math.floor(Drawing.Screen.Width / 6)--4--math.ceil(relOffset / Drawing.Screen.Width * 5)
 		while ((max < offset) and direction == -1) or ((max > offset) and direction == 1) do
 			offset = offset + direction * speed
 			relOffset = (offset + Drawing.Screen.Width * (to - 1))
@@ -176,7 +175,7 @@ function AnimatePageChange(from, to)
 				offset = max
 			end
 			AddOffset()			
-			sleep(0.1)
+			sleep(0.05)
 		end
 	end
 	offset = max

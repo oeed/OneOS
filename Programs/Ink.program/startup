@@ -30,6 +30,211 @@ UIColours = {
 	MenuBarActive = colours.white
 }
 
+local getNames = peripheral.getNames or function()
+	local tResults = {}
+	for n,sSide in ipairs( rs.getSides() ) do
+		if peripheral.isPresent( sSide ) then
+			table.insert( tResults, sSide )
+			local isWireless = false
+			if not pcall(function()isWireless = peripheral.call(sSide, 'isWireless') end) then
+				isWireless = true
+			end     
+			if peripheral.getType( sSide ) == "modem" and not isWireless then
+				local tRemote = peripheral.call( sSide, "getNamesRemote" )
+				for n,sName in ipairs( tRemote ) do
+					table.insert( tResults, sName )
+				end
+			end
+		end
+	end
+	return tResults
+end
+
+Peripheral = {
+	GetPeripheral = function(_type)
+		for i, p in ipairs(Peripheral.GetPeripherals()) do
+			if p.Type == _type then
+				return p
+			end
+		end
+	end,
+
+	Call = function(type, ...)
+		local tArgs = {...}
+		local p = Peripheral.GetPeripheral(type)
+		peripheral.call(p.Side, unpack(tArgs))
+	end,
+
+	GetPeripherals = function(filterType)
+		local peripherals = {}
+		for i, side in ipairs(getNames()) do
+			local name = peripheral.getType(side):gsub("^%l", string.upper)
+			local code = string.upper(side:sub(1,1))
+			if side:find('_') then
+				code = side:sub(side:find('_')+1)
+			end
+
+			local dupe = false
+			for i, v in ipairs(peripherals) do
+				if v[1] == name .. ' ' .. code then
+					dupe = true
+				end
+			end
+
+			if not dupe then
+				local _type = peripheral.getType(side)
+				local isWireless = false
+				if _type == 'modem' then
+					if not pcall(function()isWireless = peripheral.call(sSide, 'isWireless') end) then
+						isWireless = true
+					end     
+					if isWireless then
+						_type = 'wireless_modem'
+						name = 'W '..name
+					end
+				end
+				if not filterType or _type == filterType then
+					table.insert(peripherals, {Name = name:sub(1,8) .. ' '..code, Fullname = name .. ' ('..side:sub(1, 1):upper() .. side:sub(2, -1)..')', Side = side, Type = _type, Wireless = isWireless})
+				end
+			end
+		end
+		return peripherals
+	end,
+
+	PresentNamed = function(name)
+		return peripheral.isPresent(name)
+	end,
+
+	CallType = function(type, ...)
+		local tArgs = {...}
+		local p = GetPeripheral(type)
+		return peripheral.call(p.Side, unpack(tArgs))
+	end,
+
+	CallNamed = function(name, ...)
+		local tArgs = {...}
+		return peripheral.call(name, unpack(tArgs))
+	end
+}
+
+TextLine = {
+	Text = "",
+	Alignment = AlignmentLeft,
+
+	Initialise = function(self, text, alignment)
+		local new = {}    -- the new instance
+		setmetatable( new, {__index = self} )
+		new.Text = text
+		new.Alignment = alignment or AlignmentLeft
+		return new
+	end
+}
+
+local StripColours = function(str)
+	return str:gsub('['..string.char(14)..'-'..string.char(29)..']','')
+end
+
+Printer = {
+	Name = nil,
+	PeripheralType = 'printer',
+
+	paperLevel = function(self)
+		return Peripheral.CallNamed(self.Name, 'getPaperLevel')
+	end,
+
+	newPage = function(self)
+		return Peripheral.CallNamed(self.Name, 'newPage')
+	end,
+
+	endPage = function(self)
+		return Peripheral.CallNamed(self.Name, 'endPage')
+	end,
+
+	pageWrite = function(self, text)
+		return Peripheral.CallNamed(self.Name, 'write', text)
+	end,
+
+	setPageTitle = function(self, title)
+		return Peripheral.CallNamed(self.Name, 'setPageTitle', title)
+	end,
+
+	inkLevel = function(self)
+		return Peripheral.CallNamed(self.Name, 'getInkLevel')
+	end,
+
+	getCursorPos = function(self)
+		return Peripheral.CallNamed(self.Name, 'getCursorPos')
+	end,
+
+	setCursorPos = function(self, x, y)
+		return Peripheral.CallNamed(self.Name, 'setCursorPos', x, y)
+	end,
+
+	pageSize = function(self)
+		return Peripheral.CallNamed(self.Name, 'getPageSize')
+	end,
+
+	Present = function()
+		if Peripheral.GetPeripheral(Printer.PeripheralType) == nil then
+			return false
+		else
+			return true
+		end
+	end,
+
+	PrintLines = function(self, lines, title, copies)
+		local pages = {}
+		local pageLines = {}
+		for i, line in ipairs(lines) do
+			table.insert(pageLines, TextLine:Initialise(StripColours(line)))
+			if i % 25 == 0 then
+				table.insert(pages, pageLines)
+				pageLines = {}
+			end
+		end
+		if #pageLines ~= 0 then
+				table.insert(pages, pageLines)
+		end
+		return self:PrintPages(pages, title, copies)
+	end,
+
+	PrintPages = function(self, pages, title, copies)
+		copies = copies or 1
+		for c = 1, copies do
+			for p, page in ipairs(pages) do
+				if self:paperLevel() < #pages * copies then
+					return 'Add more paper to the printer'
+				end
+				if self:inkLevel() < #pages * copies then
+					return 'Add more ink to the printer'
+				end
+				self:newPage()
+				for i, line in ipairs(page) do
+					self:setCursorPos(1, i)
+					self:pageWrite(StripColours(line.Text))
+				end
+				if title then
+					self:setPageTitle(title)
+				end
+				self:endPage()
+			end
+		end
+	end,
+
+	Initialise = function(self, name)
+		if Printer.Present() then --fix
+			local new = {}    -- the new instance
+			setmetatable( new, {__index = self} )
+			if name and Peripheral.PresentNamed(name) then
+				new.Name = name
+			else
+				new.Name = Peripheral.GetPeripheral(Printer.PeripheralType).Side
+			end
+			return new
+		end
+	end
+}
+
 Clipboard = {
 	Content = nil,
 	Type = nil,
@@ -1784,6 +1989,21 @@ function LoadMenuBar()
 	})
 end
 
+function SplashScreen()
+	local w = colours.white
+	local b = colours.black
+	local u = colours.blue
+	local lb = colours.lightBlue
+	local splashIcon = {{w,w,w,b,w,w,w,b,w,w,w,},{w,w,w,b,w,w,w,b,w,w,w,},{w,w,w,b,u,u,u,b,w,w,w,},{w,b,b,u,u,u,u,u,b,b,w,},{b,u,u,lb,lb,u,u,u,u,u,b,},{b,u,lb,lb,u,u,u,u,u,u,b,},{b,u,lb,lb,u,u,u,u,u,u,b,},{b,u,u,u,u,u,u,u,u,u,b,},{w,b,b,b,b,b,b,b,b,b,w,},
+	["text"]={{" "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," ","I","n","k"," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," ",},{" "," ","b","y"," ","o","e","e","d"," "," "},{" "," "," "," "," "," "," "," "," "," "," ",},},
+	["textcol"]={{w,w,w,w,w,w,w,w,w,w,w,},{w,w,w,w,w,w,w,w,w,w,w,},{w,w,w,w,w,w,w,w,w,w,w,},{w,w,w,w,w,w,w,w,w,w,w,},{w,w,w,w,w,w,w,w,w,w,w,},{w,w,w,w,w,w,w,w,w,w,w,},{w,w,w,w,w,w,w,w,w,w,w,},{lb,lb,lb,lb,lb,lb,lb,lb,lb,lb,lb,},{w,w,w,w,w,w,w,w,w,w,w,},},}
+	Drawing.Clear(colours.white)
+	Drawing.DrawImage((Drawing.Screen.Width - 11)/2, (Drawing.Screen.Height - 9)/2, splashIcon, 11, 9)
+	Drawing.DrawBuffer()
+	Drawing.Clear(colours.black)
+	parallel.waitForAny(function()sleep(1)end, function()os.pullEvent('mouse_click')end)
+end
+
 function Initialise(arg)
 	if OneOS then
 		fs = OneOS.FS
@@ -1800,9 +2020,6 @@ function Initialise(arg)
 	EventRegister('timer', Timer)
 	EventRegister('terminate', function(event) if Close() then error( "Terminated", 0 ) end end)
 	
-	term.setBackgroundColour(colours.lightGrey)
-	term.clear()
-
 	LoadMenuBar()
 
 	--Current.Document = Document:Initialise('abcdefghijklmnopqrtuvwxy')--'Hello everybody!')
@@ -2405,7 +2622,7 @@ PrintDocumentWindow = {
 				end
 			end
 			if doPrint then
-				local printer = Printer:Initialise()
+				local printer = Printer:Initialise(new.SelectedPrinter)
 				local err = printer:PrintLines(Current.Document.Lines, Current.Document.Title, tonumber(new.CopiesTextBox.TextInput.Value))
 				if not err then
 					new.StatusText = 'Document Printed!'
@@ -2882,16 +3099,23 @@ TextDialougeWindow = {
 	end
 }
 
+function PrintCentered(text, y)
+    local w, h = term.getSize()
+    x = math.ceil(math.ceil((w / 2) - (#text / 2)), 0)+1
+    term.setCursorPos(x, y)
+    print(text)
+end
+
 function DoVanillaClose()
 	term.setBackgroundColour(colours.black)
 	term.setTextColour(colours.white)
 	term.clear()
 	term.setCursorPos(1, 1)
-	PrintCentered("Thanks for using Sketch!", (Drawing.Screen.Height/2)-1)
+	PrintCentered("Thanks for using Ink!", (Drawing.Screen.Height/2)-1)
 	term.setTextColour(colours.lightGrey)
-	PrintCentered("Photoshop Inspired Image Editor for ComputerCraft", (Drawing.Screen.Height/2))
+	PrintCentered("Word Proccessor for ComputerCraft", (Drawing.Screen.Height/2))
 	term.setTextColour(colours.white)
-	PrintCentered("(c) oeed 2013 - 2014", (Drawing.Screen.Height/2)+3)
+	PrintCentered("(c) oeed 2014", (Drawing.Screen.Height/2)+3)
 	term.setCursorPos(1, Drawing.Screen.Height)
 	error('', 0)
 end

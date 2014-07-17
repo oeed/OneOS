@@ -54,10 +54,10 @@ end
 Click = function(self, event, side, x, y)
 	if self.Visible and not self.IgnoreClick and self.Enabled and event ~= 'mouse_scroll' then
 		if self.OnClick then
-			local newToggle = not self.Toggle
-			if self:OnClick(event, side, x, y, not self.Toggle) ~= false and self.Toggle ~= nil then
-				self.Toggle = newToggle
+			if self.Toggle ~= nil then
+				self.Toggle = not self.Toggle
 			end
+			self:OnClick(event, side, x, y, self.Toggle)
 		else
 			self.Toggle = not self.Toggle
 		end

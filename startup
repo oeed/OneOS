@@ -1,4 +1,4 @@
-isDebug = true
+isDebug = false
 
 oldTerm = term
 
@@ -169,7 +169,7 @@ function LoadingScreen()
 
 			os.pullEvent('mouse_click')
 		else
-			log('WARNING! Less than 50KB disk space available.')
+			Log.w('Less than 50KB disk space available.')
 			sleep(1)
 		end
 	end
@@ -190,7 +190,7 @@ function LoadingScreen()
 		local screenWidth, screenHeight = term.getSize()
 		term.setBackgroundColour(colours.white)	
 		term.clear()
-		x = math.ceil((screenWidth - 24) / 2) + 1
+		x = math.ceil((screenWidth - 23) / 2) + 1
 		y = (screenHeight - 8) / 2 + 1
 
 		local text = 'OneOS by oeed'

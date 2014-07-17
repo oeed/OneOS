@@ -40,6 +40,20 @@ bedrock.OnTimer = function(self, event, timer)
 	end
 end
 
+bedrock:RegisterEvent('modem_message', function(self, event, side, channel, replyChannel, message, distance)
+	if pocket and channel == Wireless.Channels.UltimateDoorlockPing then
+		message = textutils.unserialize(message)
+		if message then
+			message.content = textutils.unserialize(message.content)
+			if message.content then
+				Wireless.SendMessage(Wireless.Channels.UltimateDoorlockRequest, fingerprint, Wireless.Channels.UltimateDoorlockRequestReply, nil, message.senderID)
+				return true
+			end
+		end
+	end
+	Current.Program:QueueEvent(event, side, channel, replyChannel, message, distance)
+end)
+
 bedrock.EventHandler = function(self)
 	for i, program in ipairs(Current.Programs) do
 		for i, event in ipairs(program.EventQueue) do
@@ -138,6 +152,36 @@ function Restart(force)
 	Shutdown(force, true)
 end
 
+function StartDoorWireless()
+	if pocket and Wireless.Present() then
+		Wireless.Open(Wireless.Channels.UltimateDoorlockPing)
+		Wireless.Open(Wireless.Channels.UltimateDoorlockRequest)
+		if fs.exists('/System/.fingerprint') then
+			local h = fs.open('/System/.fingerprint', 'r')
+			if h then
+				fingerprint = h.readAll()
+				h.close()
+			end
+		else
+			local function GenerateFingerprint()
+			    local str = ""
+			    for _ = 1, 256 do
+			        local char = math.random(32, 126)
+			        --if char == 96 then char = math.random(32, 95) end
+			        str = str .. string.char(char)
+			    end
+			    return str
+			end
+			fingerprint = GenerateFingerprint()
+			local h = fs.open('/System/.fingerprint', 'w')
+			if h then
+				h.write(fingerprint)
+				h.close()
+			end
+		end
+	end
+end
+
 function Initialise()
 	bedrock:Run(function()
 		Log.i('Reached GUI')
@@ -146,7 +190,7 @@ function Initialise()
 
 		Current.ProgramView = bedrock:GetObject('ProgramView')
 		Current.Overlay = bedrock:GetObject('Overlay')
-		Indexer.RefreshIndex() --TODO: finish the search. this needs to be done before starting the desktop
+		Indexer.RefreshIndex()
 
 		bedrock:GetObject('ClickCatcherView').OnClick = function()
 			if Current.SearchActive then
@@ -164,9 +208,10 @@ function Initialise()
 		--Helpers.OpenFile('System/Programs/Files.program')
 		--Helpers.OpenFile('Programs/Games/Gold Runner.program')
 		-- Helpers.OpenFile('Programs/Test2.program')
-		-- Helpers.OpenFile('Programs/Test3.program')
+		--Helpers.OpenFile('Programs/Door Lock.program')
 		--Helpers.OpenFile('Programs/Transmit.program')--, {'r'})
 		UpdateOverlay()
 		--Search.Open()
+		StartDoorWireless()
 	end)
 end
