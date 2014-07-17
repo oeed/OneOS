@@ -997,9 +997,6 @@ function Initialise()
             OneOS.OpenFile(Settings.InstallLocation..'/'..path..'/'..app.name..".program/")
           end 
         end)
-        Load("Application Installed!", function()
-          sleep(1)
-        end)
         OneOS.Close()
       end
       print('Connecting...')

@@ -1,0 +1,41 @@
+{
+  ["Children"]={
+    [1]={
+      ["Y"]=1,
+      ["X"]=1,
+      ["Name"]="Toolbar",
+      ["Type"]="View",
+      ["InheritView"]="toolbar"
+    },
+    [2]={
+      ["Y"]=5,
+      ["X"]=3,
+      ["Width"]="100%,-4",
+      ["Height"]=3,
+      ["Name"]="Label",
+      ["Type"]="Label",
+      ["Text"]="To save disc space, OneOS does not come with Redirection downloaded by default. Do you want to download it now?"
+    },
+    [3]={
+      ["Y"]="100%,-1",
+      ["X"]="100%,-6",
+      ["Name"]="YesButton",
+      ["Type"]="Button",
+      ["Text"]="Yes",
+      ["BackgroundColour"]=8192,
+      ["TextColour"]=1
+    },
+    [4]={
+      ["Y"]="100%,-1",
+      ["X"]="100%,-11",
+      ["Name"]="NoButton",
+      ["Type"]="Button",
+      ["Text"]="No",
+      ["BackgroundColour"]=16384,
+      ["TextColour"]=1
+    },
+  },
+  ["BackgroundColour"]=1,
+  ["ToolBarColour"] = 128,
+  ["ToolBarTextColour"] = 1
+}
