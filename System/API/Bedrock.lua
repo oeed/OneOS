@@ -150,10 +150,12 @@ function HandleClick(self, event, side, x, y)
 			self.View:DoClick(self.Window, event, side, x, y)
 		end
 	elseif self.Menu then
+		if OneOS then l('menu click') end
 		if not self.View:DoClick(self.Menu, event, side, x, y) then
 			self.Menu:Close()
 		end
 	elseif self.View then
+		if OneOS then l('view click') end
 		if self.View:Click(event, side, x, y) ~= false then
 		end		
 	end
@@ -185,7 +187,7 @@ function ToggleMenu(self, name, owner, x, y)
 		return true
 	end
 end
-local la = false
+
 function SetMenu(self, menu, owner, x, y)
 	x = x or 1
 	y = y or 1
@@ -193,9 +195,7 @@ function SetMenu(self, menu, owner, x, y)
 		self.Menu:Close()
 	end	
 	if menu then
-		la = true
 		local pos = owner:GetPosition()
-		la = false
 		self.Menu = self:AddObject(menu, {Type = 'Menu', Owner = owner, X = pos.X + x - 1, Y = pos.Y + y})
 	end
 end
@@ -229,9 +229,7 @@ function GetAbsolutePosition(self, obj)
 		local pos = self:GetAbsolutePosition(obj.Parent)
 		local x = pos.X + obj.X - 1
 		local y = pos.Y + obj.Y - 1
-		if la then Log.i(x) end
 		if not obj.Fixed and obj.Parent.ChildOffset then
-		if la then Log.i('add offset') end
 			x = x + obj.Parent.ChildOffset.X
 			y = y + obj.Parent.ChildOffset.Y
 		end
@@ -594,6 +592,7 @@ function StartRepeatingTimer(self, func, interval)
 		return
 	end
 	local timer = os.startTimer(int)
+
 	self.Timers[timer] = {func, true, interval}
 	return timer
 end
@@ -663,7 +662,6 @@ local drawCalls = 0
 local ignored = 0
 function Draw(self)
 	self.IsDrawing = true
-	self.DrawTimer = nil
 	if self.OnDraw then
 		self:OnDraw()
 	end

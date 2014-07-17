@@ -20,19 +20,27 @@ function Close()
 	AnimateOpenClose()
 end
 
+function SetOffset(offset)
+	for i, v in ipairs(Current.Bedrock.View.Children) do
+		if v.Name ~= 'SearchView' then
+			v.X = offset
+		end
+	end
+end
+
 function AnimateOpenClose()
 	local openX = -Current.Bedrock:GetObject('SearchView').Width
 	if Settings:GetValues()['UseAnimations'] then
 		for i = 1, 5 do
-			Current.Bedrock.View.ChildOffset = {X = (Current.SearchActive and i * (openX / 5) or openX - i * (openX / 5)), Y = 0}
+			SetOffset((Current.SearchActive and i * (openX / 5) or 1 + openX - i * (openX / 5)))
 			Current.Bedrock:Draw()
 			sleep(0.05)
 		end
 	end
 
 	if Current.SearchActive then
-		Current.Bedrock.View.ChildOffset = {X = openX, Y = 0}
+		SetOffset(openX)
 	else
-		Current.Bedrock.View.ChildOffset = {X = 0, Y = 0}
+		SetOffset(1)
 	end
 end

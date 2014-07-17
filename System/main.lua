@@ -24,11 +24,9 @@ function UpdateOverlay()
 end
 
 bedrock.OnKeyChar = function(self, event, keychar)
-	if keychar == '\\' then
+	if keychar == '\\' then --TODO: remove
 		--Restart()
 		AnimateShutdown(true)
-	elseif Current.Program then
-		Current.Program:QueueEvent(event, keychar)
 	end
 end
 
@@ -49,9 +47,8 @@ bedrock.EventHandler = function(self)
 		end
 		program.EventQueue = {}
 	end
-	
 	local event = { os.pullEventRaw() }
-	--l('Event: '..table.concat(event, ', ')) --TODO: enable at release
+	Log.i('Event: '..table.concat(event, ', ')) --TODO: enable at release
 
 	if self.EventHandlers[event[1]] then
 		for i, e in ipairs(self.EventHandlers[event[1]]) do
@@ -145,7 +142,6 @@ function Initialise()
 	bedrock:Run(function()
 		Log.i('Reached GUI')
 		bedrock:LoadView('main', false)
-		bedrock.View.ChildOffset = {X = 0, Y = 0}
 		Log.i('GUI Loaded')
 
 		Current.ProgramView = bedrock:GetObject('ProgramView')
@@ -165,13 +161,12 @@ function Initialise()
 			UpdateOverlay()
 		end
 
-		sleep(0)
 		--Helpers.OpenFile('System/Programs/Files.program')
 		--Helpers.OpenFile('Programs/Games/Gold Runner.program')
-		--Helpers.OpenFile('Programs/Shell.program')
+		-- Helpers.OpenFile('Programs/Test2.program')
+		-- Helpers.OpenFile('Programs/Test3.program')
 		--Helpers.OpenFile('Programs/Transmit.program')--, {'r'})
 		UpdateOverlay()
-		Search.bedrock = bedrock
-		Search.Open()
+		--Search.Open()
 	end)
 end

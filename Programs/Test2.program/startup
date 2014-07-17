@@ -1,1 +1,5 @@
-print(OneOS.Run)
+print('start')
+while true do
+	sleep(2)
+	print('tick')
+end

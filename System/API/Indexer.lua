@@ -24,18 +24,12 @@ function AddToIndex(path, index)
 end
 
 function RefreshIndex()
+	Log.i('Refreshing Index...')
 	local index = AddToIndex('', {})
 	if index['root'] then
 		Index = index['root']
 	end
-	Current.IconCache = {}
-	_G.indexTimer = os.startTimer(Indexer.IndexRate)
-	if Current.CanDraw then
-		Current.DidIndex = true
-		Overlay.UpdateButtons()
-		MainDraw()
-		Current.DidIndexTimer = os.startTimer(1)
-	end
+	Log.i('Index refresh complete!')
 end
 
 function Search(filter, items, index, indexName)
@@ -45,9 +39,6 @@ function Search(filter, items, index, indexName)
 	items = items or {}
 	index = index or Index
 	indexName = indexName or ''
-	term.setTextColour(colours.black)
-	--print('searching '..indexName)
-	--sleep(1)
 	for name, _file in pairs(index) do
 		if not (name == 'rom' and indexName == '') and not (name == 'System' and indexName == '') and not (name == 'startup' and indexName == '') then
 			local _path = indexName..'/'..name

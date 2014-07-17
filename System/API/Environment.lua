@@ -33,7 +33,7 @@ end
 Initialise = function(self, program, shell, path)
 	local env = {}    -- the new instance
 	setmetatable( env, {__index = _G} )
-	env.l = function(msg)Log.i('['..program.Title..'] '..msg)end
+	env.l = function(msg)Log.i('['..program.Title..'] '..tostring(msg))end
 	env.fs = addErrorHandler(self.FS(env, program, path), 'FS API')
 	env.io = addErrorHandler(self.IO(env, program, path), 'IO API')
 	env.os = addErrorHandler(self.OS(env, program, path), 'OS API')

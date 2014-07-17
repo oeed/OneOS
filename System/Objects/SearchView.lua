@@ -51,7 +51,7 @@ function ItemClick(self, event, side, x, y)
 	if side == 1 then
 		Search.Close()
 		Helpers.OpenFile(self.Path)
-	elseif self:ToggleMenu('searchmenu') then
+	elseif self:ToggleMenu('searchmenu', x, y) then
 		self.Bedrock:GetObject('OpenMenuItem').OnClick = function()Search.Close() Helpers.OpenFile(self.Path)end
 		self.Bedrock:GetObject('ShowInFilesMenuItem').OnClick = function()Search.Close() Helpers.OpenFile('/System/Programs/Files.program', {self.Path, true})end
 	end

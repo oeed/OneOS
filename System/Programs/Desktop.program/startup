@@ -239,17 +239,21 @@ program.OnKeyChar = function(self, event, key)
 	end
 end
 
+program.OnClick = function(self, event)
+	l(event)
+end
+
 program:Run(function()
 	program:LoadView('main', false)
 	UpdateBackground()
 	OneOS.Settings.SetDesktopColourChange(UpdateBackground)
 	ReloadFiles()
-	program:StartRepeatingTimer(function()
-		if FilesHaveChanged() then
-			ReloadFiles()
-			GoToPage(1)
-		end
-	end, 5)
+	-- program:StartRepeatingTimer(function()
+	-- 	if FilesHaveChanged() then
+	-- 		ReloadFiles()
+	-- 		GoToPage(1)
+	-- 	end
+	-- end, 5)
 
 	program.View.OnClick = viewClick
 	program.View.OnDrag = viewDrag

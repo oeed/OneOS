@@ -1,1 +1,5 @@
-print(OneOS.Run)
+while true do
+	local event, val = os.pullEvent()
+	print(event)
+	print(val)
+end
