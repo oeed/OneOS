@@ -29,7 +29,7 @@ function SetOffset(offset)
 end
 
 function AnimateOpenClose()
-	local openX = -Current.Bedrock:GetObject('SearchView').Width
+	local openX = -Current.Bedrock:GetObject('SearchView').Width + 1
 	if Settings:GetValues()['UseAnimations'] then
 		for i = 1, 5 do
 			SetOffset((Current.SearchActive and i * (openX / 5) or 1 + openX - i * (openX / 5)))

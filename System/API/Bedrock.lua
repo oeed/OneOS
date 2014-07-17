@@ -101,6 +101,7 @@ Menu = nil
 ActiveObject = nil
 
 DrawTimer = nil
+DrawTimerExpiry = 0
 
 IsDrawing = false
 
@@ -417,11 +418,12 @@ function RemoveObjects(self, name)
 end
 
 function ForceDraw(self)
-	if not self.DrawTimer then
+	if not self.DrawTimer or self.DrawTimerExpiry <= os.clock() then
 		self.DrawTimer = self:StartTimer(function()
 			self.DrawTimer = nil
 			self:Draw()
 		end, 0.05)
+		self.DrawTimerExpiry = os.clock() + 0.1
 	end
 end
 
@@ -666,7 +668,6 @@ function Draw(self)
 	if self.OnDraw then
 		self:OnDraw()
 	end
-
 
 	if self.View and self.View:NeedsDraw() then
 		self.View:Draw()
