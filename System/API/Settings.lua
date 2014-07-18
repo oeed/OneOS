@@ -15,6 +15,11 @@ Defaults = {
 		Label = 'Use Animations',
 		Default = true,
 	},
+	DownloadPrereleases = {
+		Type = 'Bool',
+		Label = 'Download Betas',
+		Default = true,
+	},
 	StartupProgram = {
 		Type = 'Program',
 		Label = 'Startup Program',

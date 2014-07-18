@@ -13,8 +13,7 @@ program:Run(function()
 
 	local values = OneOS.Settings:GetValues()
 	for k, v in pairs(settings) do
-		if k ~= 'Monitor Side' then
-
+		if k ~= 'Monitor' then
 			program:AddObject({
 				Type = 'Label',
 				X = startX,
@@ -34,14 +33,14 @@ program:Run(function()
 					Text = (value and 'Yes' or 'No'),
 					Toggle = value,
 					OnClick = function(self)
-						if not self.Toggle then
+						if self.Toggle then
 							self.Text = 'Yes'
 							self.Width = 5
 						else
 							self.Text = 'No'
 							self.Width = 4
 						end
-						OneOS.Settings:SetValue(k, not self.Toggle)
+						OneOS.Settings:SetValue(k, self.Toggle)
 					end
 				})
 			elseif v.Type == 'Colour' then

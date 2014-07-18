@@ -24,7 +24,7 @@ function UpdateOverlay()
 end
 
 bedrock.OnKeyChar = function(self, event, keychar)
-	if keychar == '\\' then --TODO: remove
+	if isDebug and keychar == '\\' then
 		--Restart()
 		AnimateShutdown(true)
 	end
@@ -62,7 +62,12 @@ bedrock.EventHandler = function(self)
 		program.EventQueue = {}
 	end
 	local event = { os.pullEventRaw() }
-	-- Log.i('Event: '..table.concat(event, ', ')) --TODO: enable at release
+
+	-- local s = 'Event: '
+	-- for i, v in ipairs(event) do
+	-- 	s = s..tostring(v)..', '
+	-- end
+	-- Log.i(s)
 
 	if self.EventHandlers[event[1]] then
 		for i, e in ipairs(self.EventHandlers[event[1]]) do
@@ -181,6 +186,127 @@ function StartDoorWireless()
 	end
 end
 
+local checkAutoUpdateArg = nil
+
+function CheckAutoUpdate(arg)
+	Log.i('Checking for updates...')
+	checkAutoUpdateArg = arg
+	if http then
+		if checkAutoUpdateArg then
+			bedrock:DisplayAlertWindow("Update OneOS", "Checking for updates, this may take a moment.", {'Ok'})
+		end
+		http.request('https://api.github.com/repos/oeed/OneOS/releases#')
+	elseif arg then
+		Log.e('Update failed. HTTP is not enabled.')
+		bedrock:DisplayAlertWindow("HTTP Not Enabled!", "Turn on the HTTP API to update.", {'Ok'})		
+	else
+		Log.e('Update failed. HTTP is not enabled.')
+	end
+end
+
+function split(str, sep)
+        local sep, fields = sep or ":", {}
+        local pattern = string.format("([^%s]+)", sep)
+        str:gsub(pattern, function(c) fields[#fields+1] = c end)
+        return fields
+end
+
+function GetSematicVersion(tag)
+	tag = tag:sub(2)
+	return split(tag, '.')
+end
+
+--Returns true if the FIRST version is NEWER
+function SematicVersionIsNewer(version, otherVersion)
+	if version[1] > otherVersion[1] then
+		return true
+	elseif version[2] > otherVersion[2] then
+		return true
+	elseif version[3] > otherVersion[3] then
+		return true
+	end
+	return false
+end
+
+function AutoUpdateFail(self, event, url, data)
+	if url == 'https://api.github.com/repos/oeed/OneOS/releases#' then
+		Log.w('Auto update failed. (http_failure)')
+		if checkAutoUpdateArg then
+			if bedrock.Window then
+				bedrock.Window:Close()
+			end
+			bedrock:DisplayAlertWindow("Update Check Failed", "Check your connection and try again.", {'Ok'})
+		end
+	end
+	Current.Program:QueueEvent(event, url, data)
+end
+
+function AutoUpdateResponse(self, event, url, data)
+	if url == 'https://api.github.com/repos/oeed/OneOS/releases#' then
+		os.loadAPI('/System/JSON')
+		if not data then
+			Log.w('Auto update failed. (no)')
+			return
+		end
+		local releases = JSON.decode(data.readAll())
+		os.unloadAPI('JSON')
+		if not releases or not releases[1] or not releases[1].tag_name then
+			Log.w('Auto update failed. (misformatted)')
+			if checkAutoUpdateArg then
+				if bedrock.Window then
+					bedrock.Window:Close()
+				end
+				bedrock:DisplayAlertWindow("Update Check Failed", "Check your connection and try again.", {'Ok'})
+			end
+			return
+		end
+		local latestReleaseTag = releases[1].tag_name
+
+		if not Settings:GetValues()['DownloadPrereleases'] then
+			Log.i('Not downloading prereleases')
+			for i, v in ipairs(releases) do
+				if not v.prerelease then
+					latestReleaseTag = v.tag_name
+					break
+				end
+			end
+		end
+		Log.i('Latest tag: '..latestReleaseTag)
+
+		local h = fs.open('/System/.version', 'r')
+		local version = h.readAll()
+		h.close()
+
+		if version == latestReleaseTag then
+			--using latest version
+			Log.i('OneOS is up to date.')
+			if checkAutoUpdateArg then
+				if bedrock.Window then
+					bedrock.Window:Close()
+				end
+				bedrock:DisplayAlertWindow("Up to date!", "OneOS is up to date!", {'Ok'})
+			end
+			return
+		elseif SematicVersionIsNewer(GetSematicVersion(latestReleaseTag), GetSematicVersion(version)) then			
+			Log.i('New version of OneOS available.')
+			if bedrock.Window then
+				bedrock.Window:Close()
+			end
+			bedrock:DisplayAlertWindow("Update OneOS", "There is a new version of OneOS available, do you want to update?", {'Yes', 'No'}, function(value)
+				if value == 'Yes' then
+					Helpers.OpenFile('System/Programs/Update OneOS.program')
+				end
+			end)
+		else
+			Log.i('OneOS is neither up to date or behind. (.version probably edited)')
+		end
+	end
+	Current.Program:QueueEvent(event, url, data)
+end
+
+bedrock:RegisterEvent('http_success', AutoUpdateResponse)
+bedrock:RegisterEvent('http_failure', AutoUpdateFail)
+
 function FirstSetup()
 	bedrock:Run(function()
 		Log.i('Reached First Setup GUI')
@@ -215,14 +341,8 @@ function Initialise()
 			Helpers.OpenFile('Programs/'..Settings:GetValues()['StartupProgram'])
 			UpdateOverlay()
 		end
-
-		--Helpers.OpenFile('System/Programs/Files.program')
-
-		-- Helpers.OpenFile('Programs/Test2.program')
-		-- Helpers.OpenFile('Programs/App Store.program')
-		--Helpers.OpenFile('Programs/Transmit.program')--, {'r'})
 		UpdateOverlay()
-		--Search.Open()
 		StartDoorWireless()
+		CheckAutoUpdate()
 	end)
 end

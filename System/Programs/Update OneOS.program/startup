@@ -1,0 +1,162 @@
+OneOS.LoadAPI('/System/API/Bedrock.lua', false)
+
+local program = Bedrock:Initialise()
+local latestReleaseTag = ''
+local canClose = false
+
+_fs = OneOS.FS
+
+OneOS.CanClose = function()
+	return canClose
+end
+
+local totalBytes, downloadedBytes, downloadedFiles, totalFiles = 0, 0, 0, 0
+
+function UpdaterRefresh()
+	program:GetObject('ProgressBar').Maximum = totalBytes
+	program:GetObject('ProgressBar').Value = downloadedBytes
+	if program:GetObject('ProgressBar').Value == program:GetObject('ProgressBar').Maximum and program:GetObject('ProgressBar').Value ~= 0 then
+		program:GetObject('UpdateLabel').Text = 'Download Complete!'
+		program:GetObject('StatusLabel').Text = 'Your computer will restart in 3 seconds...'
+		sleep(3)
+		OneOS.Restart(true)
+	elseif program:GetObject('ProgressBar').Value ~= 0 then
+		program:GetObject('UpdateLabel').Text = 'Downloading Files...'
+		program:GetObject('StatusLabel').Text = FormatBytes(totalBytes - downloadedBytes) .. ' ('..totalFiles - downloadedFiles..' files) Remaining...'
+	else
+		program:GetObject('UpdateLabel').Text = 'Updating OneOS'
+		program:GetObject('StatusLabel').Text = 'Preparing Downloads'
+	end
+	program:Draw()
+end
+
+function FormatBytes(bytes)
+	if bytes < 1024 then
+		return "< 1KB"
+	elseif bytes < 1024 * 1024 then
+		return math.ceil(bytes / 1024) .. 'KB'
+	elseif bytes < 1024 * 1024 * 1024 then
+		--string.format('%.2f', ...) wasn't working for some reason
+		local b = math.ceil((bytes / 1024 / 1024)*100)
+		return b/100 .. 'MB'
+	else
+		return '> 1GB'
+	end
+end
+
+function downloadJSON(path)
+	OneOS.Log.i('Downloading JSON: '..path)
+	local _json = http.get(path)
+	if not _json then
+		error('Could not download, check your connection.')
+	end
+	return JSON.decode(_json.readAll())
+end
+
+local blacklist = {
+	'/.gitignore',
+	'/README.md',
+	'/TODO',
+	'/Desktop/.Desktop.settings',
+	'/System/.OneOS.settings',
+	'/.version'
+}
+
+function isBlacklisted(path)
+	for i, item in ipairs(blacklist) do
+		if item == path then
+			return true
+		end
+	end
+	return false
+end
+
+function downloadBlob(v)
+	if isBlacklisted(v.path) then
+		return
+	end
+	if v.type == 'tree' then
+		OneOS.Log.i('Making folder: '..'/'..v.path)
+		OneOS.FS.makeDir('/'..v.path)
+	else
+		OneOS.Log.i('(' .. downloadedBytes .. 'B/' .. totalBytes .. 'B) Downloading file: '..v.path)
+		local f = http.get(('https://raw.github.com/oeed/OneOS/'..latestReleaseTag..'/'..v.path):gsub(' ','%%20'))
+		if not f then
+			error('Downloading failed, try again. '..('https://raw.github.com/oeed/OneOS/'..latestReleaseTag..'/'..v.path):gsub(' ','%%20'))
+		end
+		local h = OneOS.FS.open('/'..v.path, 'w')
+		h.write(f.readAll())
+		h.close()
+
+		if v.size then
+			downloadedBytes = downloadedBytes + v.size
+		end
+		downloadedFiles = downloadedFiles + 1
+		UpdaterRefresh()
+	end
+end
+
+function StartUpdate()
+	OneOS.LoadAPI('/System/JSON')
+	if JSON then
+		OneOS.Log.i('Loaded JSON')
+	else
+		error('Failed to load JSON API')
+	end
+
+	OneOS.Log.i('Determining latest version...')
+	local releases = downloadJSON('https://api.github.com/repos/oeed/OneOS/releases')
+
+	latestReleaseTag = releases[1].tag_name
+
+	if not OneOS.Settings:GetValues()['DownloadPrereleases'] then
+		for i, v in ipairs(releases) do
+			if not v.prerelease then
+				latestReleaseTag = v.tag_name
+				break
+			end
+		end
+	end
+	OneOS.Log.i('Latest release: '..latestReleaseTag)
+
+	OneOS.Log.i('Optaining Latest Version URL')
+	local refs = downloadJSON('https://api.github.com/repos/oeed/OneOS/git/refs')
+	local latestReleaseSha = ''
+	for i, v in ipairs(refs) do
+		if v.ref == 'refs/tags/'..latestReleaseTag then
+			latestReleaseSha = v.object.sha
+		end
+	end
+
+	OneOS.Log.i('Downloading tree for SHA: '..latestReleaseSha)
+	local tree = downloadJSON('https://api.github.com/repos/oeed/OneOS/git/trees/'..latestReleaseSha..'?recursive=1').tree
+
+	for i, v in ipairs(tree) do
+		if not isBlacklisted(v.path) and v.size then
+			totalBytes = totalBytes + v.size
+			totalFiles = totalFiles + 1
+		end
+	end
+
+	local downloads = {}
+	fs.makeDir('/')
+	for i, v in ipairs(tree) do
+		--parallel.waitForAny(function() sleep(0) end, function()downloadBlob(v)end)
+		--downloadBlob(v)
+		table.insert(downloads, function()downloadBlob(v)end)
+	end
+
+	parallel.waitForAll(unpack(downloads))
+
+	local h = OneOS.FS.open('/System/.version', 'w')
+	h.write(latestReleaseTag)
+	h.close()
+end
+
+
+
+program:Run(function()
+	program:LoadView('main')
+	OneOS.Log.i('Starting update')
+	StartUpdate()
+end)

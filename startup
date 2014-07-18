@@ -560,7 +560,6 @@ elseif Start() then
 			Initialise()
 		else
 			xpcall(Initialise, function(err)
-				Log.e('[> First Setup] '..err)
 				ok = {false, err}
 			end)
 		end
