@@ -78,7 +78,7 @@ bedrock.EventHandler = function(self)
 	end
 end
 
-function Shutdown(force, restart)
+function Shutdown(force, restart, animate)
 	Log.i(bedrock.View.Name)
 	if bedrock.View.Name == 'firstsetup' then
 		os.reboot()
@@ -94,7 +94,7 @@ function Shutdown(force, restart)
 	end
 
 	if success then
-		AnimateShutdown(restart)
+		AnimateShutdown(restart, animate)
 	else
 		Log.w('Shutdown/restart aborted')
 		Current.Desktop:SwitchTo()
@@ -103,18 +103,20 @@ function Shutdown(force, restart)
 
 		bedrock:DisplayAlertWindow("Programs Still Open", "You have unsaved work. Save your work and close the program or click 'Force "..shutdownLabelCaptital.."'.", {'Force '..shutdownLabelCaptital, 'Cancel'}, function(value)
 			if value ~= 'Cancel' then
-				AnimateShutdown(restart)
+				AnimateShutdown(restart, animate)
 			end
 		end)
 	end
 end
-local firstsetup = false
-function AnimateShutdown(restart)
+
+function AnimateShutdown(restart, animate)
 	Log.w('System safely stopping.')
-	if Settings:GetValues()['UseAnimations'] and not firstsetup then
+	if Settings:GetValues()['UseAnimations'] and animate then
+		Log.i('Animating')
 		Drawing.Clear(colours.white)
 		Drawing.DrawBuffer()
 		sleep(0)
+		Log.i('out')
 		local x = 0
 		local y = 0
 		local w = 0
@@ -143,6 +145,7 @@ function AnimateShutdown(restart)
 		Drawing.DrawBlankArea(x + 1, y, w, h, colours.grey)
 		Drawing.DrawBuffer()
 		sleep(0)
+		Log.i('Done animation')
 	end
 
 	term.setBackgroundColour(colours.black)
@@ -157,8 +160,8 @@ function AnimateShutdown(restart)
 	end
 end
 
-function Restart(force)
-	Shutdown(force, true)
+function Restart(force, animate)
+	Shutdown(force, true, animate)
 end
 
 function StartDoorWireless()

@@ -18,8 +18,6 @@ function UpdaterRefresh()
 	if program:GetObject('ProgressBar').Value == program:GetObject('ProgressBar').Maximum and program:GetObject('ProgressBar').Value ~= 0 then
 		program:GetObject('UpdateLabel').Text = 'Download Complete!'
 		program:GetObject('StatusLabel').Text = 'Your computer will restart in 3 seconds...'
-		sleep(3)
-		OneOS.Restart(true)
 	elseif program:GetObject('ProgressBar').Value ~= 0 then
 		program:GetObject('UpdateLabel').Text = 'Downloading Files...'
 		program:GetObject('StatusLabel').Text = FormatBytes(totalBytes - downloadedBytes) .. ' ('..totalFiles - downloadedFiles..' files) Remaining...'
@@ -151,6 +149,9 @@ function StartUpdate()
 	local h = OneOS.FS.open('/System/.version', 'w')
 	h.write(latestReleaseTag)
 	h.close()
+	--sleep()
+	OneOS.Log.i('Done, rebooting now.')
+	OneOS.KillSystem()
 end
 
 
