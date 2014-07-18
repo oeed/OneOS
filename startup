@@ -480,6 +480,7 @@ function RemoveOldFiles()
 	print('---------------------------------------------------')
 	log('Press enter to delete these files.')
 	read()
+	fs.delete('/System/.OneOS.settings')
 	for i, v in ipairs(oldFiles) do
 		log('Deleting: '..v)
 		if fs.exists(v) then
