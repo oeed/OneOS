@@ -13,7 +13,7 @@
       ["Width"]="100%,-6",
       ["Name"]="Label",
       ["Type"]="Label",
-      ["Text"]="All done! OneOS is now all setup and ready for you to use. Click 'Restart' to get going!"
+      ["Text"]="All done! OneOS is now all setup and ready for you to use. Click 'Restart' to get going!\n\nIf the restart button does not work then hold Ctrl + R or break and replace your computer."
     },
     [3]={
       ["Y"]="100%,-1",

@@ -79,6 +79,10 @@ bedrock.EventHandler = function(self)
 end
 
 function Shutdown(force, restart)
+	Log.i(bedrock.View.Name)
+	if bedrock.View.Name == 'firstsetup' then
+		os.reboot()
+	end
 	Log.i('Trying to shutdown/restart. Restart: '..tostring(restart))
 	local success = true
 	if not force then
@@ -104,10 +108,10 @@ function Shutdown(force, restart)
 		end)
 	end
 end
-
+local firstsetup = false
 function AnimateShutdown(restart)
 	Log.w('System safely stopping.')
-	if Settings:GetValues()['UseAnimations'] then
+	if Settings:GetValues()['UseAnimations'] and not firstsetup then
 		Drawing.Clear(colours.white)
 		Drawing.DrawBuffer()
 		sleep(0)

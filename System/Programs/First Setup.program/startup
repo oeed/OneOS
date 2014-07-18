@@ -73,7 +73,9 @@ program:ObjectClick('RestartButton', function(self, event, side, x, y)
 	h.write(textutils.serialize(settings))
 	h.close()
 
+	OneOS.Log.i('Trying to reboot...')
 	OneOS.Restart(true)
+	print('You might have to hold Ctrl + R if you\'re seeing this.')
 end)
 
 program:ObjectClick('ColourButton', function(self, event, side, x, y)
