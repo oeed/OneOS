@@ -4,15 +4,8 @@ Text = ""
 AutoWidth = false
 Align = 'Left'
 
-OnUpdate = function(self, value)
-    if value == 'Text' and self.AutoWidth then
-        self.Width = #self.Text
-        return true --TODO: remove the need for the return value
-    end
-end
-
 local wrapText = function(text, maxWidth)
-	local lines = {''}
+    local lines = {''}
     for word, space in text:gmatch('(%S+)(%s*)') do
         local temp = lines[#lines] .. word .. space:gsub('\n','')
         if #temp > maxWidth then
@@ -30,9 +23,19 @@ local wrapText = function(text, maxWidth)
         end
     end
     if #lines[1] == 0 then
-    	table.remove(lines,1)
+        table.remove(lines,1)
     end
-	return lines
+    return lines
+end
+
+OnUpdate = function(self, value)
+    if value == 'Text' then
+        if self.AutoWidth then
+            self.Width = #self.Text
+        else
+            self.Height = #wrapText(self.Text, self.Width)
+        end
+    end
 end
 
 OnDraw = function(self, x, y)

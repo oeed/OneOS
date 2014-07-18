@@ -11,13 +11,13 @@ term.clear()
 --local _, err = pcall(function()
 
 
-
+local doLog = false
 
 local function log(...)
 	if Log then
 		Log.i(...)
 	end
-	if isDebug then
+	if isDebug or doLog then
 		print(...)
 	end
 end
@@ -96,7 +96,6 @@ function LoadAPI(_sPath)
 		tAPI.__index = Object
 		if tAPI.Inherit then
 			if not getfenv()[tAPI.Inherit] then
-				--TODO: dynamically get the path
 				LoadAPI('System/Objects/'..tAPI.Inherit..'.lua')
 			end
 			tAPI.__index = getfenv()[tAPI.Inherit]
@@ -126,6 +125,19 @@ Log.i('Starting OneOS')
 Log.i(os.version())
 Log.i('Free space: '..fs.getFreeSpace('/'))
 
+local h = fs.open('/System/.version', 'r')
+local version = '?'
+if h then
+	version = h.readAll()
+	h.close()
+else
+	local h = fs.open('/System/.version', 'w')
+	h.write('v1.2.0') --assumed minimum version. if there's a newer one it'll update them
+	h.close()
+	version = 'Not set. Using v1.2.0'
+end
+Log.i('OneOS Version: '..version)
+
 LoadAPI('System/API/Settings.lua')
 LoadAPI('System/API/Object.lua')
 local _side = Settings:GetValues()['Monitor']
@@ -143,6 +155,7 @@ if not term.setTextScale and _side then
 		
 		PrintCentered('- Break the monitor next to the computer', 13)
 		PrintCentered('This method will NOT save your files.', 14)
+		Log.i("Using a monitor on side: ".._side)
 		term.redirect(peripheral.wrap(Settings:GetValues()['Monitor']))
 	else
 		Settings:SetValue('Monitor', nil)
@@ -168,10 +181,8 @@ function LoadingScreen()
 			PrintCentered('Click anywhere to continue.', 12)
 
 			os.pullEvent('mouse_click')
-		else
-			Log.w('Less than 50KB disk space available.')
-			sleep(1)
 		end
+		Log.w('Less than 50KB disk space available.')
 	end
 	
 	local x, y = nil
@@ -280,6 +291,7 @@ function PastebinPut(file)
 end
 
 function BootMenu()
+	Log.i('Entered Boot Menu')
 	Drawing.Clear(colours.white)
 	Drawing.DrawCharactersCenter(nil, (-Drawing.Screen.Height/2) + 2, nil, nil, 'OneOS', colours.blue, colours.white)
 	Drawing.DrawCharactersCenter(nil, (-Drawing.Screen.Height/2) + 3, nil, nil, 'Boot Options', colours.grey, colours.white)
@@ -417,8 +429,69 @@ function IsSystemModified()
 	return true
 end
 
+local oldFiles = {
+	'/System/API/Animation.lua',
+	'/System/API/Button.lua',
+	'/System/API/ButtonDialogueWindow.lua',
+	'/System/API/Desktop.lua',
+	'/System/API/ListView.lua',
+	'/System/API/Menu.lua',
+	'/System/API/OpenWithDialougeWindow.lua',
+	'/System/API/Overlay.lua',
+	'/System/API/Printer.lua',
+	'/System/API/ProgressBar.lua',
+	'/System/API/ScrollBar.lua',
+	'/System/API/TextBox.lua',
+	'/System/API/TextDialogueWindow.lua',
+	'/System/API/TextInput.lua',
+	'/System/API/Turtle.lua',
+	'/System/API/Window.lua',
+	'/System/Images/Icons/ink',
+	'/System/Images/Icons/lua',
+	'/System/Images/Icons/nfp',
+	'/System/Images/Icons/nft',
+	'/System/Images/Icons/skch',
+	'/System/Images/Icons/pkg',
+	'/System/Images/Icons/startup',
+	'/System/Images/Icons/text',
+	'/System/Images/Icons/txt',
+	'/System/Programs/Setup.program',
+	'/System/Programs/About OneOS',
+	'/System/Programs/Settings',
+	'/System/Programs/Update OneOS',
+}
+
+function RemoveOldFiles()
+	local found = false
+	for i, v in ipairs(oldFiles) do
+		if fs.exists(v) then
+			found = true
+		end
+	end
+	if not found then
+		return
+	end
+	doLog = true
+	log('OneOS has detected old files which may cause conflict.')
+	log('If you want to keep these files then shutdown now.')
+	print('---------------------------------------------------')
+	log("If you can, you should do a fresh install. There might be lots of trash files not deleted that could cause issues.")
+	log("To do this, press enter, reboot and hold ALT then select 'Wipe Computer' and reinstall.")
+	print('---------------------------------------------------')
+	log('Press enter to delete these files.')
+	read()
+	for i, v in ipairs(oldFiles) do
+		log('Deleting: '..v)
+		if fs.exists(v) then
+			fs.delete(v)
+			sleep(0)
+		end
+	end
+	doLog = false
+end
 
 function Start()
+	RemoveOldFiles()
 	local key = nil
 	local success = false
 	parallel.waitForAll(function()success = LoadingScreen() os.queueEvent('onesos_bootdone') end, function() key = RecieveStartupKey() end)
@@ -474,12 +547,12 @@ elseif Start() then
 
 	local ok = nil
 	if not fs.exists('/System/.version') or not fs.exists('/System/.OneOS.settings') then
-		log('Not .version or .OneOS.settings! Running First Setup')
+		log('No .version or .OneOS.settings! Running First Setup')
 		if fs.exists('/System/.OneOS.settings') then
 			fs.delete('/System/.OneOS.settings')
 		end
 		xpcall(FirstSetup, function(err)
-			log('Error: '..err)
+			Log.e('[> First Setup] '..err)
 			ok = {false, err}
 		end)
 	else
@@ -487,7 +560,7 @@ elseif Start() then
 			Initialise()
 		else
 			xpcall(Initialise, function(err)
-				log('Error: '..err)
+				Log.e('[> First Setup] '..err)
 				ok = {false, err}
 			end)
 		end
@@ -499,6 +572,10 @@ elseif Start() then
 			log('Syntaxt error (probably): '..err)
 			table.insert(ok, err)
 		end)
+		
+		for i, v in ipairs(ok) do
+			Log.e(v)
+		end
 		--if the crash is a too long without yeilding error then there's nothing we can really do, restart
 		if ok[2]:sub(-25) == 'Too long without yielding' then
 			term.setBackgroundColor(colours.grey)
@@ -594,12 +671,23 @@ elseif Start() then
 					else
 						version = 'N/E'
 					end
+
+					local detailString = textutils.serialize(detail) ..'\n\n'
+
+					local h = fs.open('/System/OneOS.log')
+					if h then
+						detailString = detailString .. 'Log:\n'..h.readAll()
+						h.close()
+					else
+						detailString = detailString .. 'No Log'
+					end
+
 					if not isDebug then
 						local _ = http.post('http://olivercooper.me/errorSubmit.php', 
 		                                "product="..textutils.urlEncode(tostring('OneOS')).."&"..
 		                                "version="..textutils.urlEncode(tostring(version)).."&"..
 		                                "error="..textutils.urlEncode(ok[#ok]).."&"..
-		                                "detail="..textutils.urlEncode(textutils.serialize(detail)));
+		                                "detail="..textutils.urlEncode(detailString));
 						if _ then
 							success = true
 						end

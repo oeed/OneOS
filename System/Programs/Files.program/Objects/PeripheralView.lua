@@ -8,7 +8,6 @@ OnUpdate = function(self, value)
 		self:RemoveAllObjects()
 		if self.Side and #self.Side ~= 0 then
 			local p = Peripheral.GetSide(self.Side)
-			l(textutils.serialize(p))
 			local path = 'Images/'..p.Type
 			if not fs.exists(path) then
 				path = 'Images/unknown'

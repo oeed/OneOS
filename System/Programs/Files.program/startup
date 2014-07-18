@@ -122,7 +122,6 @@ function FileClick(item, event, side, x, y)
 			end
 
 			program:GetObject('CopyMenuItem').OnClick = function(_item)
-				--TODO: clipboard
 				OneOS.Clipboard.Copy(item.Path, 'filepath')
 			end
 

@@ -31,6 +31,5 @@
       ["Type"]="Overlay",
       ["InheritView"]="overlay"
     },
-  },
-  ["ChildOffset"] = {["X"] = 0, ["Y"] = 0}
+  }
 }

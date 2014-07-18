@@ -102,48 +102,48 @@ end
 
 function AnimateShutdown(restart)
 	Log.w('System safely stopping.')
-	if not Settings:GetValues()['UseAnimations'] then
-		return
-	end
+	if Settings:GetValues()['UseAnimations'] then
+		Drawing.Clear(colours.white)
+		Drawing.DrawBuffer()
+		sleep(0)
+		local x = 0
+		local y = 0
+		local w = 0
+		local h = 0
+		for i = 1, 8 do
+			local percent = (i * 0.05)
+			Drawing.Clear(colours.black)
+			x = Drawing.Screen.Width * (i * 0.01)
+			y = math.floor(Drawing.Screen.Height * (i * 0.05)) + 3
+			w = Drawing.Screen.Width - (2 * x) + 1
+			h = Drawing.Screen.Height - (2 * y) + 1
 
-	Drawing.Clear(colours.white)
-	Drawing.DrawBuffer()
-	sleep(0)
-	local x = 0
-	local y = 0
-	local w = 0
-	local h = 0
-	for i = 1, 8 do
-		local percent = (i * 0.05)
-		Drawing.Clear(colours.black)
-		x = Drawing.Screen.Width * (i * 0.01)
-		y = math.floor(Drawing.Screen.Height * (i * 0.05)) + 3
-		w = Drawing.Screen.Width - (2 * x) + 1
-		h = Drawing.Screen.Height - (2 * y) + 1
+			if h < 1 then
+				h = 1
+			end
 
-		if h < 1 then
-			h = 1
+			Drawing.DrawBlankArea(x + 1, y, w, h, colours.white)
+			Drawing.DrawBuffer()
+			sleep(0)
 		end
 
-		Drawing.DrawBlankArea(x + 1, y, w, h, colours.white)
+		Drawing.DrawBlankArea(x + 1, y, w, h, colours.lightGrey)
+		Drawing.DrawBuffer()
+		sleep(0)
+
+		Drawing.DrawBlankArea(x + 1, y, w, h, colours.grey)
 		Drawing.DrawBuffer()
 		sleep(0)
 	end
-
-	Drawing.DrawBlankArea(x + 1, y, w, h, colours.lightGrey)
-	Drawing.DrawBuffer()
-	sleep(0)
-
-	Drawing.DrawBlankArea(x + 1, y, w, h, colours.grey)
-	Drawing.DrawBuffer()
-	sleep(0)
 
 	term.setBackgroundColour(colours.black)
 	term.clear()
 	if restart then
 		sleep(0.2)
+		Log.i('Rebooting now.')
 		os.reboot()
 	else
+		Log.i('Shutting down now.')
 		os.shutdown()
 	end
 end
@@ -167,7 +167,6 @@ function StartDoorWireless()
 			    local str = ""
 			    for _ = 1, 256 do
 			        local char = math.random(32, 126)
-			        --if char == 96 then char = math.random(32, 95) end
 			        str = str .. string.char(char)
 			    end
 			    return str
@@ -182,6 +181,18 @@ function StartDoorWireless()
 	end
 end
 
+function FirstSetup()
+	bedrock:Run(function()
+		Log.i('Reached First Setup GUI')
+		bedrock:LoadView('firstsetup', false)
+		Log.i('First Setup GUI Loaded')
+		
+		Current.ProgramView = bedrock:GetObject('ProgramView')
+		Helpers.OpenFile('System/Programs/First Setup.program', {isHidden = true})
+	end)
+end
+
+--TODO: auto updating
 function Initialise()
 	bedrock:Run(function()
 		Log.i('Reached GUI')
@@ -208,7 +219,7 @@ function Initialise()
 		--Helpers.OpenFile('System/Programs/Files.program')
 
 		-- Helpers.OpenFile('Programs/Test2.program')
-		Helpers.OpenFile('Programs/App Store.program')
+		-- Helpers.OpenFile('Programs/App Store.program')
 		--Helpers.OpenFile('Programs/Transmit.program')--, {'r'})
 		UpdateOverlay()
 		--Search.Open()

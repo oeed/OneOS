@@ -13,140 +13,143 @@ program:Run(function()
 
 	local values = OneOS.Settings:GetValues()
 	for k, v in pairs(settings) do
-		program:AddObject({
-			Type = 'Label',
-			X = startX,
-			Y = startY,
-			Text = v.Label
-		})
-		local value = values[k]
-		if v.Type == 'Bool' then
-			settings[k].Control = program:AddObject({
-				Type = 'Button',
-				X = controlX,
+		if k ~= 'Monitor Side' then
+
+			program:AddObject({
+				Type = 'Label',
+				X = startX,
 				Y = startY,
-				Width = (value and 5 or 4),
-				BackgroundColour = colours.red,
-				ActiveBackgroundColour = colours.green,
-				TextColour = colours.white,
-				Text = (value and 'Yes' or 'No'),
-				Toggle = value,
-				OnClick = function(self)
-					if not self.Toggle then
-						self.Text = 'Yes'
-						self.Width = 5
-					else
-						self.Text = 'No'
-						self.Width = 4
-					end
-					OneOS.Settings:SetValue(k, not self.Toggle)
-				end
+				Text = v.Label
 			})
-		elseif v.Type == 'Colour' then
-			local x = controlX
-			_colours = {
-				colours.brown,
-				colours.yellow,
-				colours.orange,
-				colours.red,
-				colours.green,
-				colours.lime,
-				colours.magenta,
-				colours.pink,
-				colours.purple,
-				colours.blue,
-				colours.cyan,
-				colours.lightBlue,
-				colours.lightGrey,
-				colours.grey,
-				colours.black,
-				colours.white
-			}
-			for i, c in ipairs(_colours) do
-				local txt = ''
-				if c == colours.white then
-					txt = '##'
-				end
-				settings[k].Controls[i] = program:AddObject({
+			local value = values[k]
+			if v.Type == 'Bool' then
+				settings[k].Control = program:AddObject({
 					Type = 'Button',
-					X = x,
+					X = controlX,
 					Y = startY,
-					Width = 2,
-					BackgroundColour = c,
-					TextColour = colours.lightGrey,
-					Text = txt,
+					Width = (value and 5 or 4),
+					BackgroundColour = colours.red,
+					ActiveBackgroundColour = colours.green,
+					TextColour = colours.white,
+					Text = (value and 'Yes' or 'No'),
+					Toggle = value,
 					OnClick = function(self)
-						OneOS.Settings:SetValue(k, c)
+						if not self.Toggle then
+							self.Text = 'Yes'
+							self.Width = 5
+						else
+							self.Text = 'No'
+							self.Width = 4
+						end
+						OneOS.Settings:SetValue(k, not self.Toggle)
 					end
 				})
-				x = x + 2
-			end
-				
-
-		elseif v.Type == 'Text' then
-			settings[k].Control = program:AddObject({
-				Type = 'TextBox',
-				X = controlX,
-				Y = startY,
-				Width = 23,
-				Text = value,
-				OnClick = function(self)
-					OneOS.Settings:SetValue(k, self.TextInput.Value)
+			elseif v.Type == 'Colour' then
+				local x = controlX
+				_colours = {
+					colours.brown,
+					colours.yellow,
+					colours.orange,
+					colours.red,
+					colours.green,
+					colours.lime,
+					colours.magenta,
+					colours.pink,
+					colours.purple,
+					colours.blue,
+					colours.cyan,
+					colours.lightBlue,
+					colours.lightGrey,
+					colours.grey,
+					colours.black,
+					colours.white
+				}
+				for i, c in ipairs(_colours) do
+					local txt = ''
+					if c == colours.white then
+						txt = '##'
+					end
+					settings[k].Controls[i] = program:AddObject({
+						Type = 'Button',
+						X = x,
+						Y = startY,
+						Width = 2,
+						BackgroundColour = c,
+						TextColour = colours.lightGrey,
+						Text = txt,
+						OnClick = function(self)
+							OneOS.Settings:SetValue(k, c)
+						end
+					})
+					x = x + 2
 				end
-			})
-		elseif v.Type == 'Program' then
-			local txt = value
-			if not value then
-				txt = 'None'
-			else
-				txt = program.Helpers.RemoveExtension(txt)
-			end
+					
 
-			settings[k].Control = program:AddObject({
-				Type = 'Button',
-				X = controlX,
-				Y = startY,
-				BackgroundColour = colours.grey,
-				TextColour = colours.white,
-				Text = txt,
-				Name = 'ProgramButton',
-				OnClick = function(self)
-					local items = {
-						{
-					    	["Name"]="MenuItem",
-					    	["Type"]="Button",
-					    	["Text"]="None",
-					    	OnClick = function()
-					    		OneOS.Settings:SetValue(k, nil)
-								self.Text = "None"
-					    	end
-					    }
-					}
+			elseif v.Type == 'Text' then
+				settings[k].Control = program:AddObject({
+					Type = 'TextBox',
+					X = controlX,
+					Y = startY,
+					Width = 23,
+					Text = value,
+					OnClick = function(self)
+						OneOS.Settings:SetValue(k, self.TextInput.Value)
+					end
+				})
+			elseif v.Type == 'Program' then
+				local txt = value
+				if not value then
+					txt = 'None'
+				else
+					txt = program.Helpers.RemoveExtension(txt)
+				end
 
-					for i, _v in ipairs(OneOS.FS.list('/Programs/')) do
-						if program.Helpers.Extension(_v) == 'program' then
-							table.insert(items, 
+				settings[k].Control = program:AddObject({
+					Type = 'Button',
+					X = controlX,
+					Y = startY,
+					BackgroundColour = colours.grey,
+					TextColour = colours.white,
+					Text = txt,
+					Name = 'ProgramButton',
+					OnClick = function(self)
+						local items = {
 							{
 						    	["Name"]="MenuItem",
 						    	["Type"]="Button",
-						    	["Text"]=program.Helpers.RemoveExtension(_v),
-								OnClick = function(btn)
-									OneOS.Settings:SetValue(k, _v)
-									self.Text = btn.Text
-								end
-							})
+						    	["Text"]="None",
+						    	OnClick = function()
+						    		OneOS.Settings:SetValue(k, nil)
+									self.Text = "None"
+						    	end
+						    }
+						}
+
+						for i, _v in ipairs(OneOS.FS.list('/Programs/')) do
+							if program.Helpers.Extension(_v) == 'program' then
+								table.insert(items, 
+								{
+							    	["Name"]="MenuItem",
+							    	["Type"]="Button",
+							    	["Text"]=program.Helpers.RemoveExtension(_v),
+									OnClick = function(btn)
+										OneOS.Settings:SetValue(k, _v)
+										self.Text = btn.Text
+									end
+								})
+							end
 						end
+						
+						self:ToggleMenu({
+							["Type"]="Menu",
+							["HideTop"] = true,
+							["Owner"]="OneButton",
+							["Children"]=items
+						})
 					end
-					
-					self:ToggleMenu({
-						["Type"]="Menu",
-						["HideTop"] = true,
-						["Owner"]="OneButton",
-						["Children"]=items
-					})
-				end
-			})
+				})
+			end
+			startY = startY + 2
 		end
-		startY = startY + 2
 	end
 end)

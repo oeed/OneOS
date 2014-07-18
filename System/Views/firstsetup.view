@@ -1,0 +1,13 @@
+{
+  ["Children"]={
+    [1]={
+      ["Y"]=1,
+      ["X"]=1,
+      ["Width"]="100%",
+      ["Height"]="100%",
+      ["Name"]="ProgramView",
+      ["Type"]="ProgramView",
+      ["Active"]=true
+    },
+  }
+}

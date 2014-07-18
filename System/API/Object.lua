@@ -59,45 +59,32 @@ Draw = function(self)
 		return
 	end
 
-	--TODO: looks like caching actually just slows everything down
-	if true then -- self:NeedsDraw() then
-		self.DrawCache.NeedsDraw = false
-		local pos = self:GetPosition()
-		Drawing.StartCopyBuffer()
+	self.DrawCache.NeedsDraw = false
+	local pos = self:GetPosition()
+	Drawing.StartCopyBuffer()
 
-		if self.ClipDrawing then
-			Drawing.AddConstraint(pos.X, pos.Y, self.Width, self.Height)
-		end
+	if self.ClipDrawing then
+		Drawing.AddConstraint(pos.X, pos.Y, self.Width, self.Height)
+	end
 
-		if self.OnDraw then
-			self:OnDraw(pos.X, pos.Y)
-		end
+	if self.OnDraw then
+		self:OnDraw(pos.X, pos.Y)
+	end
 
-		self.DrawCache.Buffer = Drawing.EndCopyBuffer()
-		
-		if self.Children then
-			for i, child in ipairs(self.Children) do
-				local pos = child:GetOffsetPosition()
-				if pos.Y + self.Height > 1 and pos.Y <= self.Height and pos.X + self.Width > 1 and pos.X <= self.Width then
-					child:Draw()
-				end
-			end
-		end
-
-		if self.ClipDrawing then
-			Drawing.RemoveConstraint()
-		end
-
-	else
-		Drawing.DrawCachedBuffer(self.DrawCache.Buffer)
-		if self.Children then
-			for i, child in ipairs(self.Children) do
+	self.DrawCache.Buffer = Drawing.EndCopyBuffer()
+	
+	if self.Children then
+		for i, child in ipairs(self.Children) do
+			local pos = child:GetOffsetPosition()
+			if pos.Y + self.Height > 1 and pos.Y <= self.Height and pos.X + self.Width > 1 and pos.X <= self.Width then
 				child:Draw()
 			end
 		end
 	end
 
-	
+	if self.ClipDrawing then
+		Drawing.RemoveConstraint()
+	end	
 end
 
 ForceDraw = function(self, ignoreChildren, ignoreParent, ignoreBedrock)

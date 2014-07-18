@@ -33,6 +33,7 @@ end
 
 program:Run(function()
 	program:LoadView('main')
+	program:GetObject('VersionLabel').Text = 'OneOS '..OneOS.Version
 
 	if fs.getFreeSpace and fs.getSize then
 		local systemSize = FolderSize('/System/') + OneOS.FS.getSize('startup')

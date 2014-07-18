@@ -15,7 +15,7 @@
       ["Width"]=13,
       ["Name"]="VersionLabel",
       ["Type"]="Label",
-      ["Text"]="OneOS v1.2.0",
+      ["Text"]="OneOS (Unknown Version)",
       ["TextColour"]=128,
     },
     [3]={

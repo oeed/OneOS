@@ -68,7 +68,6 @@ if not isStartup then
 			env[v].__index = Object
 			if env[v].Inherit then
 				if not getfenv()[env[v].Inherit] then
-					--TODO: dynamically get the path
 					load('System/Objects/'..env[v].Inherit..'.lua')
 				end
 				env[v].__index = getfenv()[env[v].Inherit]
@@ -83,7 +82,6 @@ if not isStartup then
 			env[name].__index = Object
 			if env[name].Inherit then
 				if not getfenv()[env[name].Inherit] then
-					--TODO: dynamically get the path
 					load('Objects/'..env[name].Inherit..'.lua')
 				end
 				env[name].__index = getfenv()[env[name].Inherit]
@@ -239,6 +237,9 @@ end
 function LoadView(self, name, draw)
 	if self.View and self.OnViewClose then
 		self.OnViewClose(self.View.Name)
+	end
+	if self.View then
+		self.View:OnRemove()
 	end
 	local success = false
 
@@ -729,7 +730,6 @@ function Run(self, ready)
 	end
 
 	if self.AllowTerminate then
-		--TODO: maybe quit here instead
 		self:RegisterEvent('terminate', function()error('Terminated', 0) end)
 	end
 

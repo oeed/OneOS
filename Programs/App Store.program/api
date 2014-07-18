@@ -199,13 +199,6 @@ function installApplication(id, path, removeSpaces, alwaysFolder, fullPath)
 	end
 end
 
---[[
-function uninstallApplication(id, computerid, username, password)
-	--TODO: impliment this later
-	return doRequest('computer', 'uninstall', {id = id, computerid = computerid, username = username, password = password})
-end
-]]--
-
 function registerComputer(realid, username, password)
 	return doRequest('computer', 'register', {realid = realid, username = username, password = password})
 end

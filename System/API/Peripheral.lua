@@ -71,16 +71,11 @@ GetPeripherals = function(filterType)
 end
 
 GetSide = function(side)
-	l(side)
-	l('--')
 	for i, p in ipairs(GetPeripherals()) do
-		l(p.Side)
 		if p.Side == side then
-			l('indeed')
 			return p
 		end
 	end
-	l('*')
 end
 
 PresentNamed = function(name)

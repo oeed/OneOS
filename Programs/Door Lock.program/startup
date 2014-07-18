@@ -1,1348 +1,1148 @@
-tArgs = {...}
-
+tArgs={...}
 if OneOS then
-	--running under OneOS
-	OneOS.ToolBarColour = colours.white
-	OneOS.ToolBarTextColour = colours.grey
+OneOS.ToolBarColour=colours.white
+OneOS.ToolBarTextColour=colours.grey
 end
-
-local _w, _h = term.getSize()
-
-local round = function(num, idp)
-	local mult = 10^(idp or 0)
-	return math.floor(num * mult + 0.5) / mult
+local t,a=term.getSize()
+local l=function(t,e)
+local e=10^(e or 0)
+return math.floor(t*e+.5)/e
 end
-
-InterfaceElements = {}
-
-Drawing = {
-	
-	Screen = {
-		Width = _w,
-		Height = _h
-	},
-
-	DrawCharacters = function (x, y, characters, textColour,bgColour)
-		Drawing.WriteStringToBuffer(x, y, characters, textColour, bgColour)
-	end,
-	
-	DrawBlankArea = function (x, y, w, h, colour)
-		Drawing.DrawArea (x, y, w, h, " ", 1, colour)
-	end,
-
-	DrawArea = function (x, y, w, h, character, textColour, bgColour)
-		--width must be greater than 1, other wise we get a stack overflow
-		if w < 0 then
-			w = w * -1
-		elseif w == 0 then
-			w = 1
-		end
-
-		for ix = 1, w do
-			local currX = x + ix - 1
-			for iy = 1, h do
-				local currY = y + iy - 1
-				Drawing.WriteToBuffer(currX, currY, character, textColour, bgColour)
-			end
-		end
-	end,
-
-	DrawImage = function(_x,_y,tImage, w, h)
-		if tImage then
-			for y = 1, h do
-				if not tImage[y] then
-					break
-				end
-				for x = 1, w do
-					if not tImage[y][x] then
-						break
-					end
-					local bgColour = tImage[y][x]
-		            local textColour = tImage.textcol[y][x] or colours.white
-		            local char = tImage.text[y][x]
-		            Drawing.WriteToBuffer(x+_x-1, y+_y-1, char, textColour, bgColour)
-				end
-			end
-		elseif w and h then
-			Drawing.DrawBlankArea(x, y, w, h, colours.green)
-		end
-	end,
-	--using .nft
-	LoadImage = function(path)
-		local image = {
-			text = {},
-			textcol = {}
-		}
-		local fs = fs
-		if OneOS then
-			fs = OneOS.FS
-		end
-		if fs.exists(path) then
-			local _open = io.open
-			if OneOS then
-				_open = OneOS.IO.open
-			end
-	        local file = _open(path, "r")
-	        local sLine = file:read()
-	        local num = 1
-	        while sLine do  
-	                table.insert(image, num, {})
-	                table.insert(image.text, num, {})
-	                table.insert(image.textcol, num, {})
-	                                            
-	                --As we're no longer 1-1, we keep track of what index to write to
-	                local writeIndex = 1
-	                --Tells us if we've hit a 30 or 31 (BG and FG respectively)- next char specifies the curr colour
-	                local bgNext, fgNext = false, false
-	                --The current background and foreground colours
-	                local currBG, currFG = nil,nil
-	                for i=1,#sLine do
-	                        local nextChar = string.sub(sLine, i, i)
-	                        if nextChar:byte() == 30 then
-                                bgNext = true
-	                        elseif nextChar:byte() == 31 then
-                                fgNext = true
-	                        elseif bgNext then
-                                currBG = Drawing.GetColour(nextChar)
-                                bgNext = false
-	                        elseif fgNext then
-                                currFG = Drawing.GetColour(nextChar)
-                                fgNext = false
-	                        else
-                                if nextChar ~= " " and currFG == nil then
-                                       currFG = colours.white
-                                end
-                                image[num][writeIndex] = currBG
-                                image.textcol[num][writeIndex] = currFG
-                                image.text[num][writeIndex] = nextChar
-                                writeIndex = writeIndex + 1
-	                        end
-	                end
-	                num = num+1
-	                sLine = file:read()
-	        end
-	        file:close()
-		end
-	 	return image
-	end,
-
-	DrawCharactersCenter = function(x, y, w, h, characters, textColour,bgColour)
-		w = w or Drawing.Screen.Width
-		h = h or Drawing.Screen.Height
-		x = x or 0
-		y = y or 0
-		x = math.ceil((w - #characters) / 2) + x
-		y = math.floor(h / 2) + y
-
-		Drawing.DrawCharacters(x, y, characters, textColour, bgColour)
-	end,
-
-	GetColour = function(hex)
-		if hex == ' ' then
-			return colours.transparent
-		end
-	    local value = tonumber(hex, 16)
-	    if not value then return nil end
-	    value = math.pow(2,value)
-	    return value
-	end,
-
-	Clear = function (_colour)
-		_colour = _colour or colours.black
-		Drawing.ClearBuffer()
-		Drawing.DrawBlankArea(1, 1, Drawing.Screen.Width, Drawing.Screen.Height, _colour)
-	end,
-
-	Buffer = {},
-	BackBuffer = {},
-
-	DrawBuffer = function()
-		for y,row in pairs(Drawing.Buffer) do
-			for x,pixel in pairs(row) do
-				local shouldDraw = true
-				local hasBackBuffer = true
-				if Drawing.BackBuffer[y] == nil or Drawing.BackBuffer[y][x] == nil or #Drawing.BackBuffer[y][x] ~= 3 then
-					hasBackBuffer = false
-				end
-				if hasBackBuffer and Drawing.BackBuffer[y][x][1] == Drawing.Buffer[y][x][1] and Drawing.BackBuffer[y][x][2] == Drawing.Buffer[y][x][2] and Drawing.BackBuffer[y][x][3] == Drawing.Buffer[y][x][3] then
-					shouldDraw = false
-				end
-				if shouldDraw then
-					term.setBackgroundColour(pixel[3])
-					term.setTextColour(pixel[2])
-					term.setCursorPos(x, y)
-					term.write(pixel[1])
-				end
-			end
-		end
-		Drawing.BackBuffer = Drawing.Buffer
-		Drawing.Buffer = {}
-		term.setCursorPos(1,1)
-	end,
-
-	ClearBuffer = function()
-		Drawing.Buffer = {}
-	end,
-
-	WriteStringToBuffer = function (x, y, characters, textColour,bgColour)
-		for i = 1, #characters do
-   			local character = characters:sub(i,i)
-   			Drawing.WriteToBuffer(x + i - 1, y, character, textColour, bgColour)
-		end
-	end,
-
-	WriteToBuffer = function(x, y, character, textColour,bgColour)
-		x = round(x)
-		y = round(y)
-		if bgColour == colours.transparent then
-			Drawing.Buffer[y] = Drawing.Buffer[y] or {}
-			Drawing.Buffer[y][x] = Drawing.Buffer[y][x] or {"", colours.white, colours.black}
-			Drawing.Buffer[y][x][1] = character
-			Drawing.Buffer[y][x][2] = textColour
-		else
-			Drawing.Buffer[y] = Drawing.Buffer[y] or {}
-			Drawing.Buffer[y][x] = {character, textColour, bgColour}
-		end
-	end,
+InterfaceElements={}
+Drawing={
+Screen={
+Width=t,
+Height=a
+},
+DrawCharacters=function(t,e,a,o,i)
+Drawing.WriteStringToBuffer(t,e,a,o,i)
+end,
+DrawBlankArea=function(e,a,t,i,o)
+Drawing.DrawArea(e,a,t,i," ",1,o)
+end,
+DrawArea=function(t,s,e,n,o,a,i)
+if e<0 then
+e=e*-1
+elseif e==0 then
+e=1
+end
+for e=1,e do
+local t=t+e-1
+for e=1,n do
+local e=s+e-1
+Drawing.WriteToBuffer(t,e,o,a,i)
+end
+end
+end,
+DrawImage=function(n,s,t,o,i)
+if t then
+for e=1,i do
+if not t[e]then
+break
+end
+for a=1,o do
+if not t[e][a]then
+break
+end
+local i=t[e][a]
+local o=t.textcol[e][a]or colours.white
+local t=t.text[e][a]
+Drawing.WriteToBuffer(a+n-1,e+s-1,t,o,i)
+end
+end
+elseif o and i then
+Drawing.DrawBlankArea(x,y,o,i,colours.green)
+end
+end,
+LoadImage=function(e)
+local t={
+text={},
+textcol={}
 }
-
-Current = {
-	Document = nil,
-	TextInput = nil,
-	CursorPos = {1,1},
-	CursorColour = colours.black,
-	Selection = {8, 36},
-	Window = nil,
-	HeaderText = '',
-	StatusText = '',
-	StatusColour = colours.grey,
-	StatusScreen = true,
-	ButtonOne = nil,
-	ButtonTwo = nil,
-	Locked = false,
-	Page = '',
-	PageControls = {}
-}
-
-isRunning = true
-
-Events = {}
-
-Button = {
-	X = 1,
-	Y = 1,
-	Width = 0,
-	Height = 0,
-	BackgroundColour = colours.lightGrey,
-	TextColour = colours.white,
-	ActiveBackgroundColour = colours.lightGrey,
-	Text = "",
-	Parent = nil,
-	_Click = nil,
-	Toggle = nil,
-
-	AbsolutePosition = function(self)
-		return self.Parent:AbsolutePosition()
-	end,
-
-	Draw = function(self)
-		local bg = self.BackgroundColour
-		local tc = self.TextColour
-		if type(bg) == 'function' then
-			bg = bg()
-		end
-
-		if self.Toggle then
-			tc = colours.white
-			bg = self.ActiveBackgroundColour
-		end
-
-		local pos = GetAbsolutePosition(self)
-		Drawing.DrawBlankArea(pos.X, pos.Y, self.Width, self.Height, bg)
-		Drawing.DrawCharactersCenter(pos.X, pos.Y, self.Width, self.Height, self.Text, tc, bg)
-	end,
-
-	Initialise = function(self, x, y, width, height, backgroundColour, parent, click, text, textColour, toggle, activeBackgroundColour)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		height = height or 1
-		new.Width = width or #text + 2
-		new.Height = height
-		new.Y = y
-		new.X = x
-		new.Text = text or ""
-		new.BackgroundColour = backgroundColour or colours.lightGrey
-		new.TextColour = textColour or colours.white
-		new.ActiveBackgroundColour = activeBackgroundColour or colours.lightBlue
-		new.Parent = parent
-		new._Click = click
-		new.Toggle = toggle
-		return new
-	end,
-
-	Click = function(self, side, x, y)
-		if self._Click then
-			if self:_Click(side, x, y, not self.Toggle) ~= false and self.Toggle ~= nil then
-				self.Toggle = not self.Toggle
-				Draw()
-			end
-			return true
-		else
-			return false
-		end
-	end
-}
-
-Label = {
-	X = 1,
-	Y = 1,
-	Width = 0,
-	Height = 0,
-	BackgroundColour = colours.lightGrey,
-	TextColour = colours.white,
-	Text = "",
-	Parent = nil,
-
-	AbsolutePosition = function(self)
-		return self.Parent:AbsolutePosition()
-	end,
-
-	Draw = function(self)
-		local bg = self.BackgroundColour
-		local tc = self.TextColour
-
-		if self.Toggle then
-			tc = UIColours.MenuBarActive
-			bg = self.ActiveBackgroundColour
-		end
-
-		local pos = GetAbsolutePosition(self)
-		Drawing.DrawCharacters(pos.X, pos.Y, self.Text, self.TextColour, self.BackgroundColour)
-	end,
-
-	Initialise = function(self, x, y, text, textColour, backgroundColour, parent)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		height = height or 1
-		new.Width = width or #text + 2
-		new.Height = height
-		new.Y = y
-		new.X = x
-		new.Text = text or ""
-		new.BackgroundColour = backgroundColour or colours.white
-		new.TextColour = textColour or colours.black
-		new.Parent = parent
-		return new
-	end,
-
-	Click = function(self, side, x, y)
-		return false
-	end
-}
-
-TextBox = {
-	X = 1,
-	Y = 1,
-	Width = 0,
-	Height = 0,
-	BackgroundColour = colours.lightGrey,
-	TextColour = colours.black,
-	Parent = nil,
-	TextInput = nil,
-	Placeholder = '',
-
-	AbsolutePosition = function(self)
-		return self.Parent:AbsolutePosition()
-	end,
-
-	Draw = function(self)		
-		local pos = GetAbsolutePosition(self)
-		Drawing.DrawBlankArea(pos.X, pos.Y, self.Width, self.Height, self.BackgroundColour)
-		local text = self.TextInput.Value
-		if #tostring(text) > (self.Width - 2) then
-			text = text:sub(#text-(self.Width - 3))
-			if Current.TextInput == self.TextInput then
-				Current.CursorPos = {pos.X + 1 + self.Width-2, pos.Y}
-			end
-		else
-			if Current.TextInput == self.TextInput then
-				Current.CursorPos = {pos.X + 1 + self.TextInput.CursorPos, pos.Y}
-			end
-		end
-		
-		if #tostring(text) == 0 then
-			Drawing.DrawCharacters(pos.X + 1, pos.Y, self.Placeholder, colours.lightGrey, self.BackgroundColour)
-		else
-			Drawing.DrawCharacters(pos.X + 1, pos.Y, text, self.TextColour, self.BackgroundColour)
-		end
-
-		term.setCursorBlink(true)
-		
-		Current.CursorColour = self.TextColour
-	end,
-
-	Initialise = function(self, x, y, width, height, parent, text, backgroundColour, textColour, done, numerical)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		height = height or 1
-		new.Width = width or #text + 2
-		new.Height = height
-		new.Y = y
-		new.X = x
-		new.TextInput = TextInput:Initialise(text or '', function(key)
-			if done then
-				done(key)
-			end
-			Draw()
-		end, numerical)
-		new.BackgroundColour = backgroundColour or colours.lightGrey
-		new.TextColour = textColour or colours.black
-		new.Parent = parent
-		return new
-	end,
-
-	Click = function(self, side, x, y)
-		Current.Input = self.TextInput
-		self:Draw()
-	end
-}
-
-TextInput = {
-	Value = "",
-	Change = nil,
-	CursorPos = nil,
-	Numerical = false,
-	IsDocument = nil,
-
-	Initialise = function(self, value, change, numerical, isDocument)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		new.Value = tostring(value)
-		new.Change = change
-		new.CursorPos = #tostring(value)
-		new.Numerical = numerical
-		new.IsDocument = isDocument or false
-		return new
-	end,
-
-	Insert = function(self, str)
-		if self.Numerical then
-			str = tostring(tonumber(str))
-		end
-
-		local selection = OrderSelection()
-
-		if self.IsDocument and selection then
-			self.Value = string.sub(self.Value, 1, selection[1]-1) .. str .. string.sub( self.Value, selection[2]+2)
-			self.CursorPos = selection[1]
-			Current.Selection = nil
-		else
-			local _, newLineAdjust = string.gsub(self.Value:sub(1, self.CursorPos), '\n','')
-
-			self.Value = string.sub(self.Value, 1, self.CursorPos + newLineAdjust) .. str .. string.sub( self.Value, self.CursorPos + 1  + newLineAdjust)
-			self.CursorPos = self.CursorPos + 1
-		end
-		
-		self.Change(key)
-	end,
-
-	Extract = function(self, remove)
-		local selection = OrderSelection()
-		if self.IsDocument and selection then
-			local _, newLineAdjust = string.gsub(self.Value:sub(selection[1], selection[2]), '\n','')
-			local str = string.sub(self.Value, selection[1], selection[2]+1+newLineAdjust)
-			if remove then
-				self.Value = string.sub(self.Value, 1, selection[1]-1) .. string.sub( self.Value, selection[2]+2+newLineAdjust)
-				self.CursorPos = selection[1] - 1
-				Current.Selection = nil
-			end
-			return str
-		end
-	end,
-
-	Char = function(self, char)
-		if char == 'nil' then
-			return
-		end
-		self:Insert(char)
-	end,
-
-	Key = function(self, key)
-		if key == keys.enter then
-			if self.IsDocument then
-				self.Value = string.sub(self.Value, 1, self.CursorPos ) .. '\n' .. string.sub( self.Value, self.CursorPos + 1 )
-				self.CursorPos = self.CursorPos + 1
-			end
-			self.Change(key)		
-		elseif key == keys.left then
-			-- Left
-			if self.CursorPos > 0 then
-				local colShift = FindColours(string.sub( self.Value, self.CursorPos, self.CursorPos))
-				self.CursorPos = self.CursorPos - 1 - colShift
-				self.Change(key)
-			end
-			
-		elseif key == keys.right then
-			-- Right				
-			if self.CursorPos < string.len(self.Value) then
-				local colShift = FindColours(string.sub( self.Value, self.CursorPos+1, self.CursorPos+1))
-				self.CursorPos = self.CursorPos + 1 + colShift
-				self.Change(key)
-			end
-		
-		elseif key == keys.backspace then
-			-- Backspace
-			if self.IsDocument and Current.Selection then
-				self:Extract(true)
-				self.Change(key)
-			elseif self.CursorPos > 0 then
-				local colShift = FindColours(string.sub( self.Value, self.CursorPos, self.CursorPos))
-				local _, newLineAdjust = string.gsub(self.Value:sub(1, self.CursorPos), '\n','')
-
-				self.Value = string.sub( self.Value, 1, self.CursorPos - 1 - colShift + newLineAdjust) .. string.sub( self.Value, self.CursorPos + 1 - colShift + newLineAdjust)
-				self.CursorPos = self.CursorPos - 1 - colShift
-				self.Change(key)
-			end
-		elseif key == keys.home then
-			-- Home
-			self.CursorPos = 0
-			self.Change(key)
-		elseif key == keys.delete then
-			if self.IsDocument and Current.Selection then
-				self:Extract(true)
-				self.Change(key)
-			elseif self.CursorPos < string.len(self.Value) then
-				self.Value = string.sub( self.Value, 1, self.CursorPos ) .. string.sub( self.Value, self.CursorPos + 2 )				
-				self.Change(key)
-			end
-		elseif key == keys["end"] then
-			-- End
-			self.CursorPos = string.len(self.Value)
-			self.Change(key)
-		elseif key == keys.up and self.IsDocument then
-			-- Up
-			if Current.Document.CursorPos then
-				local page = Current.Document.Pages[Current.Document.CursorPos.Page]
-				self.CursorPos = page:GetCursorPosFromPoint(Current.Document.CursorPos.Collum + page.MarginX, Current.Document.CursorPos.Line - page.MarginY - 1 + Current.Document.ScrollBar.Scroll, true)
-				self.Change(key)
-			end
-		elseif key == keys.down and self.IsDocument then
-			-- Down
-			if Current.Document.CursorPos then
-				local page = Current.Document.Pages[Current.Document.CursorPos.Page]
-				self.CursorPos = page:GetCursorPosFromPoint(Current.Document.CursorPos.Collum + page.MarginX, Current.Document.CursorPos.Line - page.MarginY + 1 + Current.Document.ScrollBar.Scroll, true)
-				self.Change(key)
-			end
-		end
-	end
-}
-
-local Capitalise = function(str)
-	return str:sub(1, 1):upper() .. str:sub(2, -1)
+local a=fs
+if OneOS then
+a=OneOS.FS
 end
-
-
-local getNames = peripheral.getNames or function()
-    local tResults = {}
-    for n,sSide in ipairs( rs.getSides() ) do
-        if peripheral.isPresent( sSide ) then
-            table.insert( tResults, sSide )
-            local isWireless = false
-            if not pcall(function()isWireless = peripheral.call(sSide, 'isWireless') end) then
-                isWireless = true
-            end     
-            if peripheral.getType( sSide ) == "modem" and not isWireless then
-                local tRemote = peripheral.call( sSide, "getNamesRemote" )
-                for n,sName in ipairs( tRemote ) do
-                    table.insert( tResults, sName )
-                end
-            end
-        end
-    end
-    return tResults
+if a.exists(e)then
+local a=io.open
+if OneOS then
+a=OneOS.IO.open
 end
-
-Peripheral = {
-    GetPeripheral = function(_type)
-        for i, p in ipairs(Peripheral.GetPeripherals()) do
-            if p.Type == _type then
-                return p
-            end
-        end
-    end,
-
-    Call = function(type, ...)
-        local tArgs = {...}
-        local p = Peripheral.GetPeripheral(type)
-        peripheral.call(p.Side, unpack(tArgs))
-    end,
-
-    GetPeripherals = function(filterType)
-        local peripherals = {}
-        for i, side in ipairs(getNames()) do
-            local name = peripheral.getType(side):gsub("^%l", string.upper)
-            local code = string.upper(side:sub(1,1))
-            if side:find('_') then
-                code = side:sub(side:find('_')+1)
-            end
-
-            local dupe = false
-            for i, v in ipairs(peripherals) do
-                if v[1] == name .. ' ' .. code then
-                    dupe = true
-                end
-            end
-
-            if not dupe then
-                local _type = peripheral.getType(side)
-                local isWireless = false
-                if _type == 'modem' then
-                    if not pcall(function()isWireless = peripheral.call(sSide, 'isWireless') end) then
-                        isWireless = true
-                    end     
-                    if isWireless then
-                        _type = 'wireless_modem'
-                        name = 'W '..name
-                    end
-                end
-                if not filterType or _type == filterType then
-                    table.insert(peripherals, {Name = name:sub(1,8) .. ' '..code, Fullname = name .. ' ('..side:sub(1, 1):upper() .. side:sub(2, -1)..')', Side = side, Type = _type, Wireless = isWireless})
-                end
-            end
-        end
-        return peripherals
-    end,
-
-    PresentNamed = function(name)
-        return peripheral.isPresent(name)
-    end,
-
-    CallType = function(type, ...)
-        local tArgs = {...}
-        local p = Peripheral.GetPeripheral(type)
-        return peripheral.call(p.Side, unpack(tArgs))
-    end,
-
-    CallNamed = function(name, ...)
-        local tArgs = {...}
-        return peripheral.call(name, unpack(tArgs))
-    end
-}
-
-Wireless = {
-	Channels = {
-		UltimateDoorlockPing = 4210,
-		UltimateDoorlockRequest = 4211,
-		UltimateDoorlockRequestReply = 4212,
-	},
-
-	isOpen = function(channel)
-		return Peripheral.CallType('wireless_modem', 'isOpen', channel)
-	end,
-
-	Open = function(channel)
-		if not Wireless.isOpen(channel) then
-			Peripheral.CallType('wireless_modem', 'open', channel)
-		end
-	end,
-
-	close = function(channel)
-		Peripheral.CallType('wireless_modem', 'close', channel)
-	end,
-
-	closeAll = function()
-		Peripheral.CallType('wireless_modem', 'closeAll')
-	end,
-
-	transmit = function(channel, replyChannel, message)
-		Peripheral.CallType('wireless_modem', 'transmit', channel, replyChannel, textutils.serialize(message))
-	end,
-
-	Present = function()
-		if Peripheral.GetPeripheral('wireless_modem') == nil then
-			return false
-		else
-			return true
-		end
-	end,
-
-	FormatMessage = function(message, messageID, destinationID)
-		return {
-			content = textutils.serialize(message),
-			senderID = os.getComputerID(),
-			senderName = os.getComputerLabel(),
-			channel = channel,
-			replyChannel = reply,
-			messageID = messageID or math.random(10000),
-			destinationID = destinationID
-		}
-	end,
-
-	Timeout = function(func, time)
-		time = time or 1
-		parallel.waitForAny(func, function()
-			sleep(time)
-			--log('Timeout!'..time)
-		end)
-	end,
-
-	RecieveMessage = function(_channel, messageID, timeout)
-		open(_channel)
-		local done = false
-		local event, side, channel, replyChannel, message = nil
-		Timeout(function()
-			while not done do
-				event, side, channel, replyChannel, message = os.pullEvent('modem_message')
-				if channel ~= _channel then
-					event, side, channel, replyChannel, message = nil
-				else
-					message = textutils.unserialize(message)
-					message.content = textutils.unserialize(message.content)
-					if messageID and messageID ~= message.messageID or (message.destinationID ~= nil and message.destinationID ~= os.getComputerID()) then
-						event, side, channel, replyChannel, message = nil
-					else
-						done = true
-					end
-				end
-			end
-		end,
-		timeout)
-		return event, side, channel, replyChannel, message
-	end,
-
-	Initialise = function()
-		if Wireless.Present() then
-			for i, c in pairs(Wireless.Channels) do
-				Wireless.Open(c)
-			end
-		end
-	end,
-
-	HandleMessage = function(event, side, channel, replyChannel, message, distance)
-		message = textutils.unserialize(message)
-		message.content = textutils.unserialize(message.content)
-
-		if channel == Wireless.Channels.Ping then
-			if message.content == 'Ping!' then
-				SendMessage(replyChannel, 'Pong!', nil, message.messageID)
-			end
-		elseif message.destinationID ~= nil and message.destinationID ~= os.getComputerID() then
-		elseif Wireless.Responder then
-			Wireless.Responder(event, side, channel, replyChannel, message, distance)
-		end
-	end,
-
-	SendMessage = function(channel, message, reply, messageID, destinationID)
-		reply = reply or channel + 1
-		Wireless.Open(channel)
-		Wireless.Open(reply)
-		local _message = Wireless.FormatMessage(message, messageID, destinationID)
-		Wireless.transmit(channel, reply, _message)
-		return _message
-	end,
-
-	Ping = function()
-		local message = SendMessage(Channels.Ping, 'Ping!', Channels.PingReply)
-		RecieveMessage(Channels.PingReply, message.messageID)
-	end
-}
-
-function GetAbsolutePosition(object)
-	local obj = object
-	local i = 0
-	local x = 1
-	local y = 1
-	while true do
-		x = x + obj.X - 1
-		y = y + obj.Y - 1
-
-		if not obj.Parent then
-			return {X = x, Y = y}
-		end
-
-		obj = obj.Parent
-
-		if i > 32 then
-			return {X = 1, Y = 1}
-		end
-
-		i = i + 1
-	end
-
-end
-
-function Draw()
-	Drawing.Clear(colours.white)
-
-	if Current.StatusScreen then
-		Drawing.DrawCharactersCenter(1, -2, nil, nil, Current.HeaderText, colours.blue, colours.white)
-		Drawing.DrawCharactersCenter(1, -1, nil, nil, 'by oeed', colours.lightGrey, colours.white)
-		Drawing.DrawCharactersCenter(1, 1, nil, nil, Current.StatusText, Current.StatusColour, colours.white)
-	end
-
-	if Current.ButtonOne then
-		Current.ButtonOne:Draw()
-	end
-
-	if Current.ButtonTwo then
-		Current.ButtonTwo:Draw()
-	end
-
-	for i, v in ipairs(Current.PageControls) do
-		v:Draw()
-	end
-
-	Drawing.DrawBuffer()
-
-	if Current.TextInput and Current.CursorPos and not Current.Menu and not(Current.Window and Current.Document and Current.TextInput == Current.Document.TextInput) and Current.CursorPos[2] > 1 then
-		term.setCursorPos(Current.CursorPos[1], Current.CursorPos[2])
-		term.setCursorBlink(true)
-		term.setTextColour(Current.CursorColour)
-	else
-		term.setCursorBlink(false)
-	end
-end
-MainDraw = Draw
-
-function GenerateFingerprint()
-    local str = ""
-    for _ = 1, 256 do
-        local char = math.random(32, 126)
-        --if char == 96 then char = math.random(32, 95) end
-        str = str .. string.char(char)
-    end
-    return str
-end
-
-function MakeFingerprint()
-	local h = fs.open('.fingerprint', 'w')
-	if h then
-		h.write(GenerateFingerprint())
-	end
-	h.close()
-	Current.Fingerprint = str
-end
-
-local drawTimer = nil
-function SetText(header, status, colour, isReset)
-	if header then
-		Current.HeaderText = header
-	end
-	if status then
-		Current.StatusText = status
-	end
-	if colour then
-		Current.StatusColour = colour
-	end
-	Draw()
-	if not isReset then
-		statusResetTimer = os.startTimer(2)
-	end
-end
-
-function ResetStatus()
-	if pocket then
-		if Current.Locked then
-			SetText('Ultimate Door Lock', 'Add Wireless Modem to PDA', colours.red, true)
-		else
-			SetText('Ultimate Door Lock', 'Ready', colours.grey, true)
-		end
-	else
-		if Current.Locked then
-			SetText('Ultimate Door Lock', ' Attach a Wireless Modem then reboot', colours.red, true)
-		else
-			SetText('Ultimate Door Lock', 'Ready', colours.grey, true)
-		end
-	end
-end
-
-function ResetPage()
-	Wireless.Responder = function()end
-	pingTimer = nil
-	Current.PageControls = nil
-	Current.StatusScreen = false
-	Current.ButtonOne = nil
-	Current.ButtonTwo = nil
-	Current.PageControls = {}
-	CloseDoor()
-end
-
-function PocketInitialise()
-	Current.ButtonOne = Button:Initialise(Drawing.Screen.Width - 6, Drawing.Screen.Height - 1, nil, nil, nil, nil, Quit, 'Quit', colours.black)
-	if not Wireless.Present() then
-		Current.Locked = true
-		ResetStatus()
-		return
-	end
-	Wireless.Initialise()
-	ResetStatus()
-	if fs.exists('.fingerprint') then
-		local h = fs.open('.fingerprint', 'r')
-		if h then
-			Current.Fingerprint = h.readAll()
-		else
-			MakeFingerprint()
-		end
-		h.close()
-	else
-		MakeFingerprint()
-	end
-
-	Wireless.Responder = function(event, side, channel, replyChannel, message, distance)
-		if channel == Wireless.Channels.UltimateDoorlockPing then
-			Wireless.SendMessage(Wireless.Channels.UltimateDoorlockRequest, Current.Fingerprint, Wireless.Channels.UltimateDoorlockRequestReply, nil, message.senderID)
-		elseif channel == Wireless.Channels.UltimateDoorlockRequestReply then
-			if message.content == true then
-				SetText(nil, 'Opening Door', colours.green)
-			else
-				SetText(nil, ' Access Denied', colours.red)
-			end
-		end
-	end
-end
-
-function FingerprintIsOnWhitelist(fingerprint)
-	if Current.Settings.Whitelist then
-		for i, f in ipairs(Current.Settings.Whitelist) do
-			if f == fingerprint then
-				return true
-			end
-		end
-	end
-	return false
-end
-
-function SaveSettings()
-	Current.Settings = Current.Settings or {}
-	local h = fs.open('.settings', 'w')
-	if h then
-		h.write(textutils.serialize(Current.Settings))
-	end
-	h.close()	
-end
-
-local closeDoorTimer = nil
-function OpenDoor()
-	if Current.Settings and Current.Settings.RedstoneSide then
-		SetText(nil, 'Opening Door', colours.green)
-		redstone.setOutput(Current.Settings.RedstoneSide, true)
-		closeDoorTimer = os.startTimer(0.6)
-	end
-end
-
-function CloseDoor()
-	if Current.Settings and Current.Settings.RedstoneSide then
-		if redstone.getOutput(Current.Settings.RedstoneSide) then
-			SetText(nil, 'Closing Door', colours.orange)
-			redstone.setOutput(Current.Settings.RedstoneSide, false)
-		end
-	end
-end
-
-DefaultSettings = {
-	Whitelist = {},
-	RedstoneSide = 'back',
-	Distance = 10
-}
-
-function RegisterPDA(event, drive)
-	if disk.hasData(drive) then
-		local _fs = fs
-		if OneOS then
-			_fs = OneOS.FS
-		end
-		local path = disk.getMountPath(drive)
-		local addStartup = true
-		if _fs.exists(path..'/System/') then
-			path = path..'/System/'
-			addStartup = false
-		end
-		local fingerprint = nil
-		if _fs.exists(path..'/.fingerprint') then
-			local h = _fs.open(path..'/.fingerprint', 'r')
-			if h then
-				local str = h.readAll()
-				if #str == 256 then
-					fingerprint = str
-				end
-			end
-			h.close()
-		end
-		if not fingerprint then
-			fingerprint = GenerateFingerprint()
-			local h = _fs.open(path..'/.fingerprint', 'w')
-			h.write(fingerprint)
-			h.close()
-			if addStartup then
-				local h = fs.open(shell.getRunningProgram(), 'r')
-				local startup = h.readAll()
-				h.close()
-				local h = _fs.open(path..'/startup', 'w')
-				h.write(startup)
-				h.close()
-			end
-		end
-		if not FingerprintIsOnWhitelist(fingerprint) then
-			table.insert(Current.Settings.Whitelist, fingerprint)
-			SaveSettings()
-		end
-		disk.eject(drive)
-		SetText(nil, 'Registered Pocket Computer', colours.green)
-	end
-end
-
-function HostSetup()
-	ResetPage()
-	Current.Page = 'HostSetup'
-	Current.ButtonTwo = Button:Initialise(Drawing.Screen.Width - 6, Drawing.Screen.Height - 1, nil, nil, nil, nil, HostStatusPage, 'Save', colours.black)
-	if not Current.Settings then
-		Current.Settings = DefaultSettings
-	end
-
-	local sideButtons = {}
-	local function resetSideToggle(self)
-		for i, v in ipairs(sideButtons) do
-			if v.Toggle ~= nil then
-				v.Toggle = false
-			end
-		end
-		Current.Settings.RedstoneSide = self.Text:lower()
-		SaveSettings()
-	end
-
-	table.insert(Current.PageControls, Label:Initialise(2, 2, 'Redstone Side'))
-	sideButtons = {
-		Button:Initialise(2, 4, nil, nil, nil, nil, resetSideToggle, 'Back', colours.black, false, colours.green),
-		Button:Initialise(9, 4, nil, nil, nil, nil, resetSideToggle, 'Front', colours.black, false, colours.green),
-		Button:Initialise(2, 6, nil, nil, nil, nil, resetSideToggle, 'Left', colours.black, false, colours.green),
-		Button:Initialise(9, 6, nil, nil, nil, nil, resetSideToggle, 'Right', colours.black, false, colours.green),
-		Button:Initialise(2, 8, nil, nil, nil, nil, resetSideToggle, 'Top', colours.black, false, colours.green),
-		Button:Initialise(8, 8, nil, nil, nil, nil, resetSideToggle, 'Bottom', colours.black, false, colours.green)
-	}
-  	for i, v in ipairs(sideButtons) do
-  		if v.Text:lower() == Current.Settings.RedstoneSide then
-  			v.Toggle = true
-  		end
-  		table.insert(Current.PageControls, v)
-  	end
-
-	local distanceButtons = {}
-	local function resetDistanceToggle(self)
-		for i, v in ipairs(distanceButtons) do
-			if v.Toggle ~= nil then
-				v.Toggle = false
-			end
-		end
-  		if self.Text == 'Small' then
-  			Current.Settings.Distance = 5
-  		elseif self.Text == 'Normal' then
-  			Current.Settings.Distance = 10
-  		elseif self.Text == 'Far' then
-  			Current.Settings.Distance = 15
-  		end
-		SaveSettings()
-	end
-
-	table.insert(Current.PageControls, Label:Initialise(23, 2, 'Opening Distance'))
-	distanceButtons = {
-		Button:Initialise(23, 4, nil, nil, nil, nil, resetDistanceToggle, 'Small', colours.black, false, colours.green),
-		Button:Initialise(31, 4, nil, nil, nil, nil, resetDistanceToggle, 'Normal', colours.black, false, colours.green),
-		Button:Initialise(40, 4, nil, nil, nil, nil, resetDistanceToggle, 'Far', colours.black, false, colours.green)
-	}
-  	for i, v in ipairs(distanceButtons) do
-  		if v.Text == 'Small' and Current.Settings.Distance == 5 then
-  			v.Toggle = true
-  		elseif v.Text == 'Normal' and Current.Settings.Distance == 10 then
-  			v.Toggle = true
-  		elseif v.Text == 'Far' and Current.Settings.Distance == 15 then
-  			v.Toggle = true
-  		end
-  		table.insert(Current.PageControls, v)
-  	end
-
-	table.insert(Current.PageControls, Label:Initialise(2, 10, 'Registered PDAs: '..#Current.Settings.Whitelist))
-	table.insert(Current.PageControls, Button:Initialise(2, 12, nil, nil, nil, nil, function()Current.Settings.Whitelist = {}HostSetup()end, 'Unregister All', colours.black))
-
-  	
-  	table.insert(Current.PageControls, Label:Initialise(23, 6, 'Help', colours.black))
-  	local helpLines = {
-  		Label:Initialise(23, 8, 'To register a new PDA simply', colours.black),
-  		Label:Initialise(23, 9, 'place a Disk Drive next to', colours.black),
-  		Label:Initialise(23, 10, 'the computer, then put the', colours.black),
-  		Label:Initialise(23, 11, 'PDA in the Drive, it will', colours.black),
-  		Label:Initialise(23, 12, 'register automatically. If', colours.black),
-  		Label:Initialise(23, 13, 'it worked it will eject.', colours.black),
-  		Label:Initialise(23, 15, 'Make sure you hide this', colours.red),
-  		Label:Initialise(23, 16, 'computer away from the', colours.red),
-  		Label:Initialise(23, 17, 'door! (other people)', colours.red)
-  	}
-  	for i, v in ipairs(helpLines) do
-  		table.insert(Current.PageControls, v)
-  	end
-
-
-	table.insert(Current.PageControls, Button:Initialise(2, 14, nil, nil, nil, nil, function()
-	  	for i = 1, 6 do
-	  		helpLines[i].TextColour = colours.green
-	  	end
-	end, 'Register New PDA', colours.black))
-
-end
-
-function HostStatusPage()
-	ResetPage()
-	Current.Page = 'HostStatus'
-	Current.StatusScreen = true
-	Current.ButtonOne = Button:Initialise(Drawing.Screen.Width - 6, Drawing.Screen.Height - 1, nil, nil, nil, nil, Quit, 'Quit', colours.black)
-	Current.ButtonTwo = Button:Initialise(2, Drawing.Screen.Height - 1, nil, nil, nil, nil, HostSetup, 'Settings/Help', colours.black)
-
-	Wireless.Responder = function(event, side, channel, replyChannel, message, distance)
-		if channel == Wireless.Channels.UltimateDoorlockRequest and distance < Current.Settings.Distance then
-			if FingerprintIsOnWhitelist(message.content) then
-				OpenDoor()
-				Wireless.SendMessage(Wireless.Channels.UltimateDoorlockRequestReply, true)
-			else
-				Wireless.SendMessage(Wireless.Channels.UltimateDoorlockRequestReply, false)
-			end
-		end
-	end
-
-	PingPocketComputers()
-end
-
-function HostInitialise()
-	if not Wireless.Present() then
-		Current.Locked = true
-		Current.ButtonOne = Button:Initialise(Drawing.Screen.Width - 6, Drawing.Screen.Height - 1, nil, nil, nil, nil, Quit, 'Quit', colours.black)
-		Current.ButtonTwo = Button:Initialise(2, Drawing.Screen.Height - 1, nil, nil, nil, nil, function()os.reboot()end, 'Reboot', colours.black)
-		ResetStatus()
-		return
-	end
-	Wireless.Initialise()
-	ResetStatus()
-	if fs.exists('.settings') then
-		local h = fs.open('.settings', 'r')
-		if h then
-			Current.Settings = textutils.unserialize(h.readAll())
-		end
-		h.close()
-		HostStatusPage()		
-	else
-		HostSetup()
-	end
-	if OneOS then
-		OneOS.CanClose = function()
-			CloseDoor()
-			return true
-		end
-	end
-end
-
-local pingTimer = nil
-function PingPocketComputers()
-	Wireless.SendMessage(Wireless.Channels.UltimateDoorlockPing, 'Ping!', Wireless.Channels.UltimateDoorlockRequest)
-	pingTimer = os.startTimer(0.5)
-end
-
-function Initialise(arg)
-	EventRegister('mouse_click', TryClick)
-	EventRegister('mouse_drag', function(event, side, x, y)TryClick(event, side, x, y, true)end)
-	EventRegister('mouse_scroll', Scroll)
-	EventRegister('key', HandleKey)
-	EventRegister('char', HandleKey)
-	EventRegister('timer', Timer)
-	EventRegister('terminate', function(event) if Close() then error( "Terminated", 0 ) end end)
-	EventRegister('modem_message', Wireless.HandleMessage)
-	EventRegister('disk', RegisterPDA)
-
-	if OneOS then
-		OneOS.RequestRunAtStartup()
-	end
-
-	if pocket then
-		PocketInitialise()
-	else
-		HostInitialise()
-	end
-
-
-	Draw()
-
-	EventHandler()
-end
-
-function Timer(event, timer)
-	if timer == pingTimer then
-		PingPocketComputers()
-	elseif timer == closeDoorTimer then
-		CloseDoor()
-	elseif timer == statusResetTimer then
-		ResetStatus()
-	end
-end
-
-local ignoreNextChar = false
-function HandleKey(...)
-	local args = {...}
-	local event = args[1]
-	local keychar = args[2]
-	--[[
-																							--Mac left command character
-	if event == 'key' and keychar == keys.leftCtrl or keychar == keys.rightCtrl or keychar == 219 then
-		isControlPushed = true
-		controlPushedTimer = os.startTimer(0.5)
-	elseif isControlPushed then
-		if event == 'key' then
-			if CheckKeyboardShortcut(keychar) then
-				isControlPushed = false
-				ignoreNextChar = true
-			end
-		end
-	elseif ignoreNextChar then
-		ignoreNextChar = false
-	elseif Current.TextInput then
-		if event == 'char' then
-			Current.TextInput:Char(keychar)
-		elseif event == 'key' then
-			Current.TextInput:Key(keychar)
-		end
-	end
-	]]--
-end
-
---[[
-	Check if the given object falls under the click coordinates
-]]--
-function CheckClick(object, x, y)
-	if object.X <= x and object.Y <= y and object.X + object.Width > x and object.Y + object.Height > y then
-		return true
-	end
-end
-
---[[
-	Attempt to clicka given object
-]]--
-function DoClick(object, side, x, y, drag)
-	local obj = GetAbsolutePosition(object)
-	obj.Width = object.Width
-	obj.Height = object.Height
-	if object and CheckClick(obj, x, y) then
-		return object:Click(side, x - object.X + 1, y - object.Y + 1, drag)
-	end	
-end
-
---[[
-	Try to click at the given coordinates
-]]--
-function TryClick(event, side, x, y, drag)
-	if Current.ButtonOne then
-		if DoClick(Current.ButtonOne, side, x, y, drag) then
-			Draw()
-			return
-		end
-	end
-
-	if Current.ButtonTwo then
-		if DoClick(Current.ButtonTwo, side, x, y, drag) then
-			Draw()
-			return
-		end
-	end
-
-	for i, v in ipairs(Current.PageControls) do
-		if DoClick(v, side, x, y, drag) then
-			Draw()
-			return
-		end
-	end
-
-	Draw()
-end
-
-function Scroll(event, direction, x, y)
-	if Current.Window and Current.Window.OpenButton then
-		Current.Document.Scroll = Current.Document.Scroll + direction
-		if Current.Window.Scroll < 0 then
-			Current.Window.Scroll = 0
-		elseif Current.Window.Scroll > Current.Window.MaxScroll then
-			Current.Window.Scroll = Current.Window.MaxScroll
-		end
-		Draw()
-	elseif Current.ScrollBar then
-		if Current.ScrollBar:DoScroll(direction*2) then
-			Draw()
-		end
-	end
-end
-
---[[
-	Registers functions to run on certain events
-]]--
-function EventRegister(event, func)
-	if not Events[event] then
-		Events[event] = {}
-	end
-
-	table.insert(Events[event], func)
-end
-
---[[
-	The main loop event handler, runs registered event functinos
-]]--
-function EventHandler()
-	while isRunning do
-		local event, arg1, arg2, arg3, arg4, arg5, arg6 = os.pullEventRaw()
-		if Events[event] then
-			for i, e in ipairs(Events[event]) do
-				e(event, arg1, arg2, arg3, arg4, arg5, arg6)
-			end
-		end
-	end
-end
-
-function Quit()
-	isRunning = false
-	term.setCursorPos(1,1)
-	term.setBackgroundColour(colours.black)
-	term.setTextColour(colours.white)
-	term.clear()
-	if OneOS then
-		OneOS.Close()
-	end
-end
-
-if not term.current then -- if not 1.6
-	print('Because it requires pocket computers, Ultimate Door Lock requires ComputerCraft 1.6. Please update to 1.6 to use Ultimate Door Lock.')
-elseif not (OneOS and pocket) and term.isColor and term.isColor() then
-	-- If the program crashes close the door and reboot
-	local _, err = pcall(Initialise)
-	if err then
-		CloseDoor()
-		term.setCursorPos(1,1)
-		term.setBackgroundColour(colours.black)
-		term.setTextColour(colours.white)
-		term.clear()
-		print('Ultimate Door Lock has crashed')
-		print('To maintain security, the computer will reboot.')
-		print('If you are seeing this alot try turning off all Pocket Computers or reinstall.')
-		print()
-		print('Error:')
-		printError(err)
-		sleep(5)
-		os.reboot()
-	end
-elseif OneOS and pocket then
-	term.setCursorPos(1,3)
-	term.setBackgroundColour(colours.white)
-	term.setTextColour(colours.blue)
-	term.clear()
-	print('OneOS already acts as a door key. Simply place your PDA in the door\'s disk drive to register it.')
-	print()
-	print('To setup a door, run this program on an advanced computer (non-pocket).')
-	print()
-	print('Click anywhere to quit')
-	os.pullEvent('mouse_click')
-	Quit()
+local r=a(e,"r")
+local i=r:read()
+local e=1
+while i do
+table.insert(t,e,{})
+table.insert(t.text,e,{})
+table.insert(t.textcol,e,{})
+local o=1
+local h,s=false,false
+local d,n=nil,nil
+for a=1,#i do
+local a=string.sub(i,a,a)
+if a:byte()==30 then
+h=true
+elseif a:byte()==31 then
+s=true
+elseif h then
+d=Drawing.GetColour(a)
+h=false
+elseif s then
+n=Drawing.GetColour(a)
+s=false
 else
-	print('Ultimate Door Lock requires an advanced (gold) computer or pocket computer.')
+if a~=" "and n==nil then
+n=colours.white
+end
+t[e][o]=d
+t.textcol[e][o]=n
+t.text[e][o]=a
+o=o+1
+end
+end
+e=e+1
+i=r:read()
+end
+r:close()
+end
+return t
+end,
+DrawCharactersCenter=function(e,t,a,o,i,n,s)
+a=a or Drawing.Screen.Width
+o=o or Drawing.Screen.Height
+e=e or 0
+t=t or 0
+e=math.ceil((a-#i)/2)+e
+t=math.floor(o/2)+t
+Drawing.DrawCharacters(e,t,i,n,s)
+end,
+GetColour=function(e)
+if e==' 'then
+return colours.transparent
+end
+local e=tonumber(e,16)
+if not e then return nil end
+e=math.pow(2,e)
+return e
+end,
+Clear=function(e)
+e=e or colours.black
+Drawing.ClearBuffer()
+Drawing.DrawBlankArea(1,1,Drawing.Screen.Width,Drawing.Screen.Height,e)
+end,
+Buffer={},
+BackBuffer={},
+DrawBuffer=function()
+for e,t in pairs(Drawing.Buffer)do
+for t,a in pairs(t)do
+local i=true
+local o=true
+if Drawing.BackBuffer[e]==nil or Drawing.BackBuffer[e][t]==nil or#Drawing.BackBuffer[e][t]~=3 then
+o=false
+end
+if o and Drawing.BackBuffer[e][t][1]==Drawing.Buffer[e][t][1]and Drawing.BackBuffer[e][t][2]==Drawing.Buffer[e][t][2]and Drawing.BackBuffer[e][t][3]==Drawing.Buffer[e][t][3]then
+i=false
+end
+if i then
+term.setBackgroundColour(a[3])
+term.setTextColour(a[2])
+term.setCursorPos(t,e)
+term.write(a[1])
+end
+end
+end
+Drawing.BackBuffer=Drawing.Buffer
+Drawing.Buffer={}
+term.setCursorPos(1,1)
+end,
+ClearBuffer=function()
+Drawing.Buffer={}
+end,
+WriteStringToBuffer=function(i,n,t,a,o)
+for e=1,#t do
+local t=t:sub(e,e)
+Drawing.WriteToBuffer(i+e-1,n,t,a,o)
+end
+end,
+WriteToBuffer=function(t,e,a,i,o)
+t=l(t)
+e=l(e)
+if o==colours.transparent then
+Drawing.Buffer[e]=Drawing.Buffer[e]or{}
+Drawing.Buffer[e][t]=Drawing.Buffer[e][t]or{"",colours.white,colours.black}
+Drawing.Buffer[e][t][1]=a
+Drawing.Buffer[e][t][2]=i
+else
+Drawing.Buffer[e]=Drawing.Buffer[e]or{}
+Drawing.Buffer[e][t]={a,i,o}
+end
+end,
+}
+Current={
+Document=nil,
+TextInput=nil,
+CursorPos={1,1},
+CursorColour=colours.black,
+Selection={8,36},
+Window=nil,
+HeaderText='',
+StatusText='',
+StatusColour=colours.grey,
+StatusScreen=true,
+ButtonOne=nil,
+ButtonTwo=nil,
+Locked=false,
+Page='',
+PageControls={}
+}
+isRunning=true
+Events={}
+Button={
+X=1,
+Y=1,
+Width=0,
+Height=0,
+BackgroundColour=colours.lightGrey,
+TextColour=colours.white,
+ActiveBackgroundColour=colours.lightGrey,
+Text="",
+Parent=nil,
+_Click=nil,
+Toggle=nil,
+AbsolutePosition=function(e)
+return e.Parent:AbsolutePosition()
+end,
+Draw=function(e)
+local t=e.BackgroundColour
+local o=e.TextColour
+if type(t)=='function'then
+t=t()
+end
+if e.Toggle then
+o=colours.white
+t=e.ActiveBackgroundColour
+end
+local a=GetAbsolutePosition(e)
+Drawing.DrawBlankArea(a.X,a.Y,e.Width,e.Height,t)
+Drawing.DrawCharactersCenter(a.X,a.Y,e.Width,e.Height,e.Text,o,t)
+end,
+Initialise=function(o,i,l,c,t,u,n,h,a,d,r,s)
+local e={}
+setmetatable(e,{__index=o})
+t=t or 1
+e.Width=c or#a+2
+e.Height=t
+e.Y=l
+e.X=i
+e.Text=a or""
+e.BackgroundColour=u or colours.lightGrey
+e.TextColour=d or colours.white
+e.ActiveBackgroundColour=s or colours.lightBlue
+e.Parent=n
+e._Click=h
+e.Toggle=r
+return e
+end,
+Click=function(e,o,t,a)
+if e._Click then
+if e:_Click(o,t,a,not e.Toggle)~=false and e.Toggle~=nil then
+e.Toggle=not e.Toggle
+Draw()
+end
+return true
+else
+return false
+end
+end
+}
+Label={
+X=1,
+Y=1,
+Width=0,
+Height=0,
+BackgroundColour=colours.lightGrey,
+TextColour=colours.white,
+Text="",
+Parent=nil,
+AbsolutePosition=function(e)
+return e.Parent:AbsolutePosition()
+end,
+Draw=function(e)
+local t=e.BackgroundColour
+local a=e.TextColour
+if e.Toggle then
+a=UIColours.MenuBarActive
+t=e.ActiveBackgroundColour
+end
+local t=GetAbsolutePosition(e)
+Drawing.DrawCharacters(t.X,t.Y,e.Text,e.TextColour,e.BackgroundColour)
+end,
+Initialise=function(h,n,s,t,i,a,o)
+local e={}
+setmetatable(e,{__index=h})
+height=height or 1
+e.Width=width or#t+2
+e.Height=height
+e.Y=s
+e.X=n
+e.Text=t or""
+e.BackgroundColour=a or colours.white
+e.TextColour=i or colours.black
+e.Parent=o
+return e
+end,
+Click=function(e,e,e,e)
+return false
+end
+}
+TextBox={
+X=1,
+Y=1,
+Width=0,
+Height=0,
+BackgroundColour=colours.lightGrey,
+TextColour=colours.black,
+Parent=nil,
+TextInput=nil,
+Placeholder='',
+AbsolutePosition=function(e)
+return e.Parent:AbsolutePosition()
+end,
+Draw=function(e)
+local t=GetAbsolutePosition(e)
+Drawing.DrawBlankArea(t.X,t.Y,e.Width,e.Height,e.BackgroundColour)
+local a=e.TextInput.Value
+if#tostring(a)>(e.Width-2)then
+a=a:sub(#a-(e.Width-3))
+if Current.TextInput==e.TextInput then
+Current.CursorPos={t.X+1+e.Width-2,t.Y}
+end
+else
+if Current.TextInput==e.TextInput then
+Current.CursorPos={t.X+1+e.TextInput.CursorPos,t.Y}
+end
+end
+if#tostring(a)==0 then
+Drawing.DrawCharacters(t.X+1,t.Y,e.Placeholder,colours.lightGrey,e.BackgroundColour)
+else
+Drawing.DrawCharacters(t.X+1,t.Y,a,e.TextColour,e.BackgroundColour)
+end
+term.setCursorBlink(true)
+Current.CursorColour=e.TextColour
+end,
+Initialise=function(s,d,l,u,t,r,a,h,n,o,i)
+local e={}
+setmetatable(e,{__index=s})
+t=t or 1
+e.Width=u or#a+2
+e.Height=t
+e.Y=l
+e.X=d
+e.TextInput=TextInput:Initialise(a or'',function(e)
+if o then
+o(e)
+end
+Draw()
+end,i)
+e.BackgroundColour=h or colours.lightGrey
+e.TextColour=n or colours.black
+e.Parent=r
+return e
+end,
+Click=function(e,t,t,t)
+Current.Input=e.TextInput
+e:Draw()
+end
+}
+TextInput={
+Value="",
+Change=nil,
+CursorPos=nil,
+Numerical=false,
+IsDocument=nil,
+Initialise=function(n,t,o,i,a)
+local e={}
+setmetatable(e,{__index=n})
+e.Value=tostring(t)
+e.Change=o
+e.CursorPos=#tostring(t)
+e.Numerical=i
+e.IsDocument=a or false
+return e
+end,
+Insert=function(e,a)
+if e.Numerical then
+a=tostring(tonumber(a))
+end
+local t=OrderSelection()
+if e.IsDocument and t then
+e.Value=string.sub(e.Value,1,t[1]-1)..a..string.sub(e.Value,t[2]+2)
+e.CursorPos=t[1]
+Current.Selection=nil
+else
+local o,t=string.gsub(e.Value:sub(1,e.CursorPos),'\n','')
+e.Value=string.sub(e.Value,1,e.CursorPos+t)..a..string.sub(e.Value,e.CursorPos+1+t)
+e.CursorPos=e.CursorPos+1
+end
+e.Change(key)
+end,
+Extract=function(t,o)
+local e=OrderSelection()
+if t.IsDocument and e then
+local i,a=string.gsub(t.Value:sub(e[1],e[2]),'\n','')
+local i=string.sub(t.Value,e[1],e[2]+1+a)
+if o then
+t.Value=string.sub(t.Value,1,e[1]-1)..string.sub(t.Value,e[2]+2+a)
+t.CursorPos=e[1]-1
+Current.Selection=nil
+end
+return i
+end
+end,
+Char=function(t,e)
+if e=='nil'then
+return
+end
+t:Insert(e)
+end,
+Key=function(e,t)
+if t==keys.enter then
+if e.IsDocument then
+e.Value=string.sub(e.Value,1,e.CursorPos)..'\n'..string.sub(e.Value,e.CursorPos+1)
+e.CursorPos=e.CursorPos+1
+end
+e.Change(t)
+elseif t==keys.left then
+if e.CursorPos>0 then
+local a=FindColours(string.sub(e.Value,e.CursorPos,e.CursorPos))
+e.CursorPos=e.CursorPos-1-a
+e.Change(t)
+end
+elseif t==keys.right then
+if e.CursorPos<string.len(e.Value)then
+local a=FindColours(string.sub(e.Value,e.CursorPos+1,e.CursorPos+1))
+e.CursorPos=e.CursorPos+1+a
+e.Change(t)
+end
+elseif t==keys.backspace then
+if e.IsDocument and Current.Selection then
+e:Extract(true)
+e.Change(t)
+elseif e.CursorPos>0 then
+local a=FindColours(string.sub(e.Value,e.CursorPos,e.CursorPos))
+local i,o=string.gsub(e.Value:sub(1,e.CursorPos),'\n','')
+e.Value=string.sub(e.Value,1,e.CursorPos-1-a+o)..string.sub(e.Value,e.CursorPos+1-a+o)
+e.CursorPos=e.CursorPos-1-a
+e.Change(t)
+end
+elseif t==keys.home then
+e.CursorPos=0
+e.Change(t)
+elseif t==keys.delete then
+if e.IsDocument and Current.Selection then
+e:Extract(true)
+e.Change(t)
+elseif e.CursorPos<string.len(e.Value)then
+e.Value=string.sub(e.Value,1,e.CursorPos)..string.sub(e.Value,e.CursorPos+2)
+e.Change(t)
+end
+elseif t==keys["end"]then
+e.CursorPos=string.len(e.Value)
+e.Change(t)
+elseif t==keys.up and e.IsDocument then
+if Current.Document.CursorPos then
+local a=Current.Document.Pages[Current.Document.CursorPos.Page]
+e.CursorPos=a:GetCursorPosFromPoint(Current.Document.CursorPos.Collum+a.MarginX,Current.Document.CursorPos.Line-a.MarginY-1+Current.Document.ScrollBar.Scroll,true)
+e.Change(t)
+end
+elseif t==keys.down and e.IsDocument then
+if Current.Document.CursorPos then
+local a=Current.Document.Pages[Current.Document.CursorPos.Page]
+e.CursorPos=a:GetCursorPosFromPoint(Current.Document.CursorPos.Collum+a.MarginX,Current.Document.CursorPos.Line-a.MarginY+1+Current.Document.ScrollBar.Scroll,true)
+e.Change(t)
+end
+end
+end
+}
+local e=function(e)
+return e:sub(1,1):upper()..e:sub(2,-1)
+end
+local a=peripheral.getNames or function()
+local a={}
+for t,e in ipairs(rs.getSides())do
+if peripheral.isPresent(e)then
+table.insert(a,e)
+local t=false
+if not pcall(function()t=peripheral.call(e,'isWireless')end)then
+t=true
+end
+if peripheral.getType(e)=="modem"and not t then
+local e=peripheral.call(e,"getNamesRemote")
+for t,e in ipairs(e)do
+table.insert(a,e)
+end
+end
+end
+end
+return a
+end
+Peripheral={
+GetPeripheral=function(t)
+for a,e in ipairs(Peripheral.GetPeripherals())do
+if e.Type==t then
+return e
+end
+end
+end,
+Call=function(e,...)
+local t={...}
+local e=Peripheral.GetPeripheral(e)
+peripheral.call(e.Side,unpack(t))
+end,
+GetPeripherals=function(s)
+local i={}
+for t,e in ipairs(a())do
+local t=peripheral.getType(e):gsub("^%l",string.upper)
+local n=string.upper(e:sub(1,1))
+if e:find('_')then
+n=e:sub(e:find('_')+1)
+end
+local a=false
+for o,e in ipairs(i)do
+if e[1]==t..' '..n then
+a=true
+end
+end
+if not a then
+local a=peripheral.getType(e)
+local o=false
+if a=='modem'then
+if not pcall(function()o=peripheral.call(sSide,'isWireless')end)then
+o=true
+end
+if o then
+a='wireless_modem'
+t='W '..t
+end
+end
+if not s or a==s then
+table.insert(i,{Name=t:sub(1,8)..' '..n,Fullname=t..' ('..e:sub(1,1):upper()..e:sub(2,-1)..')',Side=e,Type=a,Wireless=o})
+end
+end
+end
+return i
+end,
+PresentNamed=function(e)
+return peripheral.isPresent(e)
+end,
+CallType=function(e,...)
+local t={...}
+local e=Peripheral.GetPeripheral(e)
+return peripheral.call(e.Side,unpack(t))
+end,
+CallNamed=function(t,...)
+local e={...}
+return peripheral.call(t,unpack(e))
+end
+}
+Wireless={
+Channels={
+UltimateDoorlockPing=4210,
+UltimateDoorlockRequest=4211,
+UltimateDoorlockRequestReply=4212,
+},
+isOpen=function(e)
+return Peripheral.CallType('wireless_modem','isOpen',e)
+end,
+Open=function(e)
+if not Wireless.isOpen(e)then
+Peripheral.CallType('wireless_modem','open',e)
+end
+end,
+close=function(e)
+Peripheral.CallType('wireless_modem','close',e)
+end,
+closeAll=function()
+Peripheral.CallType('wireless_modem','closeAll')
+end,
+transmit=function(e,t,a)
+Peripheral.CallType('wireless_modem','transmit',e,t,textutils.serialize(a))
+end,
+Present=function()
+if Peripheral.GetPeripheral('wireless_modem')==nil then
+return false
+else
+return true
+end
+end,
+FormatMessage=function(a,t,e)
+return{
+content=textutils.serialize(a),
+senderID=os.getComputerID(),
+senderName=os.getComputerLabel(),
+channel=channel,
+replyChannel=reply,
+messageID=t or math.random(1e4),
+destinationID=e
+}
+end,
+Timeout=function(t,e)
+e=e or 1
+parallel.waitForAny(t,function()
+sleep(e)
+end)
+end,
+RecieveMessage=function(s,h,r)
+open(s)
+local n=false
+local i,a,t,o,e=nil
+Timeout(function()
+while not n do
+i,a,t,o,e=os.pullEvent('modem_message')
+if t~=s then
+i,a,t,o,e=nil
+else
+e=textutils.unserialize(e)
+e.content=textutils.unserialize(e.content)
+if h and h~=e.messageID or(e.destinationID~=nil and e.destinationID~=os.getComputerID())then
+i,a,t,o,e=nil
+else
+n=true
+end
+end
+end
+end,
+r)
+return i,a,t,o,e
+end,
+Initialise=function()
+if Wireless.Present()then
+for t,e in pairs(Wireless.Channels)do
+Wireless.Open(e)
+end
+end
+end,
+HandleMessage=function(i,n,t,a,e,o)
+e=textutils.unserialize(e)
+e.content=textutils.unserialize(e.content)
+if t==Wireless.Channels.Ping then
+if e.content=='Ping!'then
+SendMessage(a,'Pong!',nil,e.messageID)
+end
+elseif e.destinationID~=nil and e.destinationID~=os.getComputerID()then
+elseif Wireless.Responder then
+Wireless.Responder(i,n,t,a,e,o)
+end
+end,
+SendMessage=function(t,i,e,a,o)
+e=e or t+1
+Wireless.Open(t)
+Wireless.Open(e)
+local a=Wireless.FormatMessage(i,a,o)
+Wireless.transmit(t,e,a)
+return a
+end,
+Ping=function()
+local e=SendMessage(Channels.Ping,'Ping!',Channels.PingReply)
+RecieveMessage(Channels.PingReply,e.messageID)
+end
+}
+function GetAbsolutePosition(e)
+local e=e
+local t=0
+local a=1
+local o=1
+while true do
+a=a+e.X-1
+o=o+e.Y-1
+if not e.Parent then
+return{X=a,Y=o}
+end
+e=e.Parent
+if t>32 then
+return{X=1,Y=1}
+end
+t=t+1
+end
+end
+function Draw()
+Drawing.Clear(colours.white)
+if Current.StatusScreen then
+Drawing.DrawCharactersCenter(1,-2,nil,nil,Current.HeaderText,colours.blue,colours.white)
+Drawing.DrawCharactersCenter(1,-1,nil,nil,'by oeed',colours.lightGrey,colours.white)
+Drawing.DrawCharactersCenter(1,1,nil,nil,Current.StatusText,Current.StatusColour,colours.white)
+end
+if Current.ButtonOne then
+Current.ButtonOne:Draw()
+end
+if Current.ButtonTwo then
+Current.ButtonTwo:Draw()
+end
+for t,e in ipairs(Current.PageControls)do
+e:Draw()
+end
+Drawing.DrawBuffer()
+if Current.TextInput and Current.CursorPos and not Current.Menu and not(Current.Window and Current.Document and Current.TextInput==Current.Document.TextInput)and Current.CursorPos[2]>1 then
+term.setCursorPos(Current.CursorPos[1],Current.CursorPos[2])
+term.setCursorBlink(true)
+term.setTextColour(Current.CursorColour)
+else
+term.setCursorBlink(false)
+end
+end
+MainDraw=Draw
+function GenerateFingerprint()
+local e=""
+for t=1,256 do
+local t=math.random(32,126)
+e=e..string.char(t)
+end
+return e
+end
+function MakeFingerprint()
+local e=fs.open('.fingerprint','w')
+if e then
+e.write(GenerateFingerprint())
+end
+e.close()
+Current.Fingerprint=str
+end
+local e=nil
+function SetText(a,t,e,o)
+if a then
+Current.HeaderText=a
+end
+if t then
+Current.StatusText=t
+end
+if e then
+Current.StatusColour=e
+end
+Draw()
+if not o then
+statusResetTimer=os.startTimer(2)
+end
+end
+function ResetStatus()
+if pocket then
+if Current.Locked then
+SetText('Ultimate Door Lock','Add Wireless Modem to PDA',colours.red,true)
+else
+SetText('Ultimate Door Lock','Ready',colours.grey,true)
+end
+else
+if Current.Locked then
+SetText('Ultimate Door Lock',' Attach a Wireless Modem then reboot',colours.red,true)
+else
+SetText('Ultimate Door Lock','Ready',colours.grey,true)
+end
+end
+end
+function ResetPage()
+Wireless.Responder=function()end
+pingTimer=nil
+Current.PageControls=nil
+Current.StatusScreen=false
+Current.ButtonOne=nil
+Current.ButtonTwo=nil
+Current.PageControls={}
+CloseDoor()
+end
+function PocketInitialise()
+Current.ButtonOne=Button:Initialise(Drawing.Screen.Width-6,Drawing.Screen.Height-1,nil,nil,nil,nil,Quit,'Quit',colours.black)
+if not Wireless.Present()then
+Current.Locked=true
+ResetStatus()
+return
+end
+Wireless.Initialise()
+ResetStatus()
+if fs.exists('.fingerprint')then
+local e=fs.open('.fingerprint','r')
+if e then
+Current.Fingerprint=e.readAll()
+else
+MakeFingerprint()
+end
+e.close()
+else
+MakeFingerprint()
+end
+Wireless.Responder=function(a,a,t,a,e,a)
+if t==Wireless.Channels.UltimateDoorlockPing then
+Wireless.SendMessage(Wireless.Channels.UltimateDoorlockRequest,Current.Fingerprint,Wireless.Channels.UltimateDoorlockRequestReply,nil,e.senderID)
+elseif t==Wireless.Channels.UltimateDoorlockRequestReply then
+if e.content==true then
+SetText(nil,'Opening Door',colours.green)
+else
+SetText(nil,' Access Denied',colours.red)
+end
+end
+end
+end
+function FingerprintIsOnWhitelist(t)
+if Current.Settings.Whitelist then
+for a,e in ipairs(Current.Settings.Whitelist)do
+if e==t then
+return true
+end
+end
+end
+return false
+end
+function SaveSettings()
+Current.Settings=Current.Settings or{}
+local e=fs.open('.settings','w')
+if e then
+e.write(textutils.serialize(Current.Settings))
+end
+e.close()
+end
+local n=nil
+function OpenDoor()
+if Current.Settings and Current.Settings.RedstoneSide then
+SetText(nil,'Opening Door',colours.green)
+redstone.setOutput(Current.Settings.RedstoneSide,true)
+n=os.startTimer(.6)
+end
+end
+function CloseDoor()
+if Current.Settings and Current.Settings.RedstoneSide then
+if redstone.getOutput(Current.Settings.RedstoneSide)then
+SetText(nil,'Closing Door',colours.orange)
+redstone.setOutput(Current.Settings.RedstoneSide,false)
+end
+end
+end
+DefaultSettings={
+Whitelist={},
+RedstoneSide='back',
+Distance=10
+}
+function RegisterPDA(e,o)
+if disk.hasData(o)then
+local a=fs
+if OneOS then
+a=OneOS.FS
+end
+local e=disk.getMountPath(o)
+local i=true
+if a.exists(e..'/System/')then
+e=e..'/System/'
+i=false
+end
+local t=nil
+if a.exists(e..'/.fingerprint')then
+local e=a.open(e..'/.fingerprint','r')
+if e then
+local e=e.readAll()
+if#e==256 then
+t=e
+end
+end
+e.close()
+end
+if not t then
+t=GenerateFingerprint()
+local o=a.open(e..'/.fingerprint','w')
+o.write(t)
+o.close()
+if i then
+local t=fs.open(shell.getRunningProgram(),'r')
+local o=t.readAll()
+t.close()
+local e=a.open(e..'/startup','w')
+e.write(o)
+e.close()
+end
+end
+if not FingerprintIsOnWhitelist(t)then
+table.insert(Current.Settings.Whitelist,t)
+SaveSettings()
+end
+disk.eject(o)
+SetText(nil,'Registered Pocket Computer',colours.green)
+end
+end
+function HostSetup()
+ResetPage()
+Current.Page='HostSetup'
+Current.ButtonTwo=Button:Initialise(Drawing.Screen.Width-6,Drawing.Screen.Height-1,nil,nil,nil,nil,HostStatusPage,'Save',colours.black)
+if not Current.Settings then
+Current.Settings=DefaultSettings
+end
+local t={}
+local function e(a)
+for t,e in ipairs(t)do
+if e.Toggle~=nil then
+e.Toggle=false
+end
+end
+Current.Settings.RedstoneSide=a.Text:lower()
+SaveSettings()
+end
+table.insert(Current.PageControls,Label:Initialise(2,2,'Redstone Side'))
+t={
+Button:Initialise(2,4,nil,nil,nil,nil,e,'Back',colours.black,false,colours.green),
+Button:Initialise(9,4,nil,nil,nil,nil,e,'Front',colours.black,false,colours.green),
+Button:Initialise(2,6,nil,nil,nil,nil,e,'Left',colours.black,false,colours.green),
+Button:Initialise(9,6,nil,nil,nil,nil,e,'Right',colours.black,false,colours.green),
+Button:Initialise(2,8,nil,nil,nil,nil,e,'Top',colours.black,false,colours.green),
+Button:Initialise(8,8,nil,nil,nil,nil,e,'Bottom',colours.black,false,colours.green)
+}
+for t,e in ipairs(t)do
+if e.Text:lower()==Current.Settings.RedstoneSide then
+e.Toggle=true
+end
+table.insert(Current.PageControls,e)
+end
+local a={}
+local function t(e)
+for t,e in ipairs(a)do
+if e.Toggle~=nil then
+e.Toggle=false
+end
+end
+if e.Text=='Small'then
+Current.Settings.Distance=5
+elseif e.Text=='Normal'then
+Current.Settings.Distance=10
+elseif e.Text=='Far'then
+Current.Settings.Distance=15
+end
+SaveSettings()
+end
+table.insert(Current.PageControls,Label:Initialise(23,2,'Opening Distance'))
+a={
+Button:Initialise(23,4,nil,nil,nil,nil,t,'Small',colours.black,false,colours.green),
+Button:Initialise(31,4,nil,nil,nil,nil,t,'Normal',colours.black,false,colours.green),
+Button:Initialise(40,4,nil,nil,nil,nil,t,'Far',colours.black,false,colours.green)
+}
+for t,e in ipairs(a)do
+if e.Text=='Small'and Current.Settings.Distance==5 then
+e.Toggle=true
+elseif e.Text=='Normal'and Current.Settings.Distance==10 then
+e.Toggle=true
+elseif e.Text=='Far'and Current.Settings.Distance==15 then
+e.Toggle=true
+end
+table.insert(Current.PageControls,e)
+end
+table.insert(Current.PageControls,Label:Initialise(2,10,'Registered PDAs: '..#Current.Settings.Whitelist))
+table.insert(Current.PageControls,Button:Initialise(2,12,nil,nil,nil,nil,function()Current.Settings.Whitelist={}HostSetup()end,'Unregister All',colours.black))
+table.insert(Current.PageControls,Label:Initialise(23,6,'Help',colours.black))
+local e={
+Label:Initialise(23,8,'To register a new PDA simply',colours.black),
+Label:Initialise(23,9,'place a Disk Drive next to',colours.black),
+Label:Initialise(23,10,'the computer, then put the',colours.black),
+Label:Initialise(23,11,'PDA in the Drive, it will',colours.black),
+Label:Initialise(23,12,'register automatically. If',colours.black),
+Label:Initialise(23,13,'it worked it will eject.',colours.black),
+Label:Initialise(23,15,'Make sure you hide this',colours.red),
+Label:Initialise(23,16,'computer away from the',colours.red),
+Label:Initialise(23,17,'door! (other people)',colours.red)
+}
+for t,e in ipairs(e)do
+table.insert(Current.PageControls,e)
+end
+table.insert(Current.PageControls,Button:Initialise(2,14,nil,nil,nil,nil,function()
+for t=1,6 do
+e[t].TextColour=colours.green
+end
+end,'Register New PDA',colours.black))
+end
+function HostStatusPage()
+ResetPage()
+Current.Page='HostStatus'
+Current.StatusScreen=true
+Current.ButtonOne=Button:Initialise(Drawing.Screen.Width-6,Drawing.Screen.Height-1,nil,nil,nil,nil,Quit,'Quit',colours.black)
+Current.ButtonTwo=Button:Initialise(2,Drawing.Screen.Height-1,nil,nil,nil,nil,HostSetup,'Settings/Help',colours.black)
+Wireless.Responder=function(o,o,e,o,t,a)
+if e==Wireless.Channels.UltimateDoorlockRequest and a<Current.Settings.Distance then
+if FingerprintIsOnWhitelist(t.content)then
+OpenDoor()
+Wireless.SendMessage(Wireless.Channels.UltimateDoorlockRequestReply,true)
+else
+Wireless.SendMessage(Wireless.Channels.UltimateDoorlockRequestReply,false)
+end
+end
+end
+PingPocketComputers()
+end
+function HostInitialise()
+if not Wireless.Present()then
+Current.Locked=true
+Current.ButtonOne=Button:Initialise(Drawing.Screen.Width-6,Drawing.Screen.Height-1,nil,nil,nil,nil,Quit,'Quit',colours.black)
+Current.ButtonTwo=Button:Initialise(2,Drawing.Screen.Height-1,nil,nil,nil,nil,function()os.reboot()end,'Reboot',colours.black)
+ResetStatus()
+return
+end
+Wireless.Initialise()
+ResetStatus()
+if fs.exists('.settings')then
+local e=fs.open('.settings','r')
+if e then
+Current.Settings=textutils.unserialize(e.readAll())
+end
+e.close()
+HostStatusPage()
+else
+HostSetup()
+end
+if OneOS then
+OneOS.CanClose=function()
+CloseDoor()
+return true
+end
+end
+end
+local t=nil
+function PingPocketComputers()
+Wireless.SendMessage(Wireless.Channels.UltimateDoorlockPing,'Ping!',Wireless.Channels.UltimateDoorlockRequest)
+t=os.startTimer(.5)
+end
+function Initialise(e)
+EventRegister('mouse_click',TryClick)
+EventRegister('mouse_drag',function(e,o,t,a)TryClick(e,o,t,a,true)end)
+EventRegister('mouse_scroll',Scroll)
+EventRegister('key',HandleKey)
+EventRegister('char',HandleKey)
+EventRegister('timer',Timer)
+EventRegister('terminate',function(e)if Close()then error("Terminated",0)end end)
+EventRegister('modem_message',Wireless.HandleMessage)
+EventRegister('disk',RegisterPDA)
+if OneOS then
+OneOS.RequestRunAtStartup()
+end
+if pocket then
+PocketInitialise()
+else
+HostInitialise()
+end
+Draw()
+EventHandler()
+end
+function Timer(a,e)
+if e==t then
+PingPocketComputers()
+elseif e==n then
+CloseDoor()
+elseif e==statusResetTimer then
+ResetStatus()
+end
+end
+local e=false
+function HandleKey(...)
+local e={...}
+local t=e[1]
+local e=e[2]
+end
+function CheckClick(e,a,t)
+if e.X<=a and e.Y<=t and e.X+e.Width>a and e.Y+e.Height>t then
+return true
+end
+end
+function DoClick(e,n,o,a,i)
+local t=GetAbsolutePosition(e)
+t.Width=e.Width
+t.Height=e.Height
+if e and CheckClick(t,o,a)then
+return e:Click(n,o-e.X+1,a-e.Y+1,i)
+end
+end
+function TryClick(i,t,e,a,o)
+if Current.ButtonOne then
+if DoClick(Current.ButtonOne,t,e,a,o)then
+Draw()
+return
+end
+end
+if Current.ButtonTwo then
+if DoClick(Current.ButtonTwo,t,e,a,o)then
+Draw()
+return
+end
+end
+for n,i in ipairs(Current.PageControls)do
+if DoClick(i,t,e,a,o)then
+Draw()
+return
+end
+end
+Draw()
+end
+function Scroll(t,e,t,t)
+if Current.Window and Current.Window.OpenButton then
+Current.Document.Scroll=Current.Document.Scroll+e
+if Current.Window.Scroll<0 then
+Current.Window.Scroll=0
+elseif Current.Window.Scroll>Current.Window.MaxScroll then
+Current.Window.Scroll=Current.Window.MaxScroll
+end
+Draw()
+elseif Current.ScrollBar then
+if Current.ScrollBar:DoScroll(e*2)then
+Draw()
+end
+end
+end
+function EventRegister(e,t)
+if not Events[e]then
+Events[e]={}
+end
+table.insert(Events[e],t)
+end
+function EventHandler()
+while isRunning do
+local e,h,n,s,i,t,a=os.pullEventRaw()
+if Events[e]then
+for r,o in ipairs(Events[e])do
+o(e,h,n,s,i,t,a)
+end
+end
+end
+end
+function Quit()
+isRunning=false
+term.setCursorPos(1,1)
+term.setBackgroundColour(colours.black)
+term.setTextColour(colours.white)
+term.clear()
+if OneOS then
+OneOS.Close()
+end
+end
+if not term.current then
+print('Because it requires pocket computers, Ultimate Door Lock requires ComputerCraft 1.6. Please update to 1.6 to use Ultimate Door Lock.')
+elseif not(OneOS and pocket)and term.isColor and term.isColor()then
+local t,e=pcall(Initialise)
+if e then
+CloseDoor()
+term.setCursorPos(1,1)
+term.setBackgroundColour(colours.black)
+term.setTextColour(colours.white)
+term.clear()
+print('Ultimate Door Lock has crashed')
+print('To maintain security, the computer will reboot.')
+print('If you are seeing this alot try turning off all Pocket Computers or reinstall.')
+print()
+print('Error:')
+printError(e)
+sleep(5)
+os.reboot()
+end
+elseif OneOS and pocket then
+term.setCursorPos(1,3)
+term.setBackgroundColour(colours.white)
+term.setTextColour(colours.blue)
+term.clear()
+print('OneOS already acts as a door key. Simply place your PDA in the door\'s disk drive to register it.')
+print()
+print('To setup a door, run this program on an advanced computer (non-pocket).')
+print()
+print('Click anywhere to quit')
+os.pullEvent('mouse_click')
+Quit()
+else
+print('Ultimate Door Lock requires an advanced (gold) computer or pocket computer.')
 end

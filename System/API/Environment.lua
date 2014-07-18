@@ -4,7 +4,7 @@ This essentially allows the programs to run sandboxed. For example, os.shutdown 
 
 ]]
 
-local errorHandler = function(apiName, name, value)
+local errorHandler = function(program, apiName, name, value)
 	if type(value) ~= 'function' then
 		return value
 	end
@@ -16,16 +16,17 @@ local errorHandler = function(apiName, name, value)
 				else
 					for i, err in ipairs(response) do
 						printError(apiName .. ' Error ('..name..'): /System/API/' .. err)
+				    	Log.e('['..program.Title..'] Environment Error: '..apiName .. ' Error ('..name..'): /System/API/' .. err)
 					end
 						
 				end
 			end
 end
 
-function addErrorHandler(api, apiName)
+function addErrorHandler(program, api, apiName)
 	local newApi = {}
 	for k, v in pairs(api) do
-		newApi[k] = errorHandler(apiName, k, v)
+		newApi[k] = errorHandler(program, apiName, k, v)
 	end
 	return newApi
 end
@@ -33,9 +34,9 @@ end
 Initialise = function(self, program, shell, path)
 	local env = {}    -- the new instance
 	setmetatable( env, {__index = _G} )
-	env.fs = addErrorHandler(self.FS(env, program, path), 'FS API')
-	env.io = addErrorHandler(self.IO(env, program, path), 'IO API')
-	env.os = addErrorHandler(self.OS(env, program, path), 'OS API')
+	env.fs = addErrorHandler(program, self.FS(env, program, path), 'FS API')
+	env.io = addErrorHandler(program, self.IO(env, program, path), 'IO API')
+	env.os = addErrorHandler(program, self.OS(env, program, path), 'OS API')
 	env.loadfile = function( _sFile)
 		local file = env.fs.open( _sFile, "r")
 		if file then
@@ -111,8 +112,8 @@ Initialise = function(self, program, shell, path)
 	setmetatable( shellEnv, { __index = env } )
 	setfenv(self.Shell, shellEnv)
 	self.Shell(env, program, shell, path, Helpers, os.run)
-	env.shell = addErrorHandler(shellEnv, 'Shell')
-	env.OneOS = addErrorHandler(self.OneOS(env, program, path), 'OneOS API')
+	env.shell = addErrorHandler(program, shellEnv, 'Shell')
+	env.OneOS = addErrorHandler(program, self.OneOS(env, program, path), 'OneOS API')
 	env.sleep = env.os.sleep
 	return env
 end
@@ -135,6 +136,10 @@ IO = function(env, program, path)
 end
 
 OneOS = function(env, program, path)
+	local h = fs.open('/System/.version', 'r')
+	local version = h.readAll()
+	h.close()
+
 	local tAPIsLoading = {}
 	return {
 		ToolBarColour = colours.white,
@@ -144,7 +149,7 @@ OneOS = function(env, program, path)
 		OpenFile = Helpers.OpenFile,
 		Helpers = Helpers,
 		Settings = Settings,
-		Version = OneOSVersion,
+		Version = version,
 		Restart = Restart,
 		Reboot = Restart,
 		Shutdown = Shutdown,
@@ -216,6 +221,9 @@ OneOS = function(env, program, path)
 			return Helpers.TidyPath('/Programs/'..Settings:GetValues()['StartupProgram']..'/startup') == Helpers.TidyPath(path)
 		end,
 		RequestRunAtStartup = function()
+			if Settings:GetValues()['StartupProgram'] and Helpers.TidyPath('/Programs/'..Settings:GetValues()['StartupProgram']..'/startup') == Helpers.TidyPath(path) then
+				return
+			end
 			local settings = Settings:GetValues()
 			local onBlacklist = false
 			local h = fs.open('/System/.StartupBlacklist.settings', 'r')
@@ -229,12 +237,12 @@ OneOS = function(env, program, path)
 					end
 				end
 			end
-			--TODO: replace this window
+
 			if not settings['StartupProgram'] or not Helpers.TidyPath('/Programs/'..settings['StartupProgram']..'/startup') == Helpers.TidyPath(path) then
-				ButtonDialogueWindow:Initialise("Run at startup?", "Would you like run "..Helpers.RemoveExtension(fs.getName(Helpers.RemoveFileName(path))).." when you turn your computer on?", 'Yes', 'No', function(success, button)
-					if success then
+				Current.Bedrock:DisplayAlertWindow("Run at startup?", "Would you like run "..Helpers.RemoveExtension(fs.getName(Helpers.RemoveFileName(path))).." when you turn your computer on?", {"Yes", "No", "Never Ask"}, function(value)
+					if value == 'Yes' then
 						Settings:SetValue('StartupProgram', fs.getName(Helpers.RemoveFileName(path)))
-					elseif button == 3 then
+					elseif value == 'Never Ask' then
 						local h = fs.open('/System/.StartupBlacklist.settings', 'r')
 						local blacklist = {}
 						if h then
@@ -246,9 +254,9 @@ OneOS = function(env, program, path)
 						if h then
 							h.write(textutils.serialize(blacklist))
 							h.close()
-						end
+						end	
 					end
-				end, "Never Ask"):Show()
+				end)
 			end
 		end,
 		Log = {

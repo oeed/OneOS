@@ -41,7 +41,7 @@ OnDraw = function(self, x, y)
 	Drawing.DrawCharacters(x + _x, y, self.Text, txt, bg)
 
 	if self.Momentary and self.Toggle ~= false then
-		self.Toggle = false
+		self.Bedrock:StartTimer(function()self.Toggle = false end,0.15)
 	end
 end
 

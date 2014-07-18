@@ -7,10 +7,10 @@ end
 log = function(msg, state)
 	state = state or ''
 	if state ~= '' then
-		state = state .. ': '
+		state = ' '..state
 	end
 	local h = fs.open('/System/OneOS.log', 'a')
-	h.write('['..os.clock()..'] '..state..tostring(msg)..'\n')
+	h.write('['..os.clock()..state..'] '..tostring(msg)..'\n')
 	h.close()	
 end
 
@@ -19,7 +19,7 @@ e = function(msg)
 end
 
 i = function(msg)
-	log(msg)
+	log(msg, 'Info')
 end
 
 w = function(msg)

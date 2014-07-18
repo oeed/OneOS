@@ -1,0 +1,30 @@
+{
+  ["Children"]={
+    [1]={
+      ["Y"]=1,
+      ["X"]=1,
+      ["Name"]="Toolbar",
+      ["Type"]="View",
+      ["InheritView"]="toolbar"
+    },
+    [2]={
+      ["Y"]=5,
+      ["X"]=3,
+      ["Width"]="100%,-6",
+      ["Name"]="Label",
+      ["Type"]="Label",
+      ["Text"]="Welcome to OneOS!\n\nBefore you get started follow these short steps to customise OneOS to your liking."
+    },
+    [3]={
+      ["Y"]="100%,-1",
+      ["X"]="100%,-7",
+      ["Name"]="NextButton",
+      ["Type"]="Button",
+      ["Text"]="Next",
+      ["BackgroundColour"]=256
+    },
+  },
+  ["BackgroundColour"]=1,
+  ["ToolBarColour"] = 128,
+  ["ToolBarTextColour"] = 1
+}

@@ -115,7 +115,7 @@ OnDraw = function(self, x, y)
 		}
 		self:DrawAnimation()
 	elseif Current.Program then
-		if self.CachedProgram and self.CachedProgram.Environment and (Current.Program.Environment.OneOS.ToolBarColor ~= Current.Overlay.BackgroundColour or Current.Program.Environment.OneOS.ToolBarColour ~= Current.Overlay.BackgroundColour  or Current.Program.Environment.OneOS.ToolBarTextColor ~= Current.Overlay.TextColour  or Current.Program.Environment.OneOS.ToolBarTextColour ~= Current.Overlay.TextColour) then
+		if Current.Overlay and self.CachedProgram and self.CachedProgram.Environment and (Current.Program.Environment.OneOS.ToolBarColor ~= Current.Overlay.BackgroundColour or Current.Program.Environment.OneOS.ToolBarColour ~= Current.Overlay.BackgroundColour  or Current.Program.Environment.OneOS.ToolBarTextColor ~= Current.Overlay.TextColour  or Current.Program.Environment.OneOS.ToolBarTextColour ~= Current.Overlay.TextColour) then
 			UpdateOverlay()
 		end
 

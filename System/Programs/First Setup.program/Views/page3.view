@@ -1,0 +1,209 @@
+{
+  ["Children"]={
+    [1]={
+      ["Y"]=1,
+      ["X"]=1,
+      ["Name"]="Toolbar",
+      ["Type"]="View",
+      ["InheritView"]="toolbar"
+    },
+    [2]={
+      ["Y"]=5,
+      ["X"]=3,
+      ["Width"]="100%,-6",
+      ["Name"]="Label",
+      ["Type"]="Label",
+      ["Text"]="Pick a desktop background colour."
+    },
+    [3]={
+      ["Y"]="100%,-1",
+      ["X"]="100%,-7",
+      ["Name"]="NextButton",
+      ["Type"]="Button",
+      ["Text"]="Next",
+      ["BackgroundColour"]=256
+    },
+    [4]={
+      ["Y"]="100%,-1",
+      ["X"]="3",
+      ["Name"]="BackButton",
+      ["Type"]="Button",
+      ["Text"]="Back",
+      ["BackgroundColour"]=256
+    },
+    [5]={
+      ["Y"]=7,
+      ["X"]="50%,-18",
+      ["Width"] = 4,
+      ["Height"] = 3,
+      ["Name"]="ColourWell",
+      ["Type"]="View",
+      ["BackgroundColour"]=512
+    },
+    [6]={
+      ["Y"]=8,
+      ["X"]="50%,-13",
+      ["Width"] = 2,
+      ["Height"] = 1,
+      ["Name"]="ColourButton",
+      ["Momentary"]=false,
+      ["Type"]="Button",
+      ["BackgroundColour"]=4096
+    },
+    [7]={
+      ["Y"]=8,
+      ["X"]="50%,-11",
+      ["Width"] = 2,
+      ["Height"] = 1,
+      ["Name"]="ColourButton",
+      ["Momentary"]=false,
+      ["Type"]="Button",
+      ["BackgroundColour"]=16
+    },
+    [8]={
+      ["Y"]=8,
+      ["X"]="50%,-9",
+      ["Width"] = 2,
+      ["Height"] = 1,
+      ["Name"]="ColourButton",
+      ["Momentary"]=false,
+      ["Type"]="Button",
+      ["BackgroundColour"]=2
+    },
+    [9]={
+      ["Y"]=8,
+      ["X"]="50%,-7",
+      ["Width"] = 2,
+      ["Height"] = 1,
+      ["Name"]="ColourButton",
+      ["Momentary"]=false,
+      ["Type"]="Button",
+      ["BackgroundColour"]=16384
+    },
+    [10]={
+      ["Y"]=8,
+      ["X"]="50%,-5",
+      ["Width"] = 2,
+      ["Height"] = 1,
+      ["Name"]="ColourButton",
+      ["Momentary"]=false,
+      ["Type"]="Button",
+      ["BackgroundColour"]=8192
+    },
+    [11]={
+      ["Y"]=8,
+      ["X"]="50%,-3",
+      ["Width"] = 2,
+      ["Height"] = 1,
+      ["Name"]="ColourButton",
+      ["Momentary"]=false,
+      ["Type"]="Button",
+      ["BackgroundColour"]=32
+    },
+    [12]={
+      ["Y"]=8,
+      ["X"]="50%,-1",
+      ["Width"] = 2,
+      ["Height"] = 1,
+      ["Name"]="ColourButton",
+      ["Momentary"]=false,
+      ["Type"]="Button",
+      ["BackgroundColour"]=64
+    },
+    [13]={
+      ["Y"]=8,
+      ["X"]="50%,1",
+      ["Width"] = 2,
+      ["Height"] = 1,
+      ["Name"]="ColourButton",
+      ["Momentary"]=false,
+      ["Type"]="Button",
+      ["BackgroundColour"]=4
+    },
+    [14]={
+      ["Y"]=8,
+      ["X"]="50%,3",
+      ["Width"] = 2,
+      ["Height"] = 1,
+      ["Name"]="ColourButton",
+      ["Momentary"]=false,
+      ["Type"]="Button",
+      ["BackgroundColour"]=1024
+    },
+    [15]={
+      ["Y"]=8,
+      ["X"]="50%,5",
+      ["Width"] = 2,
+      ["Height"] = 1,
+      ["Name"]="ColourButton",
+      ["Momentary"]=false,
+      ["Type"]="Button",
+      ["BackgroundColour"]=2048
+    },
+    [16]={
+      ["Y"]=8,
+      ["X"]="50%,7",
+      ["Width"] = 2,
+      ["Height"] = 1,
+      ["Name"]="ColourButton",
+      ["Momentary"]=false,
+      ["Type"]="Button",
+      ["BackgroundColour"]=512
+    },
+    [17]={
+      ["Y"]=8,
+      ["X"]="50%,9",
+      ["Width"] = 2,
+      ["Height"] = 1,
+      ["Name"]="ColourButton",
+      ["Momentary"]=false,
+      ["Type"]="Button",
+      ["BackgroundColour"]=8
+    },
+    [18]={
+      ["Y"]=8,
+      ["X"]="50%,11",
+      ["Width"] = 2,
+      ["Height"] = 1,
+      ["Name"]="ColourButton",
+      ["Momentary"]=false,
+      ["Type"]="Button",
+      ["Text"]="##",
+      ["BackgroundColour"]=1,
+      ["TextColour"]=256
+    },
+    [19]={
+      ["Y"]=8,
+      ["X"]="50%,13",
+      ["Width"] = 2,
+      ["Height"] = 1,
+      ["Name"]="ColourButton",
+      ["Momentary"]=false,
+      ["Type"]="Button",
+      ["BackgroundColour"]=256
+    },
+    [20]={
+      ["Y"]=8,
+      ["X"]="50%,15",
+      ["Width"] = 2,
+      ["Height"] = 1,
+      ["Name"]="ColourButton",
+      ["Momentary"]=false,
+      ["Type"]="Button",
+      ["BackgroundColour"]=128
+    },
+    [21]={
+      ["Y"]=8,
+      ["X"]="50%,17",
+      ["Width"] = 2,
+      ["Height"] = 1,
+      ["Name"]="ColourButton",
+      ["Momentary"]=false,
+      ["Type"]="Button",
+      ["BackgroundColour"]=32768
+    },
+  },
+  ["BackgroundColour"]=1,
+  ["ToolBarColour"] = 128,
+  ["ToolBarTextColour"] = 1
+}

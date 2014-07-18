@@ -83,10 +83,9 @@ end
 OnRemove = function(self)
 	if self == self.Bedrock:GetActiveObject() then
 		self.Bedrock:SetActiveObject()
-	else
-		for i, child in ipairs(self.Children) do
-			child:OnRemove()
-		end
+	end
+	for i, child in ipairs(self.Children) do
+		child:OnRemove()
 	end
 end
 

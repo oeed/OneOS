@@ -1,4014 +1,3275 @@
 if OneOS then
-	--running under OneOS
-	OneOS.ToolBarColour = colours.grey
-	OneOS.ToolBarTextColour = colours.white
+OneOS.ToolBarColour=colours.grey
+OneOS.ToolBarTextColour=colours.white
 end
-
-colours.transparent = -1
-colors.transparent = -1
-
---APIS--
-
---This is my drawing API, is is pretty much identical to what drives OneOS, PearOS, etc.
-local _w, _h = term.getSize()
-
-local round = function(num, idp)
-	local mult = 10^(idp or 0)
-	return math.floor(num * mult + 0.5) / mult
+colours.transparent=-1
+colors.transparent=-1
+local e,e=term.getSize()
+local e=function(t,e)
+local e=10^(e or 0)
+return math.floor(t*e+.5)/e
 end
-
-Clipboard = {
-	Content = nil,
-	Type = nil,
-	IsCut = false,
-
-	Empty = function()
-		Clipboard.Content = nil
-		Clipboard.Type = nil
-		Clipboard.IsCut = false
-	end,
-
-	isEmpty = function()
-		return Clipboard.Content == nil
-	end,
-
-	Copy = function(content, _type)
-		Clipboard.Content = content
-		Clipboard.Type = _type or 'generic'
-		Clipboard.IsCut = false
-	end,
-
-	Cut = function(content, _type)
-		Clipboard.Content = content
-		Clipboard.Type = _type or 'generic'
-		Clipboard.IsCut = true
-	end,
-
-	Paste = function()
-		local c, t = Clipboard.Content, Clipboard.Type
-		if Clipboard.IsCut then
-			Clipboard.Empty()
-		end
-		return c, t
-	end
+Clipboard=OneOS.Clipboard
+OneOS.LoadAPI('System/API/Drawing.lua')
+UIColours={
+Toolbar=colours.grey,
+ToolbarText=colours.lightGrey,
+ToolbarSelected=colours.lightBlue,
+ControlText=colours.white,
+ToolbarItemTitle=colours.black,
+Background=colours.lightGrey,
+MenuBackground=colours.white,
+MenuText=colours.black,
+MenuSeparatorText=colours.grey,
+MenuDisabledText=colours.lightGrey,
+Shadow=colours.grey,
+TransparentBackgroundOne=colours.white,
+TransparentBackgroundTwo=colours.lightGrey,
+MenuBarActive=colours.white
 }
-
-if OneOS and OneOS.Clipboard then
-	Clipboard = OneOS.Clipboard
+Current={
+Artboard=nil,
+Layer=nil,
+Tool=nil,
+ToolSize=1,
+Toolbar=nil,
+Colour=colours.lightBlue,
+Menu=nil,
+MenuBar=nil,
+Window=nil,
+Input=nil,
+CursorPos={1,1},
+CursorColour=colours.black,
+InterfaceVisible=true,
+Selection={},
+SelectionDrawTimer=nil,
+HandDragStart={},
+Modified=false,
+}
+local t=false
+function PrintCentered(e,t)
+local a,o=term.getSize()
+x=math.ceil(math.ceil((a/2)-(#e/2)),0)+1
+term.setCursorPos(x,t)
+print(e)
 end
-
-Drawing = {
-	
-	Screen = {
-		Width = _w,
-		Height = _h
-	},
-
-	DrawCharacters = function (x, y, characters, textColour,bgColour)
-		Drawing.WriteStringToBuffer(x, y, characters, textColour, bgColour)
-	end,
-	
-	DrawBlankArea = function (x, y, w, h, colour)
-		Drawing.DrawArea (x, y, w, h, " ", 1, colour)
-	end,
-
-	DrawArea = function (x, y, w, h, character, textColour, bgColour)
-		--width must be greater than 1, other wise we get a stack overflow
-		if w < 0 then
-			w = w * -1
-		elseif w == 0 then
-			w = 1
-		end
-
-		for ix = 1, w do
-			local currX = x + ix - 1
-			for iy = 1, h do
-				local currY = y + iy - 1
-				Drawing.WriteToBuffer(currX, currY, character, textColour, bgColour)
-			end
-		end
-	end,
-
-	DrawImage = function(_x,_y,tImage, w, h)
-		if tImage then
-			for y = 1, h do
-				if not tImage[y] then
-					break
-				end
-				for x = 1, w do
-					if not tImage[y][x] then
-						break
-					end
-					local bgColour = tImage[y][x]
-		            local textColour = tImage.textcol[y][x] or colours.white
-		            local char = tImage.text[y][x]
-		            Drawing.WriteToBuffer(x+_x-1, y+_y-1, char, textColour, bgColour)
-				end
-			end
-		elseif w and h then
-			Drawing.DrawBlankArea(x, y, w, h, colours.green)
-		end
-	end,
-	--using .nft
-	LoadImage = function(path)
-		local image = {
-			text = {},
-			textcol = {}
-		}
-		local _fs = fs
-		if OneOS then
-			_fs = OneOS.FS
-		end
-		if _fs.exists(path) then
-			local _open = io.open
-			if OneOS then
-				_open = OneOS.IO.open
-			end
-	        local file = _open(path, "r")
-	        local sLine = file:read()
-	        local num = 1
-	        while sLine do  
-	                table.insert(image, num, {})
-	                table.insert(image.text, num, {})
-	                table.insert(image.textcol, num, {})
-	                                            
-	                --As we're no longer 1-1, we keep track of what index to write to
-	                local writeIndex = 1
-	                --Tells us if we've hit a 30 or 31 (BG and FG respectively)- next char specifies the curr colour
-	                local bgNext, fgNext = false, false
-	                --The current background and foreground colours
-	                local currBG, currFG = nil,nil
-	                for i=1,#sLine do
-	                        local nextChar = string.sub(sLine, i, i)
-	                        if nextChar:byte() == 30 then
-                                bgNext = true
-	                        elseif nextChar:byte() == 31 then
-                                fgNext = true
-	                        elseif bgNext then
-                                currBG = Drawing.GetColour(nextChar)
-                                bgNext = false
-	                        elseif fgNext then
-                                currFG = Drawing.GetColour(nextChar)
-                                fgNext = false
-	                        else
-                                if nextChar ~= " " and currFG == nil then
-                                       currFG = colours.white
-                                end
-                                image[num][writeIndex] = currBG
-                                image.textcol[num][writeIndex] = currFG
-                                image.text[num][writeIndex] = nextChar
-                                writeIndex = writeIndex + 1
-	                        end
-	                end
-	                num = num+1
-	                sLine = file:read()
-	        end
-	        file:close()
-		end
-	 	return image
-	end,
-
-	DrawCharactersCenter = function(x, y, w, h, characters, textColour,bgColour)
-		w = w or Drawing.Screen.Width
-		h = h or Drawing.Screen.Height
-		x = x or 0
-		y = y or 0
-		x = math.ceil((w - #characters) / 2) + x
-		y = math.floor(h / 2) + y
-
-		Drawing.DrawCharacters(x, y, characters, textColour, bgColour)
-	end,
-
-	GetColour = function(hex)
-		if hex == ' ' then
-			return colours.transparent
-		end
-	    local value = tonumber(hex, 16)
-	    if not value then return nil end
-	    value = math.pow(2,value)
-	    return value
-	end,
-
-	Clear = function (_colour)
-		_colour = _colour or colours.black
-		Drawing.ClearBuffer()
-		Drawing.DrawBlankArea(1, 1, Drawing.Screen.Width, Drawing.Screen.Height, _colour)
-	end,
-
-	Buffer = {},
-	BackBuffer = {},
-
-	DrawBuffer = function()
-		for y,row in pairs(Drawing.Buffer) do
-			for x,pixel in pairs(row) do
-				local shouldDraw = true
-				local hasBackBuffer = true
-				if Drawing.BackBuffer[y] == nil or Drawing.BackBuffer[y][x] == nil or #Drawing.BackBuffer[y][x] ~= 3 then
-					hasBackBuffer = false
-				end
-				if hasBackBuffer and Drawing.BackBuffer[y][x][1] == Drawing.Buffer[y][x][1] and Drawing.BackBuffer[y][x][2] == Drawing.Buffer[y][x][2] and Drawing.BackBuffer[y][x][3] == Drawing.Buffer[y][x][3] then
-					shouldDraw = false
-				end
-				if shouldDraw then
-					term.setBackgroundColour(pixel[3])
-					term.setTextColour(pixel[2])
-					term.setCursorPos(x, y)
-					term.write(pixel[1])
-				end
-			end
-		end
-		Drawing.BackBuffer = Drawing.Buffer
-		Drawing.Buffer = {}
-		term.setCursorPos(1,1)
-	end,
-
-	ClearBuffer = function()
-		Drawing.Buffer = {}
-	end,
-
-	WriteStringToBuffer = function (x, y, characters, textColour,bgColour)
-		for i = 1, #characters do
-   			local character = characters:sub(i,i)
-   			Drawing.WriteToBuffer(x + i - 1, y, character, textColour, bgColour)
-		end
-	end,
-
-	WriteToBuffer = function(x, y, character, textColour,bgColour)
-		x = round(x)
-		y = round(y)
-		if bgColour == colours.transparent then
-			Drawing.Buffer[y] = Drawing.Buffer[y] or {}
-			Drawing.Buffer[y][x] = Drawing.Buffer[y][x] or {"", colours.white, colours.black}
-			Drawing.Buffer[y][x][1] = character
-			Drawing.Buffer[y][x][2] = textColour
-		else
-			Drawing.Buffer[y] = Drawing.Buffer[y] or {}
-			Drawing.Buffer[y][x] = {character, textColour, bgColour}
-		end
-	end,
-}
-
---Colour Deffitions--
-UIColours = {
-	Toolbar = colours.grey,
-	ToolbarText = colours.lightGrey,
-	ToolbarSelected = colours.lightBlue,
-	ControlText = colours.white,
-	ToolbarItemTitle = colours.black,
-	Background = colours.lightGrey,
-	MenuBackground = colours.white,
-	MenuText = colours.black,
-	MenuSeparatorText = colours.grey,
-	MenuDisabledText = colours.lightGrey,
-	Shadow = colours.grey,
-	TransparentBackgroundOne = colours.white,
-	TransparentBackgroundTwo = colours.lightGrey,
-	MenuBarActive = colours.white
-}
-
---Lists--
-Current = {
-	Artboard = nil,
-	Layer = nil,
-	Tool = nil,
-	ToolSize = 1,
-	Toolbar = nil,
-	Colour = colours.lightBlue,
-	Menu = nil,
-	MenuBar = nil,
-	Window = nil,
-	Input = nil,
-	CursorPos = {1,1},
-	CursorColour = colours.black,
-	InterfaceVisible = true,
-	Selection = {},
-	SelectionDrawTimer = nil,
-	HandDragStart = {},
-	Modified = false,
-}
-
-local isQuitting = false
-
-function PrintCentered(text, y)
-    local w, h = term.getSize()
-    x = math.ceil(math.ceil((w / 2) - (#text / 2)), 0)+1
-    term.setCursorPos(x, y)
-    print(text)
-end
-
 function DoVanillaClose()
-	term.setBackgroundColour(colours.black)
-	term.setTextColour(colours.white)
-	term.clear()
-	term.setCursorPos(1, 1)
-	PrintCentered("Thanks for using Sketch!", (Drawing.Screen.Height/2)-1)
-	term.setTextColour(colours.lightGrey)
-	PrintCentered("Photoshop Inspired Image Editor for ComputerCraft", (Drawing.Screen.Height/2))
-	term.setTextColour(colours.white)
-	PrintCentered("(c) oeed 2013 - 2014", (Drawing.Screen.Height/2)+3)
-	term.setCursorPos(1, Drawing.Screen.Height)
-	error('', 0)
+term.setBackgroundColour(colours.black)
+term.setTextColour(colours.white)
+term.clear()
+term.setCursorPos(1,1)
+PrintCentered("Thanks for using Sketch!",(Drawing.Screen.Height/2)-1)
+term.setTextColour(colours.lightGrey)
+PrintCentered("Photoshop Inspired Image Editor for ComputerCraft",(Drawing.Screen.Height/2))
+term.setTextColour(colours.white)
+PrintCentered("(c) oeed 2013 - 2014",(Drawing.Screen.Height/2)+3)
+term.setCursorPos(1,Drawing.Screen.Height)
+error('',0)
 end
-
 function Close()
-	if isQuitting or not Current.Artboard or not Current.Modified then
-		if not OneOS then
-			DoVanillaClose()
-		end
-		return true
-	else
-		local _w = ButtonDialougeWindow:Initialise('Quit Sketch?', 'You have unsaved changes, do you want to quit anyway?', 'Quit', 'Cancel', function(window, success)
-			if success then
-				if OneOS then
-					OneOS.Close(true)
-				else
-					DoVanillaClose()
-				end
-			end
-			window:Close()
-			Draw()
-		end):Show()
-		--it's hacky but it works
-		os.queueEvent('mouse_click', 1, _w.X, _w.Y)
-		return false
-	end
+if t or not Current.Artboard or not Current.Modified then
+if not OneOS then
+DoVanillaClose()
 end
-
-if OneOS then
-	OneOS.CanClose = function()
-		return Close()
-	end
-end
-
-Lists = {
-	Artboards = {},
-	Interface = {
-		Toolbars = {}
-	}	
-}
-
-Events = {
-	
-}
-
---Setters--
-
-function SetColour(colour)
-	Current.Colour = colour
-	Draw()
-end
-
-function SetTool(tool)
-	if tool and tool.Select and tool:Select() then
-		Current.Input = nil
-		Current.Tool = tool
-		return true
-	end
-	return false
-end
-
-function GetAbsolutePosition(object)
-	local obj = object
-	local i = 0
-	local x = 1
-	local y = 1
-	while true do
-		x = x + obj.X - 1
-		y = y + obj.Y - 1
-
-		if not obj.Parent then
-			return {X = x, Y = y}
-		end
-
-		obj = obj.Parent
-
-		if i > 32 then
-			return {X = 1, Y = 1}
-		end
-
-		i = i + 1
-	end
-
-end
-
---Object Defintions--
-
-Pixel = {
-	TextColour = colours.black,
-	BackgroundColour = colours.white,
-	Character = " ",
-	Layer = nil,
-
-	Draw = function(self, x, y)
-		if self.BackgroundColour ~= colours.transparent or self.Character ~= ' ' then
-			Drawing.WriteToBuffer(self.Layer.Artboard.X + x - 1, self.Layer.Artboard.Y + y - 1, self.Character, self.TextColour, self.BackgroundColour)
-		end
-	end,
-
-	Initialise = function(self, textColour, backgroundColour, character, layer)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		new.TextColour = textColour or self.TextColour
-		new.BackgroundColour = backgroundColour or self.BackgroundColour
-		new.Character = character or self.Character
-		new.Layer = layer
-		return new
-	end,
-
-	Set = function(self, textColour, backgroundColour, character)
-		self.TextColour = textColour or self.TextColour
-		self.BackgroundColour = backgroundColour or self.BackgroundColour
-		self.Character = character or self.Character
-	end
-}
-
-Layer = {
-	Name = "",
-	Pixels = {
-
-	},
-	Artboard = nil,
-	BackgroundColour = colours.white,
-	Visible = true,
-	Index = 1,
-
-	Draw = function(self)
-		if self.Visible then
-			for x = 1, self.Artboard.Width do
-				for y = 1, self.Artboard.Height do
-					self.Pixels[x][y]:Draw(x, y)
-				end
-			end
-		end
-	end,
-
-	Remove = function(self)
-		for i, v in ipairs(self.Artboard.Layers) do
-			if v == Current.Layer then
-				Current.Artboard.Layers[i] = nil
-				Current.Layer = Current.Artboard.Layers[1]
-				ModuleNamed('Layers'):Update()
-			end
-		end
-	end,
-
-	Initialise = function(self, name, backgroundColour, artboard, index, pixels)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		new.Name = name
-		new.Pixels = {}
-		new.BackgroundColour = backgroundColour
-		new.Artboard = artboard
-		new.Index = index or #artboard.Layers + 1
-		if not pixels then
-			new:MakeAllBlankPixels()
-		else
-			new:MakeAllBlankPixels()
-			for x, col in ipairs(pixels) do
-				for y, pixel in ipairs(col) do
-					new:SetPixel(x, y, pixel.TextColour, pixel.BackgroundColour, pixel.Character)
-				end
-			end
-		end
-		
-		return new
-	end,
-
-	SetPixel = function(self, x, y, textColour, backgroundColour, character)
-		textColour = textColour or Current.Colour
-		backgroundColour = backgroundColour or Current.Colour
-		character = character or " "
-
-		if x < 1 or y < 1 or x > self.Artboard.Width or y > self.Artboard.Height then
-			return
-		end
-
-		if self.Pixels[x][y] then
-			self.Pixels[x][y]:Set(textColour, backgroundColour, character)
-			self.Pixels[x][y]:Draw(x,y)
-		end
-	end,
-
-	MakePixel = function(self, x, y, backgroundColour)
-		backgroundColour = backgroundColour or self.BackgroundColour			
-		self.Pixels[x][y] = Pixel:Initialise(nil, backgroundColour, nil, self)
-	end,
-
-	MakeColumn = function(self, x)
-		self.Pixels[x] = {}
-	end,
-
-	MakeAllBlankPixels = function(self)
-		for x = 1, self.Artboard.Width do
-			if not self.Pixels[x] then
-				self:MakeColumn(x)
-			end
-
-			for y = 1, self.Artboard.Height do			
-			
-				if not self.Pixels[x][y] then
-					self:MakePixel(x, y)
-				end
-
-			end
-		end
-	end,
-
-	PixelsInSelection = function(self, cut)
-		local pixels = {}
-		if Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
-			local point1 = Current.Selection[1]
-			local point2 = Current.Selection[2]
-
-			local size = point2 - point1
-			local cornerX = point1.x
-			local cornerY = point1.y
-			for x = 1, size.x + 1 do
-				for y = 1, size.y + 1 do
-					if not pixels[x] then
-						pixels[x] = {}
-					end
-					if not self.Pixels[cornerX + x - 1] or not self.Pixels[cornerX + x - 1][cornerY + y - 1] then
-						break
-					end
-					local pixel =  self.Pixels[cornerX + x - 1][cornerY + y - 1]
-					pixels[x][y] = Pixel:Initialise(pixel.TextColour, pixel.BackgroundColour, pixel.Character, Current.Layer)
-					if cut then
-						Current.Layer:SetPixel(cornerX + x - 1, cornerY + y - 1, nil, Current.Layer.BackgroundColour, nil)
-					end
-				end
-			end
-		end
-		return pixels
-	end,
-
-	EraseSelection = function(self)
-		if Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
-			local point1 = Current.Selection[1]
-			local point2 = Current.Selection[2]
-
-			local size = point2 - point1
-			local cornerX = point1.x
-			local cornerY = point1.y
-			for x = 1, size.x + 1 do
-				for y = 1, size.y + 1 do
-					Current.Layer:SetPixel(cornerX + x - 1, cornerY + y - 1, nil, Current.Layer.BackgroundColour, nil)
-				end
-			end
-		end
-	end,
-
-	InsertPixels = function(self, pixels)
-		local cornerX = Current.Selection[1].x
-		local cornerY = Current.Selection[1].y
-		for x, col in ipairs(pixels) do
-			for y, pixel in ipairs(col) do
-				Current.Layer:SetPixel(cornerX + x - 1, cornerY + y - 1, pixel.TextColour, pixel.BackgroundColour, pixel.Character)
-			end
-		end
-	end
-}
-
-Artboard = {
-	X = 0,
-	Y = 0,
-	Name = "",
-	Path = "",
-	Width = 1,
-	Height = 1,
-	Layers = {},
-	Format = nil,
-	SelectionIsBlack = true,
-
-	Draw = function(self)
-		Drawing.DrawBlankArea(self.X + 1, self.Y + 1, self.Width, self.Height, UIColours.Shadow)
-
-		local odd
-		for x = 1, self.Width do
-			odd = x % 2
-			if odd == 1 then
-				odd = true
-			else
-				odd = false
-			end
-			for y = 1, self.Height do
-				if odd then
-					Drawing.WriteToBuffer(self.X + x - 1, self.Y + y - 1, ":", UIColours.TransparentBackgroundTwo, UIColours.TransparentBackgroundOne)
-				else
-					Drawing.WriteToBuffer(self.X + x - 1, self.Y + y - 1, ":", UIColours.TransparentBackgroundOne, UIColours.TransparentBackgroundTwo)
-				end
-
-				odd = not odd
-			end
-		end
-
-		for i, layer in ipairs(self.Layers) do
-			layer:Draw()
-		end
-
-		if Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
-			local point1 = Current.Selection[1]
-			local point2 = Current.Selection[2]
-
-			local size = point2 - point1
-
-			local isBlack = self.SelectionIsBlack
-
-			local function c()
-				local c = colours.white
-				if isBlack then
-					c = colours.black
-				end
-				isBlack = not isBlack
-				return c
-			end
-
-			function horizontal(y)
-				Drawing.WriteToBuffer(self.X - 1 + point1.x, self.Y - 1 + y, '+', c(), colours.transparent)
-				if size.x > 0 then
-					for i = 1, size.x - 1 do
-						Drawing.WriteToBuffer(self.X - 1 + point1.x + i, self.Y - 1 + y, '-', c(), colours.transparent)
-					end
-				else
-					for i = 1, (-1 * size.x) - 1 do
-						Drawing.WriteToBuffer(self.X - 1 + point1.x - i, self.Y - 1 + y, '-', c(), colours.transparent)
-					end
-				end
-
-				Drawing.WriteToBuffer(self.X - 1 + point1.x + size.x, self.Y - 1 + y, '+', c(), colours.transparent)
-			end
-
-			function vertical(x)
-				if size.y < 0 then
-					for i = 1, (-1 * size.y) - 1 do
-						Drawing.WriteToBuffer(self.X - 1 + x, self.Y - 1 + point1.y  - i, '|', c(), colours.transparent)
-					end
-				else
-					for i = 1, size.y - 1 do
-						Drawing.WriteToBuffer(self.X - 1 + x, self.Y - 1 + point1.y  + i, '|', c(), colours.transparent)
-					end
-				end
-			end
-
-			horizontal(point1.y)
-			vertical(point1.x)
-			horizontal(point1.y + size.y)
-			vertical(point1.x + size.x)
-		end
-	end,
-
-	Initialise = function(self, name, path, width, height, format, backgroundColour, layers)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		new.Y = 3
-		new.X = 2
-		new.Name = name
-		new.Path = path
-		new.Width = width
-		new.Height = height
-		new.Format = format
-		new.Layers = {}
-		if not layers then
-			new:MakeLayer('Background', backgroundColour)
-		else
-			for i, layer in ipairs(layers) do
-				new:MakeLayer(layer.Name, layer.BackgroundColour, layer.Index, layer.Pixels)
-				new.Layers[i].Visible = layer.Visible
-			end
-			Current.Layer = new.Layers[#new.Layers]
-		end
-		return new
-	end,
-
-	Resize = function(self, top, bottom, left, right)
-		self.Height = self.Height + top + bottom
-		self.Width = self.Width + left + right
-
-		for i, layer in ipairs(self.Layers) do
-
-			if left < 0 then
-				for x = 1, -left do
-					table.remove(layer.Pixels, 1)
-				end
-			end
-
-			if right < 0 then
-				for x = 1, -right do
-					table.remove(layer.Pixels, #layer.Pixels)
-				end
-			end
-
-			for x = 1, left do
-				table.insert(layer.Pixels, 1, {})
-				for y = 1, self.Height do
-					layer:MakePixel(1, y)
-				end
-			end
-
-			for x = 1, right do
-				table.insert(layer.Pixels, {})
-				for y = 1, self.Height do
-					layer:MakePixel(#layer.Pixels, y)
-				end
-			end
-
-			for y = 1, top do
-				for x = 1, self.Width do
-					table.insert(layer.Pixels[x], 1, {})
-					layer:MakePixel(x, 1)
-				end
-			end
-
-			for y = 1, bottom do
-				for x = 1, self.Width do
-					table.insert(layer.Pixels[x], {})
-					layer:MakePixel(x, #layer.Pixels[x])
-				end
-			end
-
-			if top < 0 then
-				for y = 1, -top do
-					for x = 1, self.Width do
-						table.remove(layer.Pixels[x], 1)
-					end
-				end
-			end
-
-			if bottom < 0 then
-				for y = 1, -bottom do
-					for x = 1, self.Width do
-						table.remove(layer.Pixels[x], #layer.Pixels[x])
-					end
-				end
-			end
-		end
-	end,
-
-	MakeLayer = function(self, name, backgroundColour, index, pixels)
-		backgroundColour = backgroundColour or colours.white
-		name = name or "Layer"
-		local layer = Layer:Initialise(name, backgroundColour, self, index, pixels)
-		table.insert(self.Layers, layer)
-		Current.Layer = layer
-		ModuleNamed('Layers'):Update()
-		return layer
-	end,
-
-	New = function(self, name, path, width, height, format, backgroundColour, layers)
-		local new = self:Initialise(name, path, width, height, format, backgroundColour, layers)
-		table.insert(Lists.Artboards, new)
-		Current.Artboard = new
-		--new:Save()
-		return new
-	end,
-
-	Save = function(self, path)
-		Current.Artboard = self
-		path = path or self.Path
-		local _open = io.open
-		if OneOS then
-			_open = OneOS.IO.open
-		end
-        local file = _open(path, "w", true)
-		if self.Format == '.skch' then
-			file:write(textutils.serialize(SaveSKCH()))
-		else
-			local lines = {}
-			if self.Format == '.nfp' then
-				lines = SaveNFP()
-			elseif self.Format == '.nft' then
-				lines = SaveNFT()
-			end
-
-			for i, line in ipairs(lines) do
-                file:write(line.."\n")
-			end
-		end
-		file:close()
-		Current.Modified = false
-	end,
-
-	Click = function(self, side, x, y, drag)
-		if Current.Tool and Current.Layer and Current.Layer.Visible then
-			Current.Tool:Use(x, y, side, drag)
-			Current.Modified = true
-			return true
-		end
-	end
-}
-
-Toolbar = {
-	X = 0,
-	Y = 0,
-	Width = 0,
-	ExpandedWidth = 14,
-	ClosedWidth = 2,
-	Height = 0,
-	Expanded = true,
-	ToolbarItems = {},
-
-	AbsolutePosition = function(self)
-		return {X = self.X, Y = self.Y}
-	end,
-
-	Draw = function(self)
-		self:CalculateToolbarItemPositions()
-		--Drawing.DrawArea(self.X - 1, self.Y, 1, self.Height, "|", UIColours.ToolbarText, UIColours.Background)
-
-		
-
-		--if not Current.Window then
-			Drawing.DrawBlankArea(self.X, self.Y, self.Width, self.Height, UIColours.Toolbar)
-		--else
-		--	Drawing.DrawArea(self.X, self.Y, self.Width, self.Height, '|', colours.lightGrey, UIColours.Toolbar)
-		--end
-		for i, toolbarItem in ipairs(self.ToolbarItems) do
-			toolbarItem:Draw()
-		end
-	end,
-
-	Initialise = function(self, side, expanded)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		new.Expanded = expanded
-
-		if expanded then
-			new.Width = new.ExpandedWidth
-		else
-			new.Width = new.ClosedWidth
-		end
-
-		if side == 'right' then
-			new.X = Drawing.Screen.Width - new.Width + 1
-		end
-
-		if side == 'right' or side == 'left' then
-			new.Height = Drawing.Screen.Width
-		end
-
-		new.Y = 1
-
-		return new
-	end,
-
-	AddToolbarItem = function(self, item)
-		table.insert(self.ToolbarItems, item)
-		self:CalculateToolbarItemPositions()
-	end,
-
-	CalculateToolbarItemPositions = function(self)
-		local currY = 1
-		for i, toolbarItem in ipairs(self.ToolbarItems) do
-			toolbarItem.Y = currY
-			currY = currY + toolbarItem.Height
-		end
-	end,
-
-	Update = function(self)
-		for i, toolbarItem in ipairs(self.ToolbarItems) do
-			if toolbarItem.Module.Update then
-				toolbarItem.Module:Update(toolbarItem)
-			end
-		end
-	end,
-
-	New = function(self, side, expanded)
-		local new = self:Initialise(side, expanded)
-
-		--new:AddToolbarItem(ToolbarItem:Initialise("Colours", nil, true, new))
-		--new:AddToolbarItem(ToolbarItem:Initialise("IDK", true, new))
-
-		table.insert(Lists.Interface.Toolbars, new)
-		return new
-	end,
-
-	Click = function(self, side, x, y)
-		return false
-	end
-}
-
-ToolbarItem = {
-	X = 0,
-	Y = 0,
-	Width = 0,
-	Height = 0,
-	ExpandedHeight = 5,
-	Expanded = true,
-	Toolbar = nil,
-	Title = "",
-	MenuIcon = "=",
-	ExpandedIcon = "+",
-	ContractIcon = "-",
-	ContentView = nil,
-	Module = nil,
-	MenuItems = nil,
-
-	Draw = function(self)
-		Drawing.DrawBlankArea(self.X, self.Y, self.Width, 1, UIColours.ToolbarItemTitle)
-		Drawing.DrawCharacters(self.X + 1, self.Y, self.Title, UIColours.ToolbarText, UIColours.ToolbarItemTitle)
-
-		Drawing.DrawCharacters(self.X + self.Width - 1, self.Y, self.MenuIcon, UIColours.ToolbarText, UIColours.ToolbarItemTitle)
-
-		local expandContractIcon = self.ContractIcon
-		if not self.Expanded then
-			expandContractIcon = self.ExpandedIcon
-		end
-
-		if self.Expanded and self.ContentView then
-			self.ContentView:Draw()
-		end
-
-		Drawing.DrawCharacters(self.X + self.Width - 2, self.Y, expandContractIcon, UIColours.ToolbarText, UIColours.ToolbarItemTitle)
-	end,
-
-	Initialise = function(self, module, height, expanded, toolbar, menuItems)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		new.Expanded = expanded
-		new.Title = module.Title
-		new.Width = toolbar.Width
-		new.Height = height or 5
-		new.Module = module
-		new.MenuItems = menuItems or {}
-		table.insert(new.MenuItems,
-			{
-				Title = 'Shrink',
-				Click = function()
-					new:ToggleExpanded()
-				end
-			})
-		new.ExpandedHeight = height or 5
-		new.Y = 1
-		new.X = toolbar.X
-		new.ContentView = ContentView:Initialise(1, 2, new.Width, new.Height - 1, nil, new)
-		new.Toolbar = toolbar
-
-		return new
-	end,
-
-	ToggleExpanded = function(self)
-		self.Expanded = not self.Expanded
-		if self.Expanded then
-			self.Height = self.ExpandedHeight
-		else
-			self.Height = 1
-		end
-	end,
-
-	Click = function(self, side, x, y)
-		local pos = GetAbsolutePosition(self)
-		if x == self.Width and y == 1 then
-			local expandContract = "Shrink"
-
-			if not self.Expanded then
-				expandContract = "Expand"
-			end
-			self.MenuItems[#self.MenuItems].Title = expandContract
-			Menu:New(pos.X + x, pos.Y + y, self.MenuItems, self)
-			return true
-		elseif x == self.Width - 1 and y == 1 then
-			self:ToggleExpanded()
-			return true
-		elseif y ~= 1 then
-			return self.ContentView:Click(side,  x - self.ContentView.X + 1,  y - self.ContentView.Y + 1)
-		end
-
-		return false
-	end
-}
-
-ContentView = {
-	X = 1,
-	Y = 1,
-	Width = 0,
-	Height = 0,
-	Parent = nil,
-	Views = {},
-
-	AbsolutePosition = function(self)
-		return self.Parent:AbsolutePosition()
-	end,
-
-	Draw = function(self)
-		for i, view in ipairs(self.Views) do
-			view:Draw()
-		end
-	end,
-
-	Initialise = function(self, x, y, width, height, views, parent)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		new.Width = width
-		new.Height = height
-		new.Y = y
-		new.X = x
-		new.Views = views or {}
-		new.Parent = parent
-		return new
-	end,
-
-	Click = function(self, side, x, y)
-		for k, view in pairs(self.Views) do
-			if DoClick(view, side, x, y) then
-				return true
-			end
-		end
-	end
-}
-
-Button = {
-	X = 1,
-	Y = 1,
-	Width = 0,
-	Height = 0,
-	BackgroundColour = colours.lightGrey,
-	TextColour = colours.white,
-	ActiveBackgroundColour = colours.lightGrey,
-	Text = "",
-	Parent = nil,
-	_Click = nil,
-	Toggle = nil,
-
-	AbsolutePosition = function(self)
-		return self.Parent:AbsolutePosition()
-	end,
-
-	Draw = function(self)
-		local bg = self.BackgroundColour
-		local tc = self.TextColour
-		if type(bg) == 'function' then
-			bg = bg()
-		end
-
-		if self.Toggle then
-			tc = UIColours.MenuBarActive
-			bg = self.ActiveBackgroundColour
-		end
-
-		local pos = GetAbsolutePosition(self)
-		Drawing.DrawBlankArea(pos.X, pos.Y, self.Width, self.Height, bg)
-		Drawing.DrawCharactersCenter(pos.X, pos.Y, self.Width, self.Height, self.Text, tc, bg)
-	end,
-
-	Initialise = function(self, x, y, width, height, backgroundColour, parent, click, text, textColour, toggle, activeBackgroundColour)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		height = height or 1
-		new.Width = width or #text + 2
-		new.Height = height
-		new.Y = y
-		new.X = x
-		new.Text = text or ""
-		new.BackgroundColour = backgroundColour or colours.lightGrey
-		new.TextColour = textColour or colours.white
-		new.ActiveBackgroundColour = activeBackgroundColour or colours.lightGrey
-		new.Parent = parent
-		new._Click = click
-		new.Toggle = toggle
-		return new
-	end,
-
-	Click = function(self, side, x, y)
-		if self._Click then
-			if self:_Click(side, x, y, not self.Toggle) ~= false and self.Toggle ~= nil then
-				self.Toggle = not self.Toggle
-				Draw()
-			end
-			return true
-		else
-			return false
-		end
-	end
-}
-
-TextBox = {
-	X = 1,
-	Y = 1,
-	Width = 0,
-	Height = 0,
-	BackgroundColour = colours.lightGrey,
-	TextColour = colours.black,
-	Parent = nil,
-	TextInput = nil,
-
-	AbsolutePosition = function(self)
-		return self.Parent:AbsolutePosition()
-	end,
-
-	Draw = function(self)		
-		local pos = GetAbsolutePosition(self)
-		Drawing.DrawBlankArea(pos.X, pos.Y, self.Width, self.Height, self.BackgroundColour)
-		local text = self.TextInput.Value
-		if #text > (self.Width - 2) then
-			text = text:sub(#text-(self.Width - 3))
-			if Current.Input == self.TextInput then
-				Current.CursorPos = {pos.X + 1 + self.Width-2, pos.Y}
-			end
-		else
-			if Current.Input == self.TextInput then
-				Current.CursorPos = {pos.X + 1 + self.TextInput.CursorPos, pos.Y}
-			end
-		end
-		Drawing.DrawCharacters(pos.X + 1, pos.Y, text, self.TextColour, self.BackgroundColour)
-
-		term.setCursorBlink(true)
-		
-		Current.CursorColour = self.TextColour
-	end,
-
-	Initialise = function(self, x, y, width, height, parent, text, backgroundColour, textColour, done, numerical)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		height = height or 1
-		new.Width = width or #text + 2
-		new.Height = height
-		new.Y = y
-		new.X = x
-		new.TextInput = TextInput:Initialise(text or '', function(key)
-			if done then
-				done(key)
-			end
-			Draw()
-		end, numerical)
-		new.BackgroundColour = backgroundColour or colours.lightGrey
-		new.TextColour = textColour or colours.black
-		new.Parent = parent
-		return new
-	end,
-
-	Click = function(self, side, x, y)
-		Current.Input = self.TextInput
-		self:Draw()
-	end
-}
-
-TextInput = {
-	Value = "",
-	Change = nil,
-	CursorPos = nil,
-	Numerical = false,
-
-	Initialise = function(self, value, change, numerical)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		new.Value = value
-		new.Change = change
-		new.CursorPos = #value
-		new.Numerical = numerical
-		return new
-	end,
-
-	Char = function(self, char)
-		if self.Numerical then
-			char = tostring(tonumber(char))
-		end
-		if char == 'nil' then
-			return
-		end
-		self.Value = string.sub(self.Value, 1, self.CursorPos ) .. char .. string.sub( self.Value, self.CursorPos + 1 )
-		
-		self.CursorPos = self.CursorPos + 1
-		self.Change(key)
-	end,
-
-	Key = function(self, key)
-		if key == keys.enter then
-			self.Change(key)		
-		elseif key == keys.left then
-			-- Left
-			if self.CursorPos > 0 then
-				self.CursorPos = self.CursorPos - 1
-				self.Change(key)
-			end
-			
-		elseif key == keys.right then
-			-- Right				
-			if self.CursorPos < string.len(self.Value) then
-				self.CursorPos = self.CursorPos + 1
-				self.Change(key)
-			end
-		
-		elseif key == keys.backspace then
-			-- Backspace
-			if self.CursorPos > 0 then
-				self.Value = string.sub( self.Value, 1, self.CursorPos - 1 ) .. string.sub( self.Value, self.CursorPos + 1 )
-				self.CursorPos = self.CursorPos - 1
-			end
-			self.Change(key)
-		elseif key == keys.home then
-			-- Home
-			self.CursorPos = 0
-			self.Change(key)
-		elseif key == keys.delete then
-			if self.CursorPos < string.len(self.Value) then
-				self.Value = string.sub( self.Value, 1, self.CursorPos ) .. string.sub( self.Value, self.CursorPos + 2 )				
-				self.Change(key)
-			end
-		elseif key == keys["end"] then
-			-- End
-			self.CursorPos = string.len(self.Value)
-			self.Change(key)
-		end
-	end
-}
-
-LayerItem = {
-	X = 1,
-	Y = 1,
-	Parent = nil,
-	Layer = nil,
-
-	Draw = function(self)
-		self.Y = self.Layer.Index
-
-		local pos = GetAbsolutePosition(self)
-
-		local tc = colours.lightGrey
-
-		if Current.Layer == self.Layer then
-			tc = colours.white
-		end
-
-		Drawing.DrawBlankArea(pos.X, pos.Y, self.Width, self.Height, UIColours.Toolbar)
-		
-		Drawing.DrawCharacters(pos.X + 3, pos.Y, self.Layer.Name, tc, UIColours.Toolbar)
-
-		if self.Layer.Visible then
-			Drawing.DrawCharacters(pos.X + 1, pos.Y, "@", tc, UIColours.Toolbar)
-		else
-			Drawing.DrawCharacters(pos.X + 1, pos.Y, "X", tc, UIColours.Toolbar)
-		end
-
-	end,
-
-	Initialise = function(self, layer, parent)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		new.Width = parent.Width
-		new.Height = 1
-		new.Y = 1
-		new.X = 1
-		new.Layer = layer
-		new.Parent = parent
-		return new
-	end,
-
-	Click = function(self, side, x, y)
-		if x == 2 then
-			self.Layer.Visible = not self.Layer.Visible
-		else
-			Current.Layer = self.Layer
-		end
-		return true
-	end
-}
-
-Menu = {
-	X = 0,
-	Y = 0,
-	Width = 0,
-	Height = 0,
-	Owner = nil,
-	Items = {},
-	RemoveTop = false,
-
-	Draw = function(self)
-		Drawing.DrawBlankArea(self.X + 1, self.Y + 1, self.Width, self.Height, UIColours.Shadow)
-		if not self.RemoveTop then
-			Drawing.DrawBlankArea(self.X, self.Y, self.Width, self.Height, UIColours.MenuBackground)
-			for i, item in ipairs(self.Items) do
-				if item.Separator then
-					Drawing.DrawArea(self.X, self.Y + i, self.Width, 1, '-', colours.grey, UIColours.MenuBackground)
-				else
-					local textColour = UIColours.MenuText
-					if (item.Enabled and type(item.Enabled) == 'function' and item.Enabled() == false) or item.Enabled == false then
-						textColour = UIColours.MenuDisabledText
-					end
-					Drawing.DrawCharacters(self.X + 1, self.Y + i, item.Title, textColour, UIColours.MenuBackground)
-				end
-			end
-		else
-			Drawing.DrawBlankArea(self.X, self.Y, self.Width, self.Height, UIColours.MenuBackground)
-			for i, item in ipairs(self.Items) do
-				if item.Separator then
-					Drawing.DrawArea(self.X, self.Y + i - 1, self.Width, 1, '-', colours.grey, UIColours.MenuBackground)
-				else
-					local textColour = UIColours.MenuText
-					if (item.Enabled and type(item.Enabled) == 'function' and item.Enabled() == false) or item.Enabled == false then
-						textColour = UIColours.MenuDisabledText
-					end
-					Drawing.DrawCharacters(self.X + 1, self.Y + i - 1, item.Title, textColour, UIColours.MenuBackground)
-
-					Drawing.DrawCharacters(self.X - 1 + self.Width-#item.KeyName, self.Y + i - 1, item.KeyName, textColour, UIColours.MenuBackground)
-				end
-			end
-		end
-	end,
-
-	NameForKey = function(self, key)
-		if key == keys.leftCtrl then
-			return '^'
-		elseif key == keys.tab then
-			return 'Tab'
-		elseif key == keys.delete then
-			return 'Delete'
-		elseif key == keys.n then
-			return 'N'
-		elseif key == keys.s then
-			return 'S'
-		elseif key == keys.o then
-			return 'O'
-		elseif key == keys.z then
-			return 'Z'
-		elseif key == keys.y then
-			return 'Y'
-		elseif key == keys.c then
-			return 'C'
-		elseif key == keys.x then
-			return 'X'
-		elseif key == keys.v then
-			return 'V'
-		elseif key == keys.r then
-			return 'R'
-		elseif key == keys.l then
-			return 'L'
-		elseif key == keys.t then
-			return 'T'
-		elseif key == keys.h then
-			return 'H'
-		elseif key == keys.e then
-			return 'E'
-		elseif key == keys.p then
-			return 'P'
-		elseif key == keys.f then
-			return 'F'
-		elseif key == keys.m then
-			return 'M'
-		else
-			return '?'		
-		end
-	end,
-
-	Initialise = function(self, x, y, items, owner, removeTop)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		if not owner then
-			return
-		end
-
-		local keyNames = {}
-
-		for i, v in ipairs(items) do
-			items[i].KeyName = ''
-			if v.Keys then
-				for _i, key in ipairs(v.Keys) do
-					items[i].KeyName = items[i].KeyName .. self:NameForKey(key)
-				end
-			end
-			if items[i].KeyName ~= '' then
-				table.insert(keyNames, items[i].KeyName)
-			end
-		end
-		local keysLength = LongestString(keyNames)
-		if keysLength > 0 then
-			keysLength = keysLength + 2
-		end
-
-		new.Width = LongestString(items, 'Title') + 2 + keysLength
-		if new.Width < 10 then
-			new.Width = 10
-		end
-		new.Height = #items + 2
-		new.RemoveTop = removeTop or false
-		if removeTop then
-			new.Height = new.Height - 1
-		end
-		
-		if y < 1 then
-			y = 1
-		end
-		if x < 1 then
-			x = 1
-		end
-
-		if y + new.Height > Drawing.Screen.Height + 1 then
-			y = Drawing.Screen.Height - new.Height
-		end
-		if x + new.Width > Drawing.Screen.Width + 1 then
-			x = Drawing.Screen.Width - new.Width
-		end
-
-
-		new.Y = y
-		new.X = x
-		new.Items = items
-		new.Owner = owner
-		return new
-	end,
-
-	New = function(self, x, y, items, owner, removeTop)
-		if Current.Menu and Current.Menu.Owner == owner then
-			Current.Menu = nil
-			return
-		end
-
-		local new = self:Initialise(x, y, items, owner, removeTop)
-		Current.Menu = new
-		return new
-	end,
-
-	Click = function(self, side, x, y)
-		local i = y-1
-		if self.RemoveTop then
-			i = y
-		end
-		if i >= 1 and y < self.Height then
-			if not ((self.Items[i].Enabled and type(self.Items[i].Enabled) == 'function' and self.Items[i].Enabled() == false) or self.Items[i].Enabled == false) and self.Items[i].Click then
-				self.Items[i]:Click()
-				if Current.Menu.Owner and Current.Menu.Owner.Toggle then
-					Current.Menu.Owner.Toggle = false
-				end
-				Current.Menu = nil
-				self = nil
-			end
-			return true
-		end
-	end
-}
-
-MenuBar = {
-	X = 1,
-	Y = 1,
-	Width = Drawing.Screen.Width,
-	Height = 1,
-	MenuBarItems = {},
-
-	AbsolutePosition = function(self)
-		return {X = self.X, Y = self.Y}
-	end,
-
-	Draw = function(self)
-		--Drawing.DrawArea(self.X - 1, self.Y, 1, self.Height, "|", UIColours.ToolbarText, UIColours.Background)
-
-		Drawing.DrawBlankArea(self.X, self.Y, self.Width, self.Height, UIColours.Toolbar)
-		for i, button in ipairs(self.MenuBarItems) do
-			button:Draw()
-		end
-	end,
-
-	Initialise = function(self, items)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		new.X = 1
-		new.Y = 1
-		new.MenuBarItems = items
-		return new
-	end,
-
-	AddToolbarItem = function(self, item)
-		table.insert(self.ToolbarItems, item)
-		self:CalculateToolbarItemPositions()
-	end,
-
-	CalculateToolbarItemPositions = function(self)
-		local currY = 1
-		for i, toolbarItem in ipairs(self.ToolbarItems) do
-			toolbarItem.Y = currY
-			currY = currY + toolbarItem.Height
-		end
-	end,
-
-	Click = function(self, side, x, y)
-		for i, item in ipairs(self.MenuBarItems) do
-			if item.X <= x and item.X + item.Width > x then
-				if item:Click(item, side, x - item.X + 1, 1) then
-					break
-				end
-			end
-		end
-		return false
-	end
-}
-
---Modules--
-
-Modules = {
-	{
-		Title = "Colours",
-		ToolbarItem = nil,
-		Initialise = function(self)
-			self.ToolbarItem = ToolbarItem:Initialise(self, nil, true, Current.Toolbar)
-
-			local buttons = {}
-
-			local i = 0
-
-			local coloursWidth = 8
-			local _colours = {
-				colours.brown,
-				colours.yellow,
-				colours.orange,
-				colours.red,
-				colours.green,
-				colours.lime,
-				colours.magenta,
-				colours.pink,
-				colours.purple,
-				colours.blue,
-				colours.cyan,
-				colours.lightBlue,
-				colours.lightGrey,
-				colours.grey,
-				colours.black,
-				colours.white
-			}
-
-			for k, colour in pairs(_colours) do
-				if type(colour) == 'number' and colour ~= -1 then
-					i = i + 1
-
-					local y = math.floor(i/(coloursWidth/2))
-
-					local x = (i%(coloursWidth/2))
-					if x == 0 then
-						x = (coloursWidth/2)
-						y = y -1
-					end
-
-					table.insert(buttons,
-						{
-							X = x*2 - 2 + self.ToolbarItem.Width - coloursWidth,
-							Y = y+1,
-							Width = 2,
-							Height = 1,
-							BackgroundColour = colour,
-							Click = function(self, side, x, y)
-								SetColour(self.BackgroundColour)
-							end
-						}
-					)
-				end
-			end
-
-			for i, button in ipairs(buttons) do
-				table.insert(self.ToolbarItem.ContentView.Views, 
-					Button:Initialise(button.X, button.Y, button.Width, button.Height, button.BackgroundColour, self.ToolbarItem.ContentView, button.Click))	
-			end
-			
-			table.insert(self.ToolbarItem.ContentView.Views, 
-					Button:Initialise(1, 1, 4, 3, function()return Current.Colour end, self.ToolbarItem.ContentView, nil))
-		
-			Current.Toolbar:AddToolbarItem(self.ToolbarItem)
-		end
-	},
-
-	{
-		Title = "Tools",
-		ToolbarItem = nil,
-		Update = function(self)
-			for i, view in ipairs(self.ToolbarItem.ContentView.Views) do
-				if (Current.Tool and Current.Tool.Name == view.Text) then
-					view.TextColour = colours.white
-				else
-					view.TextColour = colours.lightGrey
-				end
-			end
-			self.ToolbarItem.ContentView.Views[1].Text = 'Size: '..Current.ToolSize
-		end,
-
-		Initialise = function(self)
-			self.ToolbarItem = ToolbarItem:Initialise(self, #Tools+2, true, Current.Toolbar,
-				{{
-					Title = "Change Tool Size",
-					Click = function()
-						DisplayToolSizeWindow()
-					end,
-				}})
-
-			table.insert(self.ToolbarItem.ContentView.Views, Button:Initialise(1, 1, self.ToolbarItem.Width, 1, UIColours.Toolbar, self.ToolbarItem.ContentView, DisplayToolSizeWindow, 'Size: '..Current.ToolSize))
-
-			local y = 2
-			for i, tool in ipairs(Tools) do
-				table.insert(self.ToolbarItem.ContentView.Views, Button:Initialise(1, y, self.ToolbarItem.Width, 1, UIColours.Toolbar, self.ToolbarItem.ContentView, function() SetTool(tool) self:Update(self.ToolbarItem) end, tool.Name))
-				y = y + 1
-			end
-
-			self:Update(self.ToolbarItem)
-
-			Current.Toolbar:AddToolbarItem(self.ToolbarItem)
-		end
-	},
-
-	{
-		Title = "Layers",
-		ToolbarItem = nil,
-		Update = function(self)
-			if Current.Artboard then
-				self.ToolbarItem.ContentView.Views = {}
-				for i = 1, #Current.Artboard.Layers do
-					table.insert(self.ToolbarItem.ContentView.Views, LayerItem:Initialise(Current.Artboard.Layers[#Current.Artboard.Layers-i+1], self.ToolbarItem.ContentView))
-				end					
-			end
-		end,
-
-		Initialise = function(self)
-			self.ToolbarItem = ToolbarItem:Initialise(self, nil, true, Current.Toolbar,
-				{{
-					Title = "New Layer",
-					Click = function()
-						MakeNewLayer()
-					end,
-					Enabled = function()
-						return CheckOpenArtboard()
-					end
-				},
-				{
-					Title = 'Delete Layer',
-					Click = function()
-						DeleteLayer()
-					end,
-					Enabled = function()
-						return CheckSelectedLayer()
-					end
-				},
-				{
-					Title = 'Rename Layer...',
-					Click = function()
-						RenameLayer()
-					end,
-					Enabled = function()
-						return CheckSelectedLayer()
-					end
-				}})
-			
-			self:Update()
-
-			Current.Toolbar:AddToolbarItem(self.ToolbarItem)
-		end
-	}
-
-}
-
-function ModuleNamed(name)
-	for i, v in ipairs(Modules) do
-		if v.Title == name then
-			return v
-		end
-	end
-end
-
---Tools--
-
-function ToolAffectedPixels(x, y)
-	if not CheckSelectedLayer() then
-		return {}
-	end
-	if Current.ToolSize == 1 then
-		if Current.Layer.Pixels[x] and Current.Layer.Pixels[x][y] then
-			return {{Current.Layer.Pixels[x][y], x, y}}
-		end
-	else
-		local pixels = {}
-		local cornerX = x - math.ceil(Current.ToolSize/2)
-		local cornerY = y - math.ceil(Current.ToolSize/2)
-		for _x = 1, Current.ToolSize do
-			for _y = 1, Current.ToolSize do
-				if Current.Layer.Pixels[cornerX + _x] and Current.Layer.Pixels[cornerX + _x][cornerY + _y] then
-					table.insert(pixels, {Current.Layer.Pixels[cornerX + _x][cornerY + _y], cornerX + _x, cornerY + _y})
-				end
-			end
-		end
-		return pixels
-	end
-end
-local moveStartPoint = {}
-Tools = {
-	{
-		Name = "Hand",
-		Use = function(self, x, y, side, drag)
-			Current.Input = nil
-			if drag and Current.HandDragStart and Current.HandDragStart[1] and Current.HandDragStart[2] then
-				local deltaX = x - Current.HandDragStart[1]
-				local deltaY = y - Current.HandDragStart[2]
-				Current.Artboard.X = Current.Artboard.X + deltaX
-				Current.Artboard.Y = Current.Artboard.Y + deltaY
-			else
-				Current.HandDragStart = {x, y}
-			end
-			sleep(0)
-		end,
-		Select = function(self)
-			return true
-		end
-	},
-
-	{
-		Name = "Pencil",
-		Use = function(self, _x, _y, side, artboard)
-			Current.Input = nil
-			for i, pixel in ipairs(ToolAffectedPixels(_x, _y)) do
-				if side == 1 then
-					pixel[1].BackgroundColour = Current.Colour
-				elseif side == 2 then
-					pixel[1].TextColour = Current.Colour
-				end
-				pixel[1]:Draw(pixel[2], pixel[3])
-			end
-		end,
-		Select = function(self)
-			return true
-		end
-	},
-
-	{
-		Name = "Eraser",
-		Use = function(self, x, y, side)
-			Current.Input = nil
-			Current.Layer:SetPixel(x, y, nil, Current.Layer.BackgroundColour, nil)
-			for i, pixel in ipairs(ToolAffectedPixels(x, y)) do
-				Current.Layer:SetPixel(pixel[2], pixel[3], nil, Current.Layer.BackgroundColour, nil)
-			end
-		end,
-		Select = function(self)
-			return true
-		end
-	},
-
-	{
-		Name = "Fill Bucket",
-		Use = function(self, x, y, side)
-			local replaceColour = Current.Layer.Pixels[x][y].BackgroundColour
-			if side == 2 then
-				replaceColour = Current.Layer.Pixels[x][y].TextColour
-			end
-
-			local nodes = {{X = x, Y = y}}
-
-			while #nodes > 0 do
-				local node = nodes[1]
-				if Current.Layer.Pixels[node.X] and Current.Layer.Pixels[node.X][node.Y] then
-					local replacing = Current.Layer.Pixels[node.X][node.Y].BackgroundColour
-					if side == 2 then
-						replacing = Current.Layer.Pixels[node.X][node.Y].TextColour
-					end
-					if replacing == replaceColour and replacing ~= Current.Colour then
-						if side == 1 then
-							Current.Layer.Pixels[node.X][node.Y].BackgroundColour = Current.Colour
-						elseif side == 2 then
-							Current.Layer.Pixels[node.X][node.Y].TextColour = Current.Colour
-						end
-						table.insert(nodes, {X = node.X, Y = node.Y + 1})
-						table.insert(nodes, {X = node.X + 1, Y = node.Y})
-						if x > 1 then
-							table.insert(nodes, {X = node.X - 1, Y = node.Y})
-						end
-						if y > 1 then
-							table.insert(nodes, {X = node.X, Y = node.Y - 1})
-						end
-					end
-				end
-				table.remove(nodes, 1)
-			end
-			Draw()
-		end,
-		Select = function(self)
-			return true
-		end
-	},
-
-	{
-		Name = "Select",
-		Use = function(self, x, y, side, drag)
-			Current.Input = nil
-			if not drag then
-				Current.Selection[1] = vector.new(x, y, 0)
-				Current.Selection[2] = nil
-			else
-				Current.Selection[2] = vector.new(x, y, 0)
-			end
-		end,
-		Select = function(self)
-			return true
-		end
-	},
-
-	{
-		Name = "Move",
-		Use = function(self, x, y, side, drag)
-			Current.Input = nil
-
-			if Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
-				if drag and moveStartPoint then
-					local pixels = Current.Layer:PixelsInSelection(true)
-					local size = Current.Selection[1] - Current.Selection[2]
-					Current.Selection[1] = vector.new(x-moveStartPoint[1], y-moveStartPoint[2], 0)
-					Current.Selection[2] = vector.new(x-moveStartPoint[1]-size.x, y-moveStartPoint[2]-size.y, 0)
-					Current.Layer:InsertPixels(pixels)
-				else
-					moveStartPoint = {x-Current.Selection[1].x, y-Current.Selection[1].y}
-				end
-			end
-		end,
-		Select = function(self)
-			return true
-		end
-	},
-
-	{
-		Name = "Text",
-		Use = function(self, x, y)
-			Current.Input = TextInput:Initialise('', function(key)
-				if key == keys.delete or key == keys.backspace then
-					if #Current.Input.Value == 0 then
-						if Current.Layer.Pixels[x] and Current.Layer.Pixels[x][y] then
-							Current.Layer.Pixels[x][y]:Set(nil, nil, ' ')
-							local newPos = Current.CursorPos[1] - Current.Artboard.X
-							if newPos < Current.Artboard.X - 1 then
-								newPos = Current.Artboard.X - 1
-							end
-							Current.Tool:Use(newPos, Current.CursorPos[2] - Current.Artboard.Y + 1)
-							Draw()
-						end
-						return
-					else
-						if Current.Layer.Pixels[x+#Current.Input.Value] and Current.Layer.Pixels[x+#Current.Input.Value][y] then
-							Current.Layer.Pixels[x+#Current.Input.Value][y]:Set(nil, nil, ' ')
-						end
-					end
-				else
-					local i = #Current.Input.Value
-					if Current.Layer.Pixels[x+i-1] then
-						Current.Layer.Pixels[x+i-1][y]:Set(Current.Colour, nil, Current.Input.Value:sub(i,i))
-						Current.Layer.Pixels[x+i-1][y]:Draw(x+i-1, y)
-					end
-				end
-
-				local newPos = x+Current.Input.CursorPos
-
-				if newPos > Current.Artboard.Width then
-					Current.Input.CursorPos = Current.Input.CursorPos - 1
-				end
-
-				Current.CursorPos = {x+Current.Input.CursorPos + Current.Artboard.X - 1, y + Current.Artboard.Y - 1}
-				Current.CursorColour = Current.Colour
-				Draw()
-			end)
-
-			Current.CursorPos = {x + Current.Artboard.X - 1, y + Current.Artboard.Y - 1}
-			Current.CursorColour = Current.Colour
-		end,
-		Select = function(self)
-			if Current.Artboard.Format == '.nfp' then
-				ButtonDialougeWindow:Initialise('NFP does not support text!', 'The format you are using, NFP, does not support text. Use NFT or SKCH to use text.', 'Ok', nil, function(window)
-					window:Close()
-				end):Show()
-				return false
-			else
-				return true
-			end
-		end
-	}
-}
-
-
-function ToolNamed(name)
-	for i, v in ipairs(Tools) do
-		if v.Name == name then
-			return v
-		end
-	end
-end
-
---Windows--
-
-NewDocumentWindow = {
-	X = 1,
-	Y = 1,
-	Width = 0,
-	Height = 0,
-	CursorPos = 1,
-	Visible = true,
-	Return = nil,
-	OkButton = nil,
-	Format = '.skch',
-	ImageBackgroundColour = colours.white,
-	NameLabelHighlight = false,
-	SizeLabelHighlight = false,
-
-
-	AbsolutePosition = function(self)
-		return {X = self.X, Y = self.Y}
-	end,
-
-	Draw = function(self)
-		if not self.Visible then
-			return
-		end
-		Drawing.DrawBlankArea(self.X + 1, self.Y+1, self.Width, self.Height, colours.grey)
-		Drawing.DrawBlankArea(self.X, self.Y, self.Width, 1, colours.lightGrey)
-		Drawing.DrawBlankArea(self.X, self.Y+1, self.Width, self.Height-1, colours.white)
-		Drawing.DrawCharactersCenter(self.X, self.Y, self.Width, 1, self.Title, colours.black, colours.lightGrey)
-
-		local nameLabelColour = colours.black
-		if self.NameLabelHighlight then
-			nameLabelColour = colours.red
-		end
-
-		Drawing.DrawCharacters(self.X+1, self.Y+2, "Name", nameLabelColour, colours.white)
-		Drawing.DrawCharacters(self.X+1, self.Y+4, "Type", colours.black, colours.white)
-
-		local sizeLabelColour = colours.black
-		if self.SizeLabelHighlight then
-			sizeLabelColour = colours.red
-		end
-		Drawing.DrawCharacters(self.X+1, self.Y+6, "Size", sizeLabelColour, colours.white)
-		Drawing.DrawCharacters(self.X+11, self.Y+6, "x", colours.black, colours.white)
-		Drawing.DrawCharacters(self.X+1, self.Y+8, "Background", colours.black, colours.white)
-
-		self.OkButton:Draw()
-		self.CancelButton:Draw()
-		self.SKCHButton:Draw()
-		self.NFTButton:Draw()
-		self.NFPButton:Draw()
-		self.PathTextBox:Draw()
-		self.WidthTextBox:Draw()
-		self.HeightTextBox:Draw()
-		self.WhiteButton:Draw()
-		self.BlackButton:Draw()
-		self.TransparentButton:Draw()
-	end,	
-
-	Initialise = function(self, returnFunc)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		new.Width = 32
-		new.Height = 13
-		new.Return = returnFunc
-		new.X = math.ceil((Drawing.Screen.Width - new.Width) / 2)
-		new.Y = math.ceil((Drawing.Screen.Height - new.Height) / 2)
-		new.Title = 'New Document'
-		new.Visible = true
-		new.NameLabelHighlight = false
-		new.SizeLabelHighlight = false
-		new.Format = '.skch'
-		new.OkButton = Button:Initialise(new.Width - 4, new.Height - 1, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
-			local path = new.PathTextBox.TextInput.Value
-			local ok = true
-			new.NameLabelHighlight = false
-			new.SizeLabelHighlight = false
-			local _fs = fs
-			if OneOS then
-				_fs = OneOS.FS
-			end
-			if path:sub(-1) == '/' or _fs.isDir(path) or #path == 0 then
-				ok = false
-				new.NameLabelHighlight = true
-			end
-
-			if #new.WidthTextBox.TextInput.Value == 0 or tonumber(new.WidthTextBox.TextInput.Value) <= 0 then
-				ok = false
-				new.SizeLabelHighlight = true
-			end
-
-			if #new.HeightTextBox.TextInput.Value == 0 or tonumber(new.HeightTextBox.TextInput.Value) <= 0 then
-				ok = false
-				new.SizeLabelHighlight = true
-			end
-
-			if ok then
-				returnFunc(new, true, path, tonumber(new.WidthTextBox.TextInput.Value), tonumber(new.HeightTextBox.TextInput.Value), new.Format, new.ImageBackgroundColour)
-			else
-				Draw()
-			end
-		end, 'Ok', colours.black)
-		new.CancelButton = Button:Initialise(new.Width - 13, new.Height - 1, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)returnFunc(new, false)end, 'Cancel', colours.black)
-
-		new.SKCHButton = Button:Initialise(7, 5, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
-			new.NFTButton.Toggle = false
-			new.NFPButton.Toggle = false
-			self.Toggle = false
-			new.Format = '.skch'
-		end, '.skch', colours.black, true, colours.lightBlue)
-		new.NFTButton = Button:Initialise(15, 5, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
-			new.SKCHButton.Toggle = false
-			new.NFPButton.Toggle = false
-			self.Toggle = false
-			new.Format = '.nft'
-		end, '.nft', colours.black, false, colours.lightBlue)
-		new.NFPButton = Button:Initialise(22, 5, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
-			new.SKCHButton.Toggle = false
-			new.NFTButton.Toggle = false
-			self.Toggle = false
-			new.Format = '.nfp'
-		end, '.nfp', colours.black, false, colours.lightBlue)
-
-		local path = ''
-		if OneOS then
-			path = '/Desktop/'
-		end
-		new.PathTextBox = TextBox:Initialise(7, 3, new.Width - 7, 1, new, path, nil, nil, function(key)
-			if key == keys.enter or key == keys.tab then
-				Current.Input = new.WidthTextBox.TextInput
-			end			
-		end)
-		new.WidthTextBox = TextBox:Initialise(7, 7, 4, 1, new, tostring(15), nil, nil, function()
-			if key == keys.enter or key == keys.tab then
-				Current.Input = new.HeightTextBox.TextInput
-			end
-		end, true)
-		new.HeightTextBox = TextBox:Initialise(14, 7, 4, 1, new, tostring(10), nil, nil, function()
-			if key == keys.enter or key == keys.tab then
-				Current.Input = new.PathTextBox.TextInput
-			end
-		end, true)
-		Current.Input = new.PathTextBox.TextInput
-
-
-		new.WhiteButton = Button:Initialise(2, 10, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
-			new.TransparentButton.Toggle = false
-			new.BlackButton.Toggle = false
-			self.Toggle = false
-			new.ImageBackgroundColour = colours.white
-		end, 'White', colours.black, true, colours.lightBlue)
-		new.BlackButton = Button:Initialise(10, 10, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
-			new.TransparentButton.Toggle = false
-			new.WhiteButton.Toggle = false
-			self.Toggle = false
-			new.ImageBackgroundColour = colours.black
-		end, 'Black', colours.black, false, colours.lightBlue)
-		new.TransparentButton = Button:Initialise(18, 10, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
-			new.WhiteButton.Toggle = false
-			new.BlackButton.Toggle = false
-			self.Toggle = false
-			new.ImageBackgroundColour = colours.transparent
-		end, 'Transparent', colours.black, false, colours.lightBlue)
-
-		return new
-	end,
-
-	Show = function(self)
-		Current.Window = self
-		return self
-	end,
-
-	Close = function(self)
-		Current.Input = nil
-		Current.Window = nil
-		self = nil
-	end,
-
-	Flash = function(self)
-		self.Visible = false
-		Draw()
-		sleep(0.15)
-		self.Visible = true
-		Draw()
-		sleep(0.15)
-		self.Visible = false
-		Draw()
-		sleep(0.15)
-		self.Visible = true
-		Draw()
-	end,
-
-	ButtonClick = function(self, button, x, y)
-		if button.X <= x and button.Y <= y and button.X + button.Width > x and button.Y + button.Height > y then
-			button:Click()
-		end
-	end,
-
-	Click = function(self, side, x, y)
-		local items = {self.OkButton, self.CancelButton, self.SKCHButton, self.NFTButton, self.NFPButton, self.PathTextBox, self.WidthTextBox, self.HeightTextBox, self.WhiteButton, self.BlackButton, self.TransparentButton}
-		for i, v in ipairs(items) do
-			if CheckClick(v, x, y) then
-				v:Click(side, x, y)
-			end
-		end
-		return true
-	end
-}
-
-local TidyPath = function(path)
-	path = '/'..path
-	local _fs = fs
-	if OneOS then
-		_fs = OneOS.FS
-	end
-	if _fs.isDir(path) then
-		path = path .. '/'
-	end
-
-	path, n = path:gsub("//", "/")
-	while n > 0 do
-		path, n = path:gsub("//", "/")
-	end
-	return path
-end
-
-local WrapText = function(text, maxWidth)
-	local lines = {''}
-    for word, space in text:gmatch('(%S+)(%s*)') do
-            local temp = lines[#lines] .. word .. space:gsub('\n','')
-            if #temp > maxWidth then
-                    table.insert(lines, '')
-            end
-            if space:find('\n') then
-                    lines[#lines] = lines[#lines] .. word
-                    
-                    space = space:gsub('\n', function()
-                            table.insert(lines, '')
-                            return ''
-                    end)
-            else
-                    lines[#lines] = lines[#lines] .. word .. space
-            end
-    end
-	return lines
-end
-
-OpenDocumentWindow = {
-	X = 1,
-	Y = 1,
-	Width = 0,
-	Height = 0,
-	CursorPos = 1,
-	Visible = true,
-	Return = nil,
-	OpenButton = nil,
-	PathTextBox = nil,
-	CurrentDirectory = '/',
-	Scroll = 0,
-	MaxScroll = 0,
-	GoUpButton = nil,
-	SelectedFile = '',
-	Files = {},
-	Typed = false,
-
-	AbsolutePosition = function(self)
-		return {X = self.X, Y = self.Y}
-	end,
-
-	Draw = function(self)
-		if not self.Visible then
-			return
-		end
-		Drawing.DrawBlankArea(self.X + 1, self.Y+1, self.Width, self.Height, colours.grey)
-		Drawing.DrawBlankArea(self.X, self.Y, self.Width, 3, colours.lightGrey)
-		Drawing.DrawBlankArea(self.X, self.Y+1, self.Width, self.Height-6, colours.white)
-		Drawing.DrawCharactersCenter(self.X, self.Y, self.Width, 1, self.Title, colours.black, colours.lightGrey)
-		Drawing.DrawBlankArea(self.X, self.Y + self.Height - 5, self.Width, 5, colours.lightGrey)
-		self:DrawFiles()
-
-		local _fs = fs
-		if OneOS then
-			_fs = OneOS.FS
-		end
-		if (_fs.exists(self.PathTextBox.TextInput.Value)) or (self.SelectedFile and #self.SelectedFile > 0 and _fs.exists(self.CurrentDirectory .. self.SelectedFile)) then
-			self.OpenButton.TextColour = colours.black
-		else
-			self.OpenButton.TextColour = colours.lightGrey
-		end
-
-		self.PathTextBox:Draw()
-		self.OpenButton:Draw()
-		self.CancelButton:Draw()
-		self.GoUpButton:Draw()
-	end,
-
-	DrawFiles = function(self)
-		local _fs = fs
-		if OneOS then
-			_fs = OneOS.FS
-		end
-		for i, file in ipairs(self.Files) do
-			if i > self.Scroll and i - self.Scroll <= 11 then
-				if file == self.SelectedFile then
-					Drawing.DrawCharacters(self.X + 1, self.Y + i - self.Scroll, file, colours.white, colours.lightBlue)
-				elseif string.find(file, '%.skch') or string.find(file, '%.nft') or string.find(file, '%.nfp') or _fs.isDir(self.CurrentDirectory .. file) then
-					Drawing.DrawCharacters(self.X + 1, self.Y + i - self.Scroll, file, colours.black, colours.white)
-				else
-					Drawing.DrawCharacters(self.X + 1, self.Y + i - self.Scroll, file, colours.grey, colours.white)
-				end
-			end
-		end
-		self.MaxScroll = #self.Files - 11
-		if self.MaxScroll < 0 then
-			self.MaxScroll = 0
-		end
-	end,
-
-	Initialise = function(self, returnFunc)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		new.Width = 32
-		new.Height = 17
-		new.Return = returnFunc
-		new.X = math.ceil((Drawing.Screen.Width - new.Width) / 2)
-		new.Y = math.ceil((Drawing.Screen.Height - new.Height) / 2)
-		new.Title = 'Open Document'
-		new.Visible = true
-		new.CurrentDirectory = '/'
-		new.SelectedFile = nil
-		if OneOS then
-			new.CurrentDirectory = '/Desktop/'
-		end
-		local _fs = fs
-		if OneOS then
-			_fs = OneOS.FS
-		end
-		new.OpenButton = Button:Initialise(new.Width - 6, new.Height - 1, nil, nil, colours.white, new, function(self, side, x, y, toggle)
-			if _fs.exists(new.PathTextBox.TextInput.Value) and self.TextColour == colours.black and not _fs.isDir(new.PathTextBox.TextInput.Value) then
-				returnFunc(new, true, TidyPath(new.PathTextBox.TextInput.Value))
-			elseif new.SelectedFile and self.TextColour == colours.black and _fs.isDir(new.CurrentDirectory .. new.SelectedFile) then
-				new:GoToDirectory(new.CurrentDirectory .. new.SelectedFile)
-			elseif new.SelectedFile and self.TextColour == colours.black then
-				returnFunc(new, true, TidyPath(new.CurrentDirectory .. '/' .. new.SelectedFile))
-			end
-		end, 'Open', colours.black)
-		new.CancelButton = Button:Initialise(new.Width - 15, new.Height - 1, nil, nil, colours.white, new, function(self, side, x, y, toggle)
-			returnFunc(new, false)
-		end, 'Cancel', colours.black)
-		new.GoUpButton = Button:Initialise(2, new.Height - 1, nil, nil, colours.white, new, function(self, side, x, y, toggle)
-			local folderName = _fs.getName(new.CurrentDirectory)
-			local parentDirectory = new.CurrentDirectory:sub(1, #new.CurrentDirectory-#folderName-1)
-			new:GoToDirectory(parentDirectory)
-		end, 'Go Up', colours.black)
-		new.PathTextBox = TextBox:Initialise(2, new.Height - 3, new.Width - 2, 1, new, new.CurrentDirectory, colours.white, colours.black)
-		new:GoToDirectory(new.CurrentDirectory)
-		return new
-	end,
-
-	Show = function(self)
-		Current.Window = self
-		return self
-	end,
-
-	Close = function(self)
-		Current.Input = nil
-		Current.Window = nil
-		self = nil
-	end,
-
-	GoToDirectory = function(self, path)
-		path = TidyPath(path)
-		self.CurrentDirectory = path
-		self.Scroll = 0
-		self.SelectedFile = nil
-		self.Typed = false
-		self.PathTextBox.TextInput.Value = path
-		local _fs = fs
-		if OneOS then
-			_fs = OneOS.FS
-		end
-		self.Files = _fs.list(self.CurrentDirectory)
-		Draw()
-	end,
-
-	Flash = function(self)
-		self.Visible = false
-		Draw()
-		sleep(0.15)
-		self.Visible = true
-		Draw()
-		sleep(0.15)
-		self.Visible = false
-		Draw()
-		sleep(0.15)
-		self.Visible = true
-		Draw()
-	end,
-
-	Click = function(self, side, x, y)
-		local items = {self.OpenButton, self.CancelButton, self.PathTextBox, self.GoUpButton}
-		local found = false
-		for i, v in ipairs(items) do
-			if CheckClick(v, x, y) then
-				v:Click(side, x, y)
-				found = true
-			end
-		end
-
-		if not found then
-			if y <= 12 then
-				local _fs = fs
-				if OneOS then
-					_fs = OneOS.FS
-				end
-				self.SelectedFile = _fs.list(self.CurrentDirectory)[y-1]
-				self.PathTextBox.TextInput.Value = TidyPath(self.CurrentDirectory .. '/' .. self.SelectedFile)
-				Draw()
-			end
-		end
-		return true
-	end
-}
-
-ButtonDialougeWindow = {
-	X = 1,
-	Y = 1,
-	Width = 0,
-	Height = 0,
-	CursorPos = 1,
-	Visible = true,
-	CancelButton = nil,
-	OkButton = nil,
-	Lines = {},
-
-	AbsolutePosition = function(self)
-		return {X = self.X, Y = self.Y}
-	end,
-
-	Draw = function(self)
-		if not self.Visible then
-			return
-		end
-		Drawing.DrawBlankArea(self.X + 1, self.Y+1, self.Width, self.Height, colours.grey)
-		Drawing.DrawBlankArea(self.X, self.Y, self.Width, 1, colours.lightGrey)
-		Drawing.DrawBlankArea(self.X, self.Y+1, self.Width, self.Height-1, colours.white)
-		Drawing.DrawCharactersCenter(self.X, self.Y, self.Width, 1, self.Title, colours.black, colours.lightGrey)
-
-		for i, text in ipairs(self.Lines) do
-			Drawing.DrawCharacters(self.X + 1, self.Y + 1 + i, text, colours.black, colours.white)
-		end
-
-		self.OkButton:Draw()
-		if self.CancelButton then
-			self.CancelButton:Draw()
-		end
-	end,
-
-	Initialise = function(self, title, message, okText, cancelText, returnFunc)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		new.Width = 28
-		new.Lines = WrapText(message, new.Width - 2)
-		new.Height = 5 + #new.Lines
-		new.Return = returnFunc
-		new.X = math.ceil((Drawing.Screen.Width - new.Width) / 2)
-		new.Y = math.ceil((Drawing.Screen.Height - new.Height) / 2)
-		new.Title = title
-		new.Visible = true
-		new.Visible = true
-		new.OkButton = Button:Initialise(new.Width - #okText - 2, new.Height - 1, nil, 1, nil, new, function()
-			returnFunc(new, true)
-		end, okText)
-		if cancelText then
-			new.CancelButton = Button:Initialise(new.Width - #okText - 2 - 1 - #cancelText - 2, new.Height - 1, nil, 1, nil, new, function()
-				returnFunc(new, false)
-			end, cancelText)
-		end
-
-		return new
-	end,
-
-	Show = function(self)
-		Current.Window = self
-		return self
-	end,
-
-	Close = function(self)
-		Current.Window = nil
-		self = nil
-	end,
-
-	Flash = function(self)
-		self.Visible = false
-		Draw()
-		sleep(0.15)
-		self.Visible = true
-		Draw()
-		sleep(0.15)
-		self.Visible = false
-		Draw()
-		sleep(0.15)
-		self.Visible = true
-		Draw()
-	end,
-
-	Click = function(self, side, x, y)
-		local items = {self.OkButton, self.CancelButton}
-		local found = false
-		for i, v in ipairs(items) do
-			if CheckClick(v, x, y) then
-				v:Click(side, x, y)
-				found = true
-			end
-		end
-		return true
-	end
-}
-
-TextDialougeWindow = {
-	X = 1,
-	Y = 1,
-	Width = 0,
-	Height = 0,
-	CursorPos = 1,
-	Visible = true,
-	CancelButton = nil,
-	OkButton = nil,
-	Lines = {},
-	TextInput = nil,
-
-	AbsolutePosition = function(self)
-		return {X = self.X, Y = self.Y}
-	end,
-
-	Draw = function(self)
-		if not self.Visible then
-			return
-		end
-		Drawing.DrawBlankArea(self.X + 1, self.Y+1, self.Width, self.Height, colours.grey)
-		Drawing.DrawBlankArea(self.X, self.Y, self.Width, 1, colours.lightGrey)
-		Drawing.DrawBlankArea(self.X, self.Y+1, self.Width, self.Height-1, colours.white)
-		Drawing.DrawCharactersCenter(self.X, self.Y, self.Width, 1, self.Title, colours.black, colours.lightGrey)
-
-		for i, text in ipairs(self.Lines) do
-			Drawing.DrawCharacters(self.X + 1, self.Y + 1 + i, text, colours.black, colours.white)
-		end
-
-
-		Drawing.DrawBlankArea(self.X + 1, self.Y + self.Height - 4, self.Width - 2, 1, colours.lightGrey)
-		Drawing.DrawCharacters(self.X + 2, self.Y + self.Height - 4, self.TextInput.Value, colours.black, colours.lightGrey)
-		Current.CursorPos = {self.X + 2 + self.TextInput.CursorPos, self.Y + self.Height - 4}
-		Current.CursorColour = colours.black
-
-		self.OkButton:Draw()
-		if self.CancelButton then
-			self.CancelButton:Draw()
-		end
-	end,
-
-	Initialise = function(self, title, message, okText, cancelText, returnFunc, numerical)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		new.Width = 28
-		new.Lines = WrapText(message, new.Width - 2)
-		new.Height = 7 + #new.Lines
-		new.Return = returnFunc
-		new.X = math.ceil((Drawing.Screen.Width - new.Width) / 2)
-		new.Y = math.ceil((Drawing.Screen.Height - new.Height) / 2)
-		new.Title = title
-		new.Visible = true
-		new.Visible = true
-		new.OkButton = Button:Initialise(new.Width - #okText - 2, new.Height - 1, nil, 1, nil, new, function()
-			if #new.TextInput.Value > 0 then
-				returnFunc(new, true, new.TextInput.Value)
-			end
-		end, okText)
-		if cancelText then
-			new.CancelButton = Button:Initialise(new.Width - #okText - 2 - 1 - #cancelText - 2, new.Height - 1, nil, 1, nil, new, function()
-				returnFunc(new, false)
-			end, cancelText)
-		end
-		new.TextInput = TextInput:Initialise('', function(enter)
-			if enter then
-				new.OkButton:Click()
-			end
-			Draw()
-		end, numerical)
-
-		Current.Input = new.TextInput
-
-		return new
-	end,
-
-	Show = function(self)
-		Current.Window = self
-		return self
-	end,
-
-	Close = function(self)
-		Current.Window = nil
-		Current.Input = nil
-		self = nil
-	end,
-
-	Flash = function(self)
-		self.Visible = false
-		Draw()
-		sleep(0.15)
-		self.Visible = true
-		Draw()
-		sleep(0.15)
-		self.Visible = false
-		Draw()
-		sleep(0.15)
-		self.Visible = true
-		Draw()
-	end,
-
-	Click = function(self, side, x, y)
-		local items = {self.OkButton, self.CancelButton}
-		local found = false
-		for i, v in ipairs(items) do
-			if CheckClick(v, x, y) then
-				v:Click(side, x, y)
-				found = true
-			end
-		end
-		return true
-	end
-}
-
-ResizeDocumentWindow = {
-	X = 1,
-	Y = 1,
-	Width = 0,
-	Height = 0,
-	CursorPos = 1,
-	Visible = true,
-	Return = nil,
-	OkButton = nil,
-	AnchorPosition = 5,
-	WidthLabelHighlight = false,
-	HeightLabelHighlight = false,
-
-	AbsolutePosition = function(self)
-		return {X = self.X, Y = self.Y}
-	end,
-
-	Draw = function(self)
-		if not self.Visible then
-			return
-		end
-		Drawing.DrawBlankArea(self.X + 1, self.Y+1, self.Width, self.Height, colours.grey)
-		Drawing.DrawBlankArea(self.X, self.Y, self.Width, 1, colours.lightGrey)
-		Drawing.DrawBlankArea(self.X, self.Y+1, self.Width, self.Height-1, colours.white)
-		Drawing.DrawCharactersCenter(self.X, self.Y, self.Width, 1, self.Title, colours.black, colours.lightGrey)
-
-		Drawing.DrawCharacters(self.X+1, self.Y+2, "New Size", colours.lightGrey, colours.white)
-		if (#self.WidthTextBox.TextInput.Value > 0 and tonumber(self.WidthTextBox.TextInput.Value) < Current.Artboard.Width) or (#self.HeightTextBox.TextInput.Value > 0 and tonumber(self.HeightTextBox.TextInput.Value) < Current.Artboard.Height) then
-			Drawing.DrawCharacters(self.X+1, self.Y+8, "Clipping will occur!", colours.red, colours.white)
-		end
-
-		local widthLabelColour = colours.black
-		if self.WidthLabelHighlight then
-			widthLabelColour = colours.red
-		end
-		
-		local heightLabelColour = colours.black
-		if self.HeightLabelHighlight then
-			heightLabelColour = colours.red
-		end
-
-		Drawing.DrawCharacters(self.X+1, self.Y+4, "Width", widthLabelColour, colours.white)
-		Drawing.DrawCharacters(self.X+1, self.Y+6, "Height", heightLabelColour, colours.white)
-
-		Drawing.DrawCharacters(self.X+14, self.Y+2, "Anchor", colours.lightGrey, colours.white)
-
-		self.WidthTextBox:Draw()
-		self.HeightTextBox:Draw()
-		self.OkButton:Draw()
-		self.Anchor1:Draw()
-		self.Anchor2:Draw()
-		self.Anchor3:Draw()
-		self.Anchor4:Draw()
-		self.Anchor5:Draw()
-		self.Anchor6:Draw()
-		self.Anchor7:Draw()
-		self.Anchor8:Draw()
-		self.Anchor9:Draw()
-	end,	
-
-	Initialise = function(self, returnFunc)
-		local new = {}    -- the new instance
-		setmetatable( new, {__index = self} )
-		new.Width = 27
-		new.Height = 10
-		new.Return = returnFunc
-		new.X = math.ceil((Drawing.Screen.Width - new.Width) / 2)
-		new.Y = math.ceil((Drawing.Screen.Height - new.Height) / 2)
-		new.Title = 'Resize Document'
-		new.Visible = true
-
-		new.WidthTextBox = TextBox:Initialise(9, 5, 4, 1, new, tostring(Current.Artboard.Width), nil, nil, function()
-			new:UpdateAnchorButtons()
-		end, true)
-		new.HeightTextBox = TextBox:Initialise(9, 7, 4, 1, new, tostring(Current.Artboard.Height), nil, nil, function()
-			new:UpdateAnchorButtons()
-		end, true)
-		new.OkButton = Button:Initialise(new.Width - 4, new.Height - 1, nil, nil, colours.lightGrey, new, function(self, side, x, y, toggle)
-			local ok = true
-			new.WidthLabelHighlight = false
-			new.HeightLabelHighlight = false
-
-			if #new.WidthTextBox.TextInput.Value == 0 or tonumber(new.WidthTextBox.TextInput.Value) <= 0 then
-				ok = false
-				new.WidthLabelHighlight = true
-			end
-
-			if #new.HeightTextBox.TextInput.Value == 0 or tonumber(new.HeightTextBox.TextInput.Value) <= 0 then
-				ok = false
-				new.HeightLabelHighlight = true
-			end
-
-			if ok then
-				returnFunc(new, tonumber(new.WidthTextBox.TextInput.Value), tonumber(new.HeightTextBox.TextInput.Value), new.AnchorPosition)
-			else
-				Draw()
-			end
-		end, 'Ok', colours.black)
-
-		local anchorX = 15
-		local anchorY = 5
-		new.Anchor1 = Button:Initialise(anchorX, anchorY, 1, 1, colours.lightGrey, new, function(self, side, x, y, toggle)new.AnchorPosition = 1 new:UpdateAnchorButtons() end, ' ', colours.black)
-		new.Anchor2 = Button:Initialise(anchorX+1, anchorY, 1, 1, colours.lightGrey, new, function(self, side, x, y, toggle)new.AnchorPosition = 2 new:UpdateAnchorButtons() end, '^', colours.black)
-		new.Anchor3 = Button:Initialise(anchorX+2, anchorY, 1, 1, colours.lightGrey, new, function(self, side, x, y, toggle)new.AnchorPosition = 3 new:UpdateAnchorButtons() end, ' ', colours.black)
-		new.Anchor4 = Button:Initialise(anchorX, anchorY+1, 1, 1, colours.lightGrey, new, function(self, side, x, y, toggle)new.AnchorPosition = 4 new:UpdateAnchorButtons() end, '<', colours.black)
-		new.Anchor5 = Button:Initialise(anchorX+1, anchorY+1, 1, 1, colours.lightGrey, new, function(self, side, x, y, toggle)new.AnchorPosition = 5 new:UpdateAnchorButtons() end, '#', colours.black)
-		new.Anchor6 = Button:Initialise(anchorX+2, anchorY+1, 1, 1, colours.lightGrey, new, function(self, side, x, y, toggle)new.AnchorPosition = 6 new:UpdateAnchorButtons() end, '>', colours.black)
-		new.Anchor7 = Button:Initialise(anchorX, anchorY+2, 1, 1, colours.lightGrey, new, function(self, side, x, y, toggle)new.AnchorPosition = 7 new:UpdateAnchorButtons() end, ' ', colours.black)
-		new.Anchor8 = Button:Initialise(anchorX+1, anchorY+2, 1, 1, colours.lightGrey, new, function(self, side, x, y, toggle)new.AnchorPosition = 8 new:UpdateAnchorButtons() end, 'v', colours.black)
-		new.Anchor9 = Button:Initialise(anchorX+2, anchorY+2, 1, 1, colours.lightGrey, new, function(self, side, x, y, toggle)new.AnchorPosition = 9 new:UpdateAnchorButtons() end, ' ', colours.black)
-
-		return new
-	end,
-
-	UpdateAnchorButtons = function(self)
-		local anchor1 = ' '
-		local anchor2 = ' '
-		local anchor3 = ' '
-		local anchor4 = ' '
-		local anchor5 = ' '
-		local anchor6 = ' '
-		local anchor7 = ' '
-		local anchor8 = ' '
-		local anchor9 = ' '
-		self.AnchorPosition = self.AnchorPosition or 5
-		if self.AnchorPosition == 1 then
-			anchor1 = '#'
-			anchor2 = '>'
-			anchor4 = 'v'
-		elseif self.AnchorPosition == 2 then
-			anchor1 = '<'
-			anchor2 = '#'
-			anchor3 = '>'
-			anchor5 = 'v'
-		elseif self.AnchorPosition == 3 then
-			anchor2 = '<'
-			anchor3 = '#'
-			anchor6 = 'v'
-		elseif self.AnchorPosition == 4 then
-			anchor1 = '^'
-			anchor4 = '#'
-			anchor5 = '>'
-			anchor7 = 'v'
-		elseif self.AnchorPosition == 5 then
-			anchor2 = '^'
-			anchor4 = '<'
-			anchor5 = '#'
-			anchor6 = '>'
-			anchor8 = 'v'
-		elseif self.AnchorPosition == 6 then
-			anchor3 = '^'
-			anchor6 = '#'
-			anchor5 = '<'
-			anchor9 = 'v'
-		elseif self.AnchorPosition == 7 then
-			anchor4 = '^'
-			anchor7 = '#'
-			anchor8 = '>'
-		elseif self.AnchorPosition == 8 then
-			anchor5 = '^'
-			anchor8 = '#'
-			anchor7 = '<'
-			anchor9 = '>'
-		elseif self.AnchorPosition == 9 then
-			anchor6 = '^'
-			anchor9 = '#'
-			anchor8 = '<'
-		end
-
-		if #self.HeightTextBox.TextInput.Value > 0 and Current.Artboard.Height > tonumber(self.HeightTextBox.TextInput.Value) then
-			local r = function(str)
-				if string.find(str, "%^") then
-					str = str:gsub('%^','v')
-				elseif string.find(str, "v") then
-					str = str:gsub('v','%^')
-				end
-				return str
-			end
-			anchor1 = r(anchor1)
-			anchor2 = r(anchor2)
-			anchor3 = r(anchor3)
-			anchor4 = r(anchor4)
-			anchor5 = r(anchor5)
-			anchor6 = r(anchor6)
-			anchor7 = r(anchor7)
-			anchor8 = r(anchor8)
-			anchor9 = r(anchor9)
-		end
-
-		if #self.WidthTextBox.TextInput.Value > 0 and Current.Artboard.Width > tonumber(self.WidthTextBox.TextInput.Value) then
-			local r = function(str)
-				if string.find(str, ">") then
-					str = str:gsub('>','<')
-				elseif string.find(str, "<") then
-					str = str:gsub('<','>')
-				end
-				return str
-			end
-			anchor1 = r(anchor1)
-			anchor2 = r(anchor2)
-			anchor3 = r(anchor3)
-			anchor4 = r(anchor4)
-			anchor5 = r(anchor5)
-			anchor6 = r(anchor6)
-			anchor7 = r(anchor7)
-			anchor8 = r(anchor8)
-			anchor9 = r(anchor9)
-		end
-
-		self.Anchor1.Text = anchor1
-		self.Anchor2.Text = anchor2
-		self.Anchor3.Text = anchor3
-		self.Anchor4.Text = anchor4
-		self.Anchor5.Text = anchor5
-		self.Anchor6.Text = anchor6
-		self.Anchor7.Text = anchor7
-		self.Anchor8.Text = anchor8
-		self.Anchor9.Text = anchor9
-	end,
-
-	Show = function(self)
-		Current.Window = self
-		return self
-	end,
-
-	Close = function(self)
-		Current.Input = nil
-		Current.Window = nil
-		self = nil
-	end,
-
-	Flash = function(self)
-		self.Visible = false
-		Draw()
-		sleep(0.15)
-		self.Visible = true
-		Draw()
-		sleep(0.15)
-		self.Visible = false
-		Draw()
-		sleep(0.15)
-		self.Visible = true
-		Draw()
-	end,
-
-	ButtonClick = function(self, button, x, y)
-		if button.X <= x and button.Y <= y and button.X + button.Width > x and button.Y + button.Height > y then
-			button:Click()
-		end
-	end,
-
-	Click = function(self, side, x, y)
-		local items = {self.OkButton, self.WidthTextBox, self.HeightTextBox, self.Anchor1, self.Anchor2, self.Anchor3, self.Anchor4, self.Anchor5, self.Anchor6, self.Anchor7, self.Anchor8, self.Anchor9}
-		for i, v in ipairs(items) do
-			if CheckClick(v, x, y) then
-				v:Click(side, x, y)
-			end
-		end
-		return true
-	end
-}
-
-----------------------
-
-function CheckOpenArtboard()
-	if Current.Artboard then
-		return true
-	else
-		return false
-	end
-end
-
-function CheckSelectedLayer()
-	if Current.Artboard and Current.Layer then
-		return true
-	else
-		return false
-	end
-end
-
-function DisplayNewDocumentWindow()
-	NewDocumentWindow:Initialise(function(self, success, path, width, height, format, backgroundColour)
-		if success then
-			if path:sub(-4) ~= format then
-				path = path .. format
-			end
-			local oldWindow = self
-			Current.Input = nil
-			Current.Window = nil
-			makeDocument = function()oldWindow:Close()NewDocument(path, width, height, format, backgroundColour)end
-			local _fs = fs
-			if OneOS then
-				_fs = OneOS.FS
-			end
-			if _fs.exists(path) then
-				ButtonDialougeWindow:Initialise('File Exists', path..' already exists! Use a different name and try again.', 'Ok', nil, function(window, ok)
-					window:Close()
-					oldWindow:Show()
-				end):Show()
-			elseif format == '.nfp' then
-				Current.Window = nil
-				ButtonDialougeWindow:Initialise('Use NFP?', 'The NFT format does not support text or layers, if you use it you will only be able to use 1 layer and not have any text.', 'Use NFP', 'Cancel', function(window, ok)
-					window:Close()
-					if ok then
-						makeDocument()
-					else
-						oldWindow:Show()
-					end
-				end):Show()
-			elseif format == '.nft' then
-				ButtonDialougeWindow:Initialise('Use NFT?', 'The NFT format does not support layers, if you use it you will only be able to use 1 layer.', 'Use NFT', 'Cancel', function(window, ok)
-					window:Close()
-					if ok then
-						makeDocument()
-					else
-						oldWindow:Show()
-					end
-				end):Show()
-			else
-				makeDocument()
-			end
-
-			
-		else
-			self:Close()
-		end
-	end):Show()
-end
-
-function NewDocument(path, width, height, format, backgroundColour)
-	local _fs = fs
-	if OneOS then
-		_fs = OneOS.FS
-	end
-	ab = Artboard:New(_fs.getName(path), path, width, height, format, backgroundColour)
-	Current.Tool = Tools[2]
-	Current.Toolbar:Update()
-	Current.Modified = false
-	Draw()
-end
-
-function DisplayToolSizeWindow()
-	if not CheckOpenArtboard() then
-		return
-	end	
-	TextDialougeWindow:Initialise('Change Tool Size', 'Enter the new tool size you\'d like to use.', 'Ok', 'Cancel', function(window, success, value)
-		if success then
-			Current.ToolSize = math.ceil(tonumber(value))
-			if Current.ToolSize < 1 then
-				Current.ToolSize = 1
-			elseif Current.ToolSize > 50 then
-				Current.ToolSize = 50
-			end
-			ModuleNamed('Tools'):Update()
-		end
-		window:Close()
-	end, true):Show()	
-end
-
---[[
-	Attempt to figure out what format the image is if it doesn't have an extension
-]]--
-function GetFormat(path)
-	local _fs = fs
-	if OneOS then
-		_fs = OneOS.FS
-	end
-	local file = _fs.open(path, 'r')
-	local content = file.readAll()
-	file.close()
-	if type(textutils.unserialize(content)) == 'table' then
-		-- It's a serlized table, asume sketch
-		return '.skch'
-	elseif string.find(content, string.char(30)) or string.find(content, string.char(31)) then
-		-- Contains the characters that set colours, asume nft
-		return '.nft'
-	else
-		-- Otherwise asume nfp
-		return '.nfp'
-	end
-end
-
-function DisplayOpenDocumentWindow()
-	OpenDocumentWindow:Initialise(function(self, success, path)
-		self:Close()
-		if success then
-			OpenDocument(path)
-		end
-	end):Show()
-end
-
-
-local function Extension(path, addDot)
-	if not path then
-		return nil
-	elseif not string.find(fs.getName(path), '%.') then
-		if not addDot then
-			return fs.getName(path)
-		else
-			return ''
-		end
-	else
-		local _path = path
-		if path:sub(#path) == '/' then
-			_path = path:sub(1,#path-1)
-		end
-		local extension = _path:gmatch('%.[0-9a-z]+$')()
-		if extension then
-			extension = extension:sub(2)
-		else
-			--extension = nil
-			return ''
-		end
-		if addDot then
-			extension = '.'..extension
-		end
-		return extension:lower()
-	end
-end
-
-local RemoveExtension = function(path)
-	if path:sub(1,1) == '.' then
-		return path
-	end
-	local extension = Extension(path)
-	if extension == path then
-		return fs.getName(path)
-	end
-	return string.gsub(path, extension, ''):sub(1, -2)
-end
---[[
-	Open a documet at a given path
-]]--
-function OpenDocument(path)
-	local _fs = fs
-	if OneOS then
-		_fs = OneOS.FS
-	end
-	if _fs.exists(path) and not _fs.isDir(path) then
-		local format = Extension(path, true)
-		if (not format or format == '') and (format ~= '.nfp' and format ~= '.nft' and format ~= '.skch') then
-			format = GetFormat(path)
-		end
-		local layers = {}
-		if format == '.nfp' then
-			layers = ReadNFP(path)
-		elseif format == '.nft' then
-			layers = ReadNFT(path)		
-		elseif format == '.skch' then
-			layers = ReadSKCH(path)
-		end
-
-		for i, layer in ipairs(layers) do
-			if layer.Visible == nil then
-				layer.Visible = true
-			end
-			if layer.Index == nil then
-				layer.Index = 1
-			end
-			if layer.Name == nil then
-				if layer.Index == 1 then
-					layer.Name = 'Background'
-				else
-					layer.Name = 'Layer'
-				end
-			end
-			if layer.BackgroundColour == nil then
-				layer.BackgroundColour = colours.white
-			end
-		end
-
-		if not layers[1] then
-			--log('File could not be read.')
-			return
-		end
-
-		local width = #layers[1].Pixels
-		local height = #layers[1].Pixels[1]
-
-		Current.Artboard = nil
-		local _fs = fs
-		if OneOS then
-			_fs = OneOS.FS
-		end
-		ab = Artboard:New(_fs.getName('Image'), path, width, height, format, nil, layers)
-		Current.Tool = Tools[2]
-		Current.Toolbar:Update()
-		Current.Modified = false
-		Draw()
-	end
-end
-
-function MakeNewLayer()
-	if not CheckOpenArtboard() then
-		return
-	end
-	if Current.Artboard.Format == '.skch' then
-		TextDialougeWindow:Initialise('New Layer Name', 'Enter the name you want for the next layer.', 'Ok', 'Cancel', function(window, success, value)
-			if success then
-				Current.Artboard:MakeLayer(value, colours.transparent)
-			end
-			window:Close()
-		end):Show()	
-	else
-		local format = 'NFP'
-		if Current.Artboard.Format == '.nft' then
-			format = 'NFT'
-		end
-		ButtonDialougeWindow:Initialise(format..' does not support layers!', 'The format you are using, '..format..', does not support multiple layers. Use SKCH to have more than one layer.', 'Ok', nil, function(window)
-			window:Close()
-		end):Show()
-	end
-end
-
-function ResizeDocument()
-	if not CheckOpenArtboard() then
-		return
-	end
-	ResizeDocumentWindow:Initialise(function(window, width, height, anchor)
-		window:Close()
-		local topResize = 0
-		local rightResize = 0
-		local bottomResize = 0
-		local leftResize = 0
-
-		if anchor == 1 then
-			rightResize = 1
-			bottomResize = 1
-		elseif anchor == 2 then
-			rightResize = 0.5
-			leftResize = 0.5
-			bottomResize = 1
-		elseif anchor == 3 then
-			leftResize = 1
-			bottomResize = 1
-		elseif anchor == 4 then
-			rightResize = 1
-			bottomResize = 0.5
-			topResize = 0.5
-		elseif anchor == 5 then
-			rightResize = 0.5
-			leftResize = 0.5
-			bottomResize = 0.5
-			topResize = 0.5
-		elseif anchor == 6 then
-			leftResize = 1
-			bottomResize = 0.5
-			topResize = 0.5
-		elseif anchor == 7 then
-			rightResize = 1
-			topResize = 1
-		elseif anchor == 8 then
-			rightResize = 0.5
-			leftResize = 0.5
-			topResize = 1
-		elseif anchor == 9 then
-			leftResize = 1
-			topResize = 1
-		end
-
-		topResize = topResize * (height - Current.Artboard.Height)
-		if topResize > 0 then
-			topResize = math.floor(topResize)
-		else
-			topResize = math.ceil(topResize)
-		end
-
-		bottomResize = bottomResize * (height - Current.Artboard.Height)
-		if bottomResize > 0 then
-			bottomResize = math.ceil(bottomResize)
-		else
-			bottomResize = math.floor(bottomResize)
-		end
-
-		leftResize = leftResize * (width - Current.Artboard.Width)
-		if leftResize > 0 then
-			leftResize = math.floor(leftResize)
-		else
-			leftResize = math.ceil(leftResize)
-		end
-
-		rightResize = rightResize * (width - Current.Artboard.Width)
-		if rightResize > 0 then
-			rightResize = math.ceil(rightResize)
-		else
-			rightResize = math.floor(rightResize)
-		end
-
-		Current.Artboard:Resize(topResize, bottomResize, leftResize, rightResize)
-	end):Show()
-end
-
-function RenameLayer()
-	if not CheckOpenArtboard() then
-		return
-	end
-	if Current.Artboard.Format == '.skch' then
-		TextDialougeWindow:Initialise("Rename Layer '"..Current.Layer.Name.."'", 'Enter the new name you want the layer to be called.', 'Ok', 'Cancel', function(window, success, value)
-			if success then
-				Current.Layer.Name = value
-			end
-			window:Close()
-		end):Show()	
-	else
-		local format = 'NFP'
-		if Current.Artboard.Format == '.nft' then
-			format = 'NFT'
-		end
-		ButtonDialougeWindow:Initialise(format..' does not support layers!', 'The format you are using, '..format..', does not support renaming layers. Use SKCH to rename layers.', 'Ok', nil, function(window)
-			window:Close()
-		end):Show()
-	end
-end
-
-function DeleteLayer()
-	if not CheckOpenArtboard() then
-		return
-	end
-	if Current.Artboard.Format == '.skch' then
-		if #Current.Artboard.Layers > 1 then
-			ButtonDialougeWindow:Initialise("Delete Layer '"..Current.Layer.Name.."'?", 'Are you sure you want delete the layer?', 'Ok', 'Cancel', function(window, success)
-				if success then
-					Current.Layer:Remove()
-				end
-				window:Close()
-			end):Show()
-		else
-			ButtonDialougeWindow:Initialise('Can not delete layer!', 'You can not delete the last layer of an image! Make another layer to delete this one.', 'Ok', nil, function(window)
-				window:Close()
-			end):Show()
-		end
-	else
-		local format = 'NFP'
-		if Current.Artboard.Format == '.nft' then
-			format = 'NFT'
-		end
-		ButtonDialougeWindow:Initialise(format..' does not support layers!', 'The format you are using, '..format..', does not support deleting layers. Use SKCH to deleting layers.', 'Ok', nil, function(window)
-			window:Close()
-		end):Show()
-	end
-end
-
-needsDraw = false
-isDrawing = false
-function Draw()
-	if isDrawing then
-		needsDraw = true
-		return
-	end
-	needsDraw = false
-	isDrawing = true
-	if not Current.Window then
-		Drawing.Clear(UIColours.Background)
-	else
-		Drawing.DrawArea(1, 2, Drawing.Screen.Width, Drawing.Screen.Height, '|', colours.black, colours.lightGrey)
-	end
-
-	if Current.Artboard then
-		ab:Draw()
-	end
-
-	if Current.InterfaceVisible then
-		Current.MenuBar:Draw()
-		Current.Toolbar.Width = Current.Toolbar.ExpandedWidth
-		Current.Toolbar:Draw()
-	else
-		Current.Toolbar.Width = Current.Toolbar.ExpandedWidth
-	end
-
-	if Current.InterfaceVisible and Current.Menu then
-		Current.Menu:Draw()
-	end
-
-	if Current.Window then
-		Current.Window:Draw()
-	end
-
-	if not Current.InterfaceVisible then
-		ShowInterfaceButton:Draw()
-	end
-
-	Drawing.DrawBuffer()
-	if Current.Input and not Current.Menu then
-		term.setCursorPos(Current.CursorPos[1], Current.CursorPos[2])
-		term.setCursorBlink(true)
-		term.setTextColour(Current.CursorColour)
-	else
-		term.setCursorBlink(false)
-	end
-
-	if Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
-		Current.SelectionDrawTimer = os.startTimer(0.5)
-	end
-	isDrawing = false
-	if needsDraw then
-		Draw()
-	end
-end
-
-function LoadMenuBar()
-	Current.MenuBar = MenuBar:Initialise({
-		Button:Initialise(1, 1, nil, nil, colours.grey, Current.MenuBar, function(self, side, x, y, toggle)
-			if toggle then
-				Menu:New(1, 2, {
-					{
-						Title = "New...",
-						Click = function()
-							DisplayNewDocumentWindow()
-						end,
-						Keys = {
-							keys.leftCtrl,
-							keys.n
-						}
-					},
-					{
-						Title = 'Open...',
-						Click = function()
-							DisplayOpenDocumentWindow()
-						end,
-						Keys = {
-							keys.leftCtrl,
-							keys.o
-						}
-					},
-					{
-						Separator = true
-					},
-					{
-						Title = 'Save...',
-						Click = function()
-							Current.Artboard:Save()
-						end,
-						Keys = {
-							keys.leftCtrl,
-							keys.s
-						},
-						Enabled = function()
-							return CheckOpenArtboard()
-						end
-					},
-					{
-						Separator = true
-					},
-					{
-						Title = 'Quit',
-						Click = function()
-							if Close() then
-								OneOS.Close()
-							end
-						end
-					},
-			--[[
-					{
-						Title = 'Save As...',
-						Click = function()
-
-						end
-					}	
-			]]--
-				}, self, true)
-			else
-				Current.Menu = nil
-			end
-			return true 
-		end, 'File', colours.lightGrey, false),
-		Button:Initialise(7, 1, nil, nil, colours.grey, Current.MenuBar, function(self, side, x, y, toggle)
-			if not self.Toggle then
-				Menu:New(7, 2, {
-			--[[
-					{
-						Title = "Undo",
-						Click = function()
-						end,
-						Keys = {
-							keys.leftCtrl,
-							keys.z
-						},
-						Enabled = function()
-							return false
-						end
-					},
-					{
-						Title = 'Redo',
-						Click = function()
-							
-						end,
-						Keys = {
-							keys.leftCtrl,
-							keys.y
-						},
-						Enabled = function()
-							return false
-						end
-					},
-					{
-						Separator = true
-					},
-			]]--
-					{
-						Title = 'Cut',
-						Click = function()
-							Clipboard.Cut(Current.Layer:PixelsInSelection(true), 'sketchpixels')
-						end,
-						Keys = {
-							keys.leftCtrl,
-							keys.x
-						},
-						Enabled = function()
-							return Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil
-						end
-					},
-					{
-						Title = 'Copy',
-						Click = function()
-							Clipboard.Copy(Current.Layer:PixelsInSelection(), 'sketchpixels')
-						end,
-						Keys = {
-							keys.leftCtrl,
-							keys.c
-						},
-						Enabled = function()
-							return Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil
-						end
-					},
-					{
-						Title = 'Paste',
-						Click = function()
-							Current.Layer:InsertPixels(Clipboard.Paste())
-						end,
-						Keys = {
-							keys.leftCtrl,
-							keys.v
-						},
-						Enabled = function()
-							return (not Clipboard.isEmpty()) and Clipboard.Type == 'sketchpixels'
-						end
-					}
-				}, self, true)
-			else
-				Current.Menu = nil
-			end
-			return true 
-		end, 'Edit', colours.lightGrey, false),
-		Button:Initialise(13, 1, nil, nil, colours.grey, Current.MenuBar, function(self, side, x, y, toggle)
-			if toggle then
-				Menu:New(13, 2, {
-					{
-						Title = "Resize...",
-						Click = function()
-							ResizeDocument()
-						end,
-						Keys = {
-							keys.leftCtrl,
-							keys.r
-						},
-						Enabled = function()
-							return CheckOpenArtboard()
-						end
-					},
-					{
-						Title = "Crop",
-						Click = function()
-							local top = 0
-							local left = 0
-							local bottom = 0
-							local right = 0
-							if Current.Selection[1].x < Current.Selection[2].x then
-								left = Current.Selection[1].x - 1
-								right = Current.Artboard.Width - Current.Selection[2].x
-							else
-								left = Current.Selection[2].x - 1
-								right = Current.Artboard.Width - Current.Selection[1].x
-							end
-							if Current.Selection[1].y < Current.Selection[2].y then
-								top = Current.Selection[1].y - 1
-								bottom = Current.Artboard.Height - Current.Selection[2].y
-							else
-								top = Current.Selection[2].y - 1
-								bottom = Current.Artboard.Height - Current.Selection[1].y
-							end
-							Current.Artboard:Resize(-1*top, -1*bottom, -1*left, -1*right)
-
-							Current.Selection[2] = nil
-						end,
-						Enabled = function()
-							if CheckSelectedLayer() and Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
-								return true
-							else
-								return false
-							end
-						end
-					},
-					{
-						Separator = true
-					},
-					{
-						Title = 'New Layer...',
-						Click = function()
-							MakeNewLayer()
-						end,
-						Keys = {
-							keys.leftCtrl,
-							keys.l
-						},
-						Enabled = function()
-							return CheckOpenArtboard()
-						end
-					},
-					{
-						Title = 'Delete Layer',
-						Click = function()
-							DeleteLayer()
-						end,
-						Enabled = function()
-							return CheckSelectedLayer()
-						end
-					},
-					{
-						Title = 'Rename Layer...',
-						Click = function()
-							RenameLayer()
-						end,
-						Enabled = function()
-							return CheckSelectedLayer()
-						end
-					},
-					{
-						Separator = true
-					},
-					{
-						Title = 'Erase Selection',
-						Click = function()
-							Current.Layer:EraseSelection()
-						end,
-						Keys = {
-							keys.delete
-						},
-						Enabled = function()
-							if CheckSelectedLayer() and Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then
-								return true
-							else
-								return false
-							end
-						end
-					},
-					{
-						Separator = true
-					},
-					{
-						Title = 'Hide Interface',
-						Click = function()
-							Current.InterfaceVisible = not Current.InterfaceVisible
-						end,
-						Keys = {
-							keys.tab
-						}
-					}
-				}, self, true)
-			else
-				Current.Menu = nil
-			end
-			return true 
-		end, 'Image', colours.lightGrey, false),
-		
-		Button:Initialise(20, 1, nil, nil, colours.grey, Current.MenuBar, function(self, side, x, y, toggle)
-			if toggle then
-				local menuItems = {{
-						Title = "Change Size",
-						Click = function()
-							DisplayToolSizeWindow()
-						end,
-						Keys = {
-							keys.leftCtrl,
-							keys.t
-						}
-					},
-					{
-						Separator = true
-					}
-				}
-				
-				local _keys = {'h','p','e','f','s','m','t'}
-				for i, tool in ipairs(Tools) do
-					table.insert(menuItems, {
-						Title = tool.Name,
-						Click = function()
-							SetTool(tool)
-							local m = ModuleNamed('Tools')
-							m:Update(m.ToolbarItem)
-						end,
-						Keys = {
-							keys[_keys[i]]
-						},
-						Enabled = function()
-							return CheckOpenArtboard()
-						end
-					})
-				end
-
-				Menu:New(20, 2, menuItems, self, true)
-			else
-				Current.Menu = nil
-			end
-			return true 
-		end, 'Tools', colours.lightGrey, false),
-	})
-end
-
-function Timer(event, timer)
-	if timer == Current.ControlPressedTimer then
-		Current.ControlPressedTimer = nil
-	elseif timer == Current.SelectionDrawTimer then
-		if Current.Artboard then
-			Current.Artboard.SelectionIsBlack = not Current.Artboard.SelectionIsBlack
-			Draw()
-		end
-	end
-end
-
-function Initialise(arg)
-	if not OneOS then
-		SplashScreen()
-	end
-	EventRegister('mouse_click', TryClick)
-	EventRegister('mouse_drag', function(event, side, x, y)TryClick(event, side, x, y, true)end)
-	EventRegister('mouse_scroll', Scroll)
-	EventRegister('key', HandleKey)
-	EventRegister('char', HandleKey)
-	EventRegister('timer', Timer)
-	EventRegister('terminate', function(event) if Close() then error( "Terminated", 0 ) end end)
-
-
-	Current.Toolbar = Toolbar:New('right', true)
-
-	for k, v in pairs(Modules) do
-		v:Initialise()
-	end
-	
-	term.setBackgroundColour(UIColours.Background)
-	term.clear()
-
-	LoadMenuBar()
-
-	local _fs = fs
-	if OneOS then
-		_fs = OneOS.FS
-	end
-	if arg and _fs.exists(arg) then
-		OpenDocument(arg)
-	else
-		DisplayNewDocumentWindow()
-		Current.Window.Visible = false
-	end
-
-	ShowInterfaceButton = Button:Initialise(Drawing.Screen.Width - 15, 1, nil, 1, colours.grey, nil, function(self)
-		Current.InterfaceVisible = true
-		Draw()
-	end, 'Show Interface')
-
-	Draw()
-	if Current.Window then
-		Current.Window.Visible = true
-		Draw()
-	end
-
-	EventHandler()
-end
-
-function SplashScreen()
-	local splashIcon = {{1,1,1,256,256,256,256,256,256,256,256,1,1,1,},{1,256,256,8,8,8,8,8,8,8,8,256,256,1,},{256,8,8,8,8,8,8,8,8,8,8,8,8,256,},{256,256,256,8,8,8,8,8,8,8,8,256,256,256,},{256,256,256,256,256,256,256,256,256,256,256,256,256,256,},{2048,2048,256,256,256,256,256,256,256,256,256,256,2048,2048,},{2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,},{2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,},{2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,},{2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,},{256,256,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,256,256,},{1,256,256,256,256,256,256,256,256,256,256,256,256,1,},{1,1,1,256,256,256,256,256,256,256,256,1,1,1,},["text"]={{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," ","S","k","e","t","c","h"," "," "," "," ",},{" "," "," "," "," "," ","b","y"," "," "," "," "," "," ",},{" "," "," "," "," ","o","e","e","d"," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},},["textcol"]={{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,256,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,1,1,1,1,1,1,32768,32768,32768,32768,},{32768,32768,32768,32768,8,8,8,8,8,8,8,32768,32768,32768,},{32768,32768,32768,32768,1,1,1,1,1,32768,8,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},},}
-	Drawing.Clear(colours.white)
-	Drawing.DrawImage((Drawing.Screen.Width - 14)/2, (Drawing.Screen.Height - 13)/2, splashIcon, 14, 13)
-	Drawing.DrawBuffer()
-	parallel.waitForAny(function()sleep(1)end, function()os.pullEvent('mouse_click')end)
-end
-
-LongestString = function(input, key)
-	local length = 0
-	for i = 1, #input do
-		local value = input[i]
-		if key then
-			if value[key] then
-				value = value[key]
-			else
-				value = ''
-			end
-		end
-		local titleLength = string.len(value)
-		if titleLength > length then
-			length = titleLength
-		end
-	end
-	return length
-end
-
-function HandleKey(...)
-	local args = {...}
-	local event = args[1]
-	local keychar = args[2]
-	if event == 'key' and Current.Tool and Current.Tool.Name == 'Text' and Current.Input and (keychar == keys.up or keychar == keys.down or keychar == keys.left or keychar == keys.right) then
-		local currentPos = {Current.CursorPos[1] - Current.Artboard.X + 1, Current.CursorPos[2] - Current.Artboard.Y + 1}
-		if keychar == keys.up then
-			currentPos[2] = currentPos[2] - 1
-		elseif keychar == keys.down then
-			currentPos[2] = currentPos[2] + 1
-		elseif keychar == keys.left then
-			currentPos[1] = currentPos[1] - 1
-		elseif keychar == keys.right then
-			currentPos[1] = currentPos[1] + 1
-		end
-
-		if currentPos[1] < 1 then
-			currentPos[1] = 1
-		end
-
-		if currentPos[1] > Current.Artboard.Width then
-			currentPos[1] = Current.Artboard.Width
-		end
-
-		if currentPos[2] < 1 then
-			currentPos[2] = 1
-		end
-
-		if currentPos[2] > Current.Artboard.Height then
-			currentPos[2] = Current.Artboard.Height
-		end
-
-		Current.Tool:Use(currentPos[1], currentPos[2])
-		Current.Modified = true
-		Draw()
-	elseif Current.Input then
-		if event == 'char' then
-			Current.Input:Char(keychar)
-		elseif event == 'key' then
-			Current.Input:Key(keychar)
-		end
-	elseif event == 'key' then
-		CheckKeyboardShortcut(keychar)
-	end
-end
-
-function Scroll(event, direction, x, y)
-	if Current.Window and Current.Window.OpenButton then
-		Current.Window.Scroll = Current.Window.Scroll + direction
-		if Current.Window.Scroll < 0 then
-			Current.Window.Scroll = 0
-		elseif Current.Window.Scroll > Current.Window.MaxScroll then
-			Current.Window.Scroll = Current.Window.MaxScroll
-		end
-	end
-	Draw()
-end
-
-function CheckKeyboardShortcut(key)
-	local shortcuts = {}
-
-	if key == keys.leftCtrl then
-		Current.ControlPressedTimer = os.startTimer(0.5)
-		return
-	end
-	if Current.ControlPressedTimer then
-		shortcuts[keys.n] = function() DisplayNewDocumentWindow() end
-		shortcuts[keys.o] = function() DisplayOpenDocumentWindow() end
-		shortcuts[keys.s] = function() Current.Artboard:Save() end
-		shortcuts[keys.x] = function() if Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then Clipboard.Cut(Current.Layer:PixelsInSelection(true), 'sketchpixels') end end
-		shortcuts[keys.c] = function() if Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then Clipboard.Copy(Current.Layer:PixelsInSelection(), 'sketchpixels') end end
-		shortcuts[keys.v] = function() if (not Clipboard.isEmpty()) and Clipboard.Type == 'sketchpixels' then Current.Layer:InsertPixels(Clipboard.Paste()) end end
-		shortcuts[keys.r] = function() ResizeDocument() end
-		shortcuts[keys.l] = function() MakeNewLayer() end
-	end
-
-	shortcuts[keys.delete] = function() if CheckSelectedLayer() and Current.Selection and Current.Selection[1] and Current.Selection[2] ~= nil then Current.Layer:EraseSelection() Draw() end end
-	shortcuts[keys.backspace] = shortcuts[keys.delete]
-	shortcuts[keys.tab] = function() Current.InterfaceVisible = not Current.InterfaceVisible Draw() end
-
-	shortcuts[keys.h] = function() SetTool(ToolNamed('Hand')) ModuleNamed('Tools'):Update() Draw() end
-	shortcuts[keys.e] = function() SetTool(ToolNamed('Eraser')) ModuleNamed('Tools'):Update() Draw() end
-	shortcuts[keys.p] = function() SetTool(ToolNamed('Pencil')) ModuleNamed('Tools'):Update() Draw() end
-	shortcuts[keys.f] = function() SetTool(ToolNamed('Fill Bucket')) ModuleNamed('Tools'):Update() Draw() end
-	shortcuts[keys.m] = function() SetTool(ToolNamed('Move')) ModuleNamed('Tools'):Update() Draw() end
-	shortcuts[keys.s] = function() SetTool(ToolNamed('Select')) ModuleNamed('Tools'):Update() Draw() end
-	shortcuts[keys.t] = function() SetTool(ToolNamed('Text')) ModuleNamed('Tools'):Update() Draw() end
-
-	if shortcuts[key] then
-		shortcuts[key]()
-		return true
-	else
-		return false
-	end
-end
-
---[[
-	Check if the given object falls under the click coordinates
-]]--
-function CheckClick(object, x, y)
-	if object.X <= x and object.Y <= y and object.X + object.Width > x and object.Y + object.Height > y then
-		return true
-	end
-end
-
---[[
-	Attempt to clicka given object
-]]--
-function DoClick(object, side, x, y, drag)
-	if object and CheckClick(object, x, y) then
-		return object:Click(side, x - object.X + 1, y - object.Y + 1, drag)
-	end	
-end
-
---[[
-	Try to click at the given coordinates
-]]--
-function TryClick(event, side, x, y, drag)
-	if Current.InterfaceVisible and Current.Menu then
-		if DoClick(Current.Menu, side, x, y, drag) then
-			Draw()
-			return
-		else
-			if Current.Menu.Owner and Current.Menu.Owner.Toggle then
-				Current.Menu.Owner.Toggle = false
-			end
-			Current.Menu = nil
-			Draw()
-			return
-		end
-	elseif Current.Window then
-		if DoClick(Current.Window, side, x, y, drag) then
-			Draw()
-			return
-		else
-			Current.Window:Flash()
-			return
-		end
-	end
-	local interfaceElements = {}
-
-	if Current.InterfaceVisible then
-		table.insert(interfaceElements, Current.MenuBar)
-	else
-		table.insert(interfaceElements, ShowInterfaceButton)
-	end
-
-	for i, v in ipairs(Lists.Interface.Toolbars) do
-		for i, v2 in ipairs(v.ToolbarItems) do
-			table.insert(interfaceElements, v2)
-		end
-		table.insert(interfaceElements, v)
-	end
-
-	table.insert(interfaceElements, Current.Artboard)
-
-	for i, object in ipairs(interfaceElements) do
-		if DoClick(object, side, x, y, drag) then
-			Draw()
-			return
-		end		
-	end
-	Draw()
-end
-
---[[
-	Registers functions to run on certain events
-]]--
-function EventRegister(event, func)
-	if not Events[event] then
-		Events[event] = {}
-	end
-
-	table.insert(Events[event], func)
-end
-
---[[
-	The main loop event handler, runs registered event functinos
-]]--
-function EventHandler()
-	while true do
-		local event, arg1, arg2, arg3, arg4 = os.pullEventRaw()
-		if Events[event] then
-			for i, e in ipairs(Events[event]) do
-				e(event, arg1, arg2, arg3, arg4)
-			end
-		end
-	end
-end
-
---[[
-	Thanks to NitrogenFingers for the colour functions and NFT + NFP read/write functions
-]]--
-
---[[
-	Gets the hex value from a colour
-]]--
-local hexnums = { [10] = "a", [11] = "b", [12] = "c", [13] = "d", [14] = "e" , [15] = "f" }
-local function getHexOf(colour)
-    if colour == colours.transparent or not colour or not tonumber(colour) then
-            return " "
-    end
-    local value = math.log(colour)/math.log(2)
-    if value > 9 then
-            value = hexnums[value]
-    end
-    return value
-end
-
---[[
-	Gets the colour from a hex value
-]]--
-local function getColourOf(hex)
-	if hex == ' ' then
-		return colours.transparent
-	end
-    local value = tonumber(hex, 16)
-    if not value then return nil end
-    value = math.pow(2,value)
-    return value
-end
-
---[[
-	Saves the current artboard in .skch format
-]]--
-function SaveSKCH()
-	local layers = {}
-	for i, l in ipairs(Current.Artboard.Layers) do
-		local pixels = SaveNFT(i)
-		local layer = {
-			Name = l.Name,
-			Pixels = pixels,
-			BackgroundColour = l.BackgroundColour,
-			Visible = l.Visible,
-			Index = l.Index,
-		}
-		table.insert(layers, layer)
-	end
-	return layers
-end
-
---[[
-	Saves the current artboard in .nft format
-]]--
-function SaveNFT(layer)
-	layer = layer or 1
-	local lines = {}
-	local width = Current.Artboard.Width
-	local height = Current.Artboard.Height
-	for y = 1, height do
-		local line = ''
-		local currentBackgroundColour = nil
-		local currentTextColour = nil
-		for x = 1, width do
-			local pixel = Current.Artboard.Layers[layer].Pixels[x][y]
-			if pixel.BackgroundColour ~= currentBackgroundColour then
-				line = line..string.char(30)..getHexOf(pixel.BackgroundColour)
-				currentBackgroundColour = pixel.BackgroundColour
-			end
-			if pixel.TextColour ~= currentTextColour then
-				line = line..string.char(31)..getHexOf(pixel.TextColour)
-				currentTextColour = pixel.TextColour
-			end
-			line = line .. pixel.Character
-		end
-		table.insert(lines, line)
-	end
-	return lines
-end
-
---[[
-	Saves the current artboard in .nfp format
-]]--
-function SaveNFP()
-	local lines = {}
-	local width = Current.Artboard.Width
-	local height = Current.Artboard.Height
-	for y = 1, height do
-		local line = ''
-		for x = 1, width do
-			line = line .. getHexOf(Current.Artboard.Layers[1].Pixels[x][y].BackgroundColour)
-		end
-		table.insert(lines, line)
-	end
-	return lines
-end
-
---[[
-	Reads a .nfp file from the given path
-]]--
-function ReadNFP(path)
-	local pixels = {}
-	local _fs = fs
-	if OneOS then
-		_fs = OneOS.FS
-	end
-	local file = _fs.open(path, 'r')
-	local line = file.readLine()
-	local y = 1
-	while line do
-		for x = 1, #line do
-			if not pixels[x] then
-				pixels[x] = {}
-			end
-			pixels[x][y] = {BackgroundColour = getColourOf(line:sub(x,x))}
-		end
-		y = y + 1
-		line = file.readLine()
-	end
-	file.close()
-	return {{Pixels = pixels}}
-end
-
---[[
-	Reads a .nft file from the given path
-]]--
-function ReadNFT(path)
-	local _fs = fs
-	if OneOS then
-		_fs = OneOS.FS
-	end
-	local file = _fs.open(path, 'r')
-	local line = file.readLine()
-	local lines = {}
-	while line do
-		table.insert(lines, line)
-		line = file.readLine()
-	end
-	file.close()
-	return {{Pixels = ParseNFT(lines)}}
-end
-
---[[
-	Converts the lines of an .nft document to readble pixel data
-]]--
-function ParseNFT(lines)
-	local pixels = {}
-	for y, line in ipairs(lines) do
-		local bgNext, fgNext = false, false
-		local currBG, currFG = nil,nil
-		local writePosition = 1
-		for x = 1, #line do
-			if not pixels[writePosition] then
-				pixels[writePosition] = {}
-			end
-
-			local nextChar = string.sub(line, x, x)
-            if nextChar:byte() == 30 then
-                    bgNext = true
-            elseif nextChar:byte() == 31 then
-                    fgNext = true
-            elseif bgNext then
-                    currBG = getColourOf(nextChar)
-                    if currBG == nil then
-                    	currBG = colours.transparent
-                    end
-                    bgNext = false
-            elseif fgNext then
-                    currFG = getColourOf(nextChar)
-                    fgNext = false
-            else
-                    if nextChar ~= " " and currFG == nil then
-                            currFG = colours.white
-                    end
-                    pixels[writePosition][y] = {BackgroundColour = currBG, TextColour = currFG, Character = nextChar}
-                    writePosition = writePosition + 1
-            end
-		end
-	end
-	return pixels
-end
-
---[[
-	Read a .skch file from the given path
-]]--
-function ReadSKCH(path)
-	local _fs = fs
-	if OneOS then
-		_fs = OneOS.FS
-	end
-	local file = _fs.open(path, 'r')
-	local _layers = textutils.unserialize(file.readAll())
-	file.close()
-	local layers = {}
-
-	for i, l in ipairs(_layers) do
-		local layer = {
-			Name = l.Name,
-			Pixels = ParseNFT(l.Pixels),
-			BackgroundColour = l.BackgroundColour,
-			Visible = l.Visible,
-			Index = l.Index,
-		}
-		table.insert(layers, layer)
-	end
-	return layers
-end
-
---[[
-	Start the program after all functions and tables are loaded
-]]--
-if term.isColor and term.isColor() then
-	Initialise(...)
+return true
 else
-	print('Sorry, but Sketch only works on Advanced (gold) Computers')
+local e=ButtonDialougeWindow:Initialise('Quit Sketch?','You have unsaved changes, do you want to quit anyway?','Quit','Cancel',function(e,t)
+if t then
+if OneOS then
+OneOS.Close(true)
+else
+DoVanillaClose()
+end
+end
+e:Close()
+Draw()
+end):Show()
+os.queueEvent('mouse_click',1,e.X,e.Y)
+return false
+end
+end
+if OneOS then
+OneOS.CanClose=function()
+return Close()
+end
+end
+Lists={
+Artboards={},
+Interface={
+Toolbars={}
+}
+}
+Events={
+}
+function SetColour(e)
+Current.Colour=e
+Draw()
+end
+function SetTool(e)
+if e and e.Select and e:Select()then
+Current.Input=nil
+Current.Tool=e
+return true
+end
+return false
+end
+function GetAbsolutePosition(e)
+local e=e
+local a=0
+local o=1
+local t=1
+while true do
+o=o+e.X-1
+t=t+e.Y-1
+if not e.Parent then
+return{X=o,Y=t}
+end
+e=e.Parent
+if a>32 then
+return{X=1,Y=1}
+end
+a=a+1
+end
+end
+Pixel={
+TextColour=colours.black,
+BackgroundColour=colours.white,
+Character=" ",
+Layer=nil,
+Draw=function(e,a,t)
+if e.BackgroundColour~=colours.transparent or e.Character~=' 'then
+Drawing.WriteToBuffer(e.Layer.Artboard.X+a-1,e.Layer.Artboard.Y+t-1,e.Character,e.TextColour,e.BackgroundColour)
+end
+end,
+Initialise=function(t,n,i,o,a)
+local e={}
+setmetatable(e,{__index=t})
+e.TextColour=n or t.TextColour
+e.BackgroundColour=i or t.BackgroundColour
+e.Character=o or t.Character
+e.Layer=a
+return e
+end,
+Set=function(e,t,a,o)
+e.TextColour=t or e.TextColour
+e.BackgroundColour=a or e.BackgroundColour
+e.Character=o or e.Character
+end
+}
+Layer={
+Name="",
+Pixels={
+},
+Artboard=nil,
+BackgroundColour=colours.white,
+Visible=true,
+Index=1,
+Draw=function(e)
+if e.Visible then
+for a=1,e.Artboard.Width do
+for t=1,e.Artboard.Height do
+e.Pixels[a][t]:Draw(a,t)
+end
+end
+end
+end,
+Remove=function(e)
+for t,e in ipairs(e.Artboard.Layers)do
+if e==Current.Layer then
+Current.Artboard.Layers[t]=nil
+Current.Layer=Current.Artboard.Layers[1]
+ModuleNamed('Layers'):Update()
+end
+end
+end,
+Initialise=function(o,i,n,t,s,a)
+local e={}
+setmetatable(e,{__index=o})
+e.Name=i
+e.Pixels={}
+e.BackgroundColour=n
+e.Artboard=t
+e.Index=s or#t.Layers+1
+if not a then
+e:MakeAllBlankPixels()
+else
+e:MakeAllBlankPixels()
+for a,t in ipairs(a)do
+for o,t in ipairs(t)do
+e:SetPixel(a,o,t.TextColour,t.BackgroundColour,t.Character)
+end
+end
+end
+return e
+end,
+SetPixel=function(a,e,t,n,o,i)
+n=n or Current.Colour
+o=o or Current.Colour
+i=i or" "
+if e<1 or t<1 or e>a.Artboard.Width or t>a.Artboard.Height then
+return
+end
+if a.Pixels[e][t]then
+a.Pixels[e][t]:Set(n,o,i)
+a.Pixels[e][t]:Draw(e,t)
+end
+end,
+MakePixel=function(e,a,o,t)
+t=t or e.BackgroundColour
+e.Pixels[a][o]=Pixel:Initialise(nil,t,nil,e)
+end,
+MakeColumn=function(e,t)
+e.Pixels[t]={}
+end,
+MakeAllBlankPixels=function(e)
+for t=1,e.Artboard.Width do
+if not e.Pixels[t]then
+e:MakeColumn(t)
+end
+for a=1,e.Artboard.Height do
+if not e.Pixels[t][a]then
+e:MakePixel(t,a)
+end
+end
+end
+end,
+PixelsInSelection=function(i,s)
+local t={}
+if Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then
+local e=Current.Selection[1]
+local a=Current.Selection[2]
+local o=a-e
+local a=e.x
+local n=e.y
+for e=1,o.x+1 do
+for o=1,o.y+1 do
+if not t[e]then
+t[e]={}
+end
+if not i.Pixels[a+e-1]or not i.Pixels[a+e-1][n+o-1]then
+break
+end
+local i=i.Pixels[a+e-1][n+o-1]
+t[e][o]=Pixel:Initialise(i.TextColour,i.BackgroundColour,i.Character,Current.Layer)
+if s then
+Current.Layer:SetPixel(a+e-1,n+o-1,nil,Current.Layer.BackgroundColour,nil)
+end
+end
+end
+end
+return t
+end,
+EraseSelection=function(e)
+if Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then
+local e=Current.Selection[1]
+local t=Current.Selection[2]
+local t=t-e
+local o=e.x
+local i=e.y
+for a=1,t.x+1 do
+for e=1,t.y+1 do
+Current.Layer:SetPixel(o+a-1,i+e-1,nil,Current.Layer.BackgroundColour,nil)
+end
+end
+end
+end,
+InsertPixels=function(t,e)
+local o=Current.Selection[1].x
+local t=Current.Selection[1].y
+for a,e in ipairs(e)do
+for i,e in ipairs(e)do
+Current.Layer:SetPixel(o+a-1,t+i-1,e.TextColour,e.BackgroundColour,e.Character)
+end
+end
+end
+}
+Artboard={
+X=0,
+Y=0,
+Name="",
+Path="",
+Width=1,
+Height=1,
+Layers={},
+Format=nil,
+SelectionIsBlack=true,
+Draw=function(e)
+Drawing.DrawBlankArea(e.X+1,e.Y+1,e.Width,e.Height,UIColours.Shadow)
+local t
+for a=1,e.Width do
+t=a%2
+if t==1 then
+t=true
+else
+t=false
+end
+for o=1,e.Height do
+if t then
+Drawing.WriteToBuffer(e.X+a-1,e.Y+o-1,":",UIColours.TransparentBackgroundTwo,UIColours.TransparentBackgroundOne)
+else
+Drawing.WriteToBuffer(e.X+a-1,e.Y+o-1,":",UIColours.TransparentBackgroundOne,UIColours.TransparentBackgroundTwo)
+end
+t=not t
+end
+end
+for t,e in ipairs(e.Layers)do
+e:Draw()
+end
+if Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then
+local t=Current.Selection[1]
+local a=Current.Selection[2]
+local a=a-t
+local i=e.SelectionIsBlack
+local function o()
+local e=colours.white
+if i then
+e=colours.black
+end
+i=not i
+return e
+end
+function horizontal(i)
+Drawing.WriteToBuffer(e.X-1+t.x,e.Y-1+i,'+',o(),colours.transparent)
+if a.x>0 then
+for a=1,a.x-1 do
+Drawing.WriteToBuffer(e.X-1+t.x+a,e.Y-1+i,'-',o(),colours.transparent)
+end
+else
+for a=1,(-1*a.x)-1 do
+Drawing.WriteToBuffer(e.X-1+t.x-a,e.Y-1+i,'-',o(),colours.transparent)
+end
+end
+Drawing.WriteToBuffer(e.X-1+t.x+a.x,e.Y-1+i,'+',o(),colours.transparent)
+end
+function vertical(i)
+if a.y<0 then
+for a=1,(-1*a.y)-1 do
+Drawing.WriteToBuffer(e.X-1+i,e.Y-1+t.y-a,'|',o(),colours.transparent)
+end
+else
+for a=1,a.y-1 do
+Drawing.WriteToBuffer(e.X-1+i,e.Y-1+t.y+a,'|',o(),colours.transparent)
+end
+end
+end
+horizontal(t.y)
+vertical(t.x)
+horizontal(t.y+a.y)
+vertical(t.x+a.x)
+end
+end,
+Initialise=function(r,n,i,a,o,s,h,t)
+local e={}
+setmetatable(e,{__index=r})
+e.Y=3
+e.X=2
+e.Name=n
+e.Path=i
+e.Width=a
+e.Height=o
+e.Format=s
+e.Layers={}
+if not t then
+e:MakeLayer('Background',h)
+else
+for a,t in ipairs(t)do
+e:MakeLayer(t.Name,t.BackgroundColour,t.Index,t.Pixels)
+e.Layers[a].Visible=t.Visible
+end
+Current.Layer=e.Layers[#e.Layers]
+end
+return e
+end,
+Resize=function(t,i,n,a,o)
+t.Height=t.Height+i+n
+t.Width=t.Width+a+o
+for s,e in ipairs(t.Layers)do
+if a<0 then
+for t=1,-a do
+table.remove(e.Pixels,1)
+end
+end
+if o<0 then
+for t=1,-o do
+table.remove(e.Pixels,#e.Pixels)
+end
+end
+for a=1,a do
+table.insert(e.Pixels,1,{})
+for t=1,t.Height do
+e:MakePixel(1,t)
+end
+end
+for a=1,o do
+table.insert(e.Pixels,{})
+for t=1,t.Height do
+e:MakePixel(#e.Pixels,t)
+end
+end
+for a=1,i do
+for t=1,t.Width do
+table.insert(e.Pixels[t],1,{})
+e:MakePixel(t,1)
+end
+end
+for a=1,n do
+for t=1,t.Width do
+table.insert(e.Pixels[t],{})
+e:MakePixel(t,#e.Pixels[t])
+end
+end
+if i<0 then
+for a=1,-i do
+for t=1,t.Width do
+table.remove(e.Pixels[t],1)
+end
+end
+end
+if n<0 then
+for a=1,-n do
+for t=1,t.Width do
+table.remove(e.Pixels[t],#e.Pixels[t])
+end
+end
+end
+end
+end,
+MakeLayer=function(a,e,t,i,o)
+t=t or colours.white
+e=e or"Layer"
+local e=Layer:Initialise(e,t,a,i,o)
+table.insert(a.Layers,e)
+Current.Layer=e
+ModuleNamed('Layers'):Update()
+return e
+end,
+New=function(o,a,e,t,i,s,n,h)
+local e=o:Initialise(a,e,t,i,s,n,h)
+table.insert(Lists.Artboards,e)
+Current.Artboard=e
+return e
+end,
+Save=function(e,t)
+Current.Artboard=e
+t=t or e.Path
+local a=io.open
+if OneOS then
+a=OneOS.IO.open
+end
+local a=a(t,"w",true)
+if e.Format=='.skch'then
+a:write(textutils.serialize(SaveSKCH()))
+else
+local t={}
+if e.Format=='.nfp'then
+t=SaveNFP()
+elseif e.Format=='.nft'then
+t=SaveNFT()
+end
+for t,e in ipairs(t)do
+a:write(e.."\n")
+end
+end
+a:close()
+Current.Modified=false
+end,
+Click=function(i,e,t,o,a)
+if Current.Tool and Current.Layer and Current.Layer.Visible then
+Current.Tool:Use(t,o,e,a)
+Current.Modified=true
+return true
+end
+end
+}
+Toolbar={
+X=0,
+Y=0,
+Width=0,
+ExpandedWidth=14,
+ClosedWidth=2,
+Height=0,
+Expanded=true,
+ToolbarItems={},
+AbsolutePosition=function(e)
+return{X=e.X,Y=e.Y}
+end,
+Draw=function(e)
+e:CalculateToolbarItemPositions()
+Drawing.DrawBlankArea(e.X,e.Y,e.Width,e.Height,UIColours.Toolbar)
+for t,e in ipairs(e.ToolbarItems)do
+e:Draw()
+end
+end,
+Initialise=function(o,t,a)
+local e={}
+setmetatable(e,{__index=o})
+e.Expanded=a
+if a then
+e.Width=e.ExpandedWidth
+else
+e.Width=e.ClosedWidth
+end
+if t=='right'then
+e.X=Drawing.Screen.Width-e.Width+1
+end
+if t=='right'or t=='left'then
+e.Height=Drawing.Screen.Width
+end
+e.Y=1
+return e
+end,
+AddToolbarItem=function(e,t)
+table.insert(e.ToolbarItems,t)
+e:CalculateToolbarItemPositions()
+end,
+CalculateToolbarItemPositions=function(t)
+local e=1
+for a,t in ipairs(t.ToolbarItems)do
+t.Y=e
+e=e+t.Height
+end
+end,
+Update=function(e)
+for t,e in ipairs(e.ToolbarItems)do
+if e.Module.Update then
+e.Module:Update(e)
+end
+end
+end,
+New=function(t,e,a)
+local e=t:Initialise(e,a)
+table.insert(Lists.Interface.Toolbars,e)
+return e
+end,
+Click=function(e,e,e,e)
+return false
+end
+}
+ToolbarItem={
+X=0,
+Y=0,
+Width=0,
+Height=0,
+ExpandedHeight=5,
+Expanded=true,
+Toolbar=nil,
+Title="",
+MenuIcon="=",
+ExpandedIcon="+",
+ContractIcon="-",
+ContentView=nil,
+Module=nil,
+MenuItems=nil,
+Draw=function(e)
+Drawing.DrawBlankArea(e.X,e.Y,e.Width,1,UIColours.ToolbarItemTitle)
+Drawing.DrawCharacters(e.X+1,e.Y,e.Title,UIColours.ToolbarText,UIColours.ToolbarItemTitle)
+Drawing.DrawCharacters(e.X+e.Width-1,e.Y,e.MenuIcon,UIColours.ToolbarText,UIColours.ToolbarItemTitle)
+local t=e.ContractIcon
+if not e.Expanded then
+t=e.ExpandedIcon
+end
+if e.Expanded and e.ContentView then
+e.ContentView:Draw()
+end
+Drawing.DrawCharacters(e.X+e.Width-2,e.Y,t,UIColours.ToolbarText,UIColours.ToolbarItemTitle)
+end,
+Initialise=function(n,a,o,s,t,i)
+local e={}
+setmetatable(e,{__index=n})
+e.Expanded=s
+e.Title=a.Title
+e.Width=t.Width
+e.Height=o or 5
+e.Module=a
+e.MenuItems=i or{}
+table.insert(e.MenuItems,
+{
+Title='Shrink',
+Click=function()
+e:ToggleExpanded()
+end
+})
+e.ExpandedHeight=o or 5
+e.Y=1
+e.X=t.X
+e.ContentView=ContentView:Initialise(1,2,e.Width,e.Height-1,nil,e)
+e.Toolbar=t
+return e
+end,
+ToggleExpanded=function(e)
+e.Expanded=not e.Expanded
+if e.Expanded then
+e.Height=e.ExpandedHeight
+else
+e.Height=1
+end
+end,
+Click=function(e,n,a,t)
+local o=GetAbsolutePosition(e)
+if a==e.Width and t==1 then
+local i="Shrink"
+if not e.Expanded then
+i="Expand"
+end
+e.MenuItems[#e.MenuItems].Title=i
+Menu:New(o.X+a,o.Y+t,e.MenuItems,e)
+return true
+elseif a==e.Width-1 and t==1 then
+e:ToggleExpanded()
+return true
+elseif t~=1 then
+return e.ContentView:Click(n,a-e.ContentView.X+1,t-e.ContentView.Y+1)
+end
+return false
+end
+}
+ContentView={
+X=1,
+Y=1,
+Width=0,
+Height=0,
+Parent=nil,
+Views={},
+AbsolutePosition=function(e)
+return e.Parent:AbsolutePosition()
+end,
+Draw=function(e)
+for t,e in ipairs(e.Views)do
+e:Draw()
+end
+end,
+Initialise=function(t,a,i,h,s,n,o)
+local e={}
+setmetatable(e,{__index=t})
+e.Width=h
+e.Height=s
+e.Y=i
+e.X=a
+e.Views=n or{}
+e.Parent=o
+return e
+end,
+Click=function(e,t,a,o)
+for i,e in pairs(e.Views)do
+if DoClick(e,t,a,o)then
+return true
+end
+end
+end
+}
+Button={
+X=1,
+Y=1,
+Width=0,
+Height=0,
+BackgroundColour=colours.lightGrey,
+TextColour=colours.white,
+ActiveBackgroundColour=colours.lightGrey,
+Text="",
+Parent=nil,
+_Click=nil,
+Toggle=nil,
+AbsolutePosition=function(e)
+return e.Parent:AbsolutePosition()
+end,
+Draw=function(e)
+local t=e.BackgroundColour
+local o=e.TextColour
+if type(t)=='function'then
+t=t()
+end
+if e.Toggle then
+o=UIColours.MenuBarActive
+t=e.ActiveBackgroundColour
+end
+local a=GetAbsolutePosition(e)
+Drawing.DrawBlankArea(a.X,a.Y,e.Width,e.Height,t)
+Drawing.DrawCharactersCenter(a.X,a.Y,e.Width,e.Height,e.Text,o,t)
+end,
+Initialise=function(h,r,l,d,t,u,s,o,a,i,n,c)
+local e={}
+setmetatable(e,{__index=h})
+t=t or 1
+e.Width=d or#a+2
+e.Height=t
+e.Y=l
+e.X=r
+e.Text=a or""
+e.BackgroundColour=u or colours.lightGrey
+e.TextColour=i or colours.white
+e.ActiveBackgroundColour=c or colours.lightGrey
+e.Parent=s
+e._Click=o
+e.Toggle=n
+return e
+end,
+Click=function(e,a,t,o)
+if e._Click then
+if e:_Click(a,t,o,not e.Toggle)~=false and e.Toggle~=nil then
+e.Toggle=not e.Toggle
+Draw()
+end
+return true
+else
+return false
+end
+end
+}
+TextBox={
+X=1,
+Y=1,
+Width=0,
+Height=0,
+BackgroundColour=colours.lightGrey,
+TextColour=colours.black,
+Parent=nil,
+TextInput=nil,
+AbsolutePosition=function(e)
+return e.Parent:AbsolutePosition()
+end,
+Draw=function(e)
+local t=GetAbsolutePosition(e)
+Drawing.DrawBlankArea(t.X,t.Y,e.Width,e.Height,e.BackgroundColour)
+local a=e.TextInput.Value
+if#a>(e.Width-2)then
+a=a:sub(#a-(e.Width-3))
+if Current.Input==e.TextInput then
+Current.CursorPos={t.X+1+e.Width-2,t.Y}
+end
+else
+if Current.Input==e.TextInput then
+Current.CursorPos={t.X+1+e.TextInput.CursorPos,t.Y}
+end
+end
+Drawing.DrawCharacters(t.X+1,t.Y,a,e.TextColour,e.BackgroundColour)
+term.setCursorBlink(true)
+Current.CursorColour=e.TextColour
+end,
+Initialise=function(r,h,u,d,t,l,o,n,s,a,i)
+local e={}
+setmetatable(e,{__index=r})
+t=t or 1
+e.Width=d or#o+2
+e.Height=t
+e.Y=u
+e.X=h
+e.TextInput=TextInput:Initialise(o or'',function(e)
+if a then
+a(e)
+end
+Draw()
+end,i)
+e.BackgroundColour=n or colours.lightGrey
+e.TextColour=s or colours.black
+e.Parent=l
+return e
+end,
+Click=function(e,t,t,t)
+Current.Input=e.TextInput
+e:Draw()
+end
+}
+TextInput={
+Value="",
+Change=nil,
+CursorPos=nil,
+Numerical=false,
+Initialise=function(o,t,a,i)
+local e={}
+setmetatable(e,{__index=o})
+e.Value=t
+e.Change=a
+e.CursorPos=#t
+e.Numerical=i
+return e
+end,
+Char=function(e,t)
+if e.Numerical then
+t=tostring(tonumber(t))
+end
+if t=='nil'then
+return
+end
+e.Value=string.sub(e.Value,1,e.CursorPos)..t..string.sub(e.Value,e.CursorPos+1)
+e.CursorPos=e.CursorPos+1
+e.Change(key)
+end,
+Key=function(e,t)
+if t==keys.enter then
+e.Change(t)
+elseif t==keys.left then
+if e.CursorPos>0 then
+e.CursorPos=e.CursorPos-1
+e.Change(t)
+end
+elseif t==keys.right then
+if e.CursorPos<string.len(e.Value)then
+e.CursorPos=e.CursorPos+1
+e.Change(t)
+end
+elseif t==keys.backspace then
+if e.CursorPos>0 then
+e.Value=string.sub(e.Value,1,e.CursorPos-1)..string.sub(e.Value,e.CursorPos+1)
+e.CursorPos=e.CursorPos-1
+end
+e.Change(t)
+elseif t==keys.home then
+e.CursorPos=0
+e.Change(t)
+elseif t==keys.delete then
+if e.CursorPos<string.len(e.Value)then
+e.Value=string.sub(e.Value,1,e.CursorPos)..string.sub(e.Value,e.CursorPos+2)
+e.Change(t)
+end
+elseif t==keys["end"]then
+e.CursorPos=string.len(e.Value)
+e.Change(t)
+end
+end
+}
+LayerItem={
+X=1,
+Y=1,
+Parent=nil,
+Layer=nil,
+Draw=function(e)
+e.Y=e.Layer.Index
+local t=GetAbsolutePosition(e)
+local a=colours.lightGrey
+if Current.Layer==e.Layer then
+a=colours.white
+end
+Drawing.DrawBlankArea(t.X,t.Y,e.Width,e.Height,UIColours.Toolbar)
+Drawing.DrawCharacters(t.X+3,t.Y,e.Layer.Name,a,UIColours.Toolbar)
+if e.Layer.Visible then
+Drawing.DrawCharacters(t.X+1,t.Y,"@",a,UIColours.Toolbar)
+else
+Drawing.DrawCharacters(t.X+1,t.Y,"X",a,UIColours.Toolbar)
+end
+end,
+Initialise=function(o,a,t)
+local e={}
+setmetatable(e,{__index=o})
+e.Width=t.Width
+e.Height=1
+e.Y=1
+e.X=1
+e.Layer=a
+e.Parent=t
+return e
+end,
+Click=function(e,a,t,a)
+if t==2 then
+e.Layer.Visible=not e.Layer.Visible
+else
+Current.Layer=e.Layer
+end
+return true
+end
+}
+Menu={
+X=0,
+Y=0,
+Width=0,
+Height=0,
+Owner=nil,
+Items={},
+RemoveTop=false,
+Draw=function(e)
+Drawing.DrawBlankArea(e.X+1,e.Y+1,e.Width,e.Height,UIColours.Shadow)
+if not e.RemoveTop then
+Drawing.DrawBlankArea(e.X,e.Y,e.Width,e.Height,UIColours.MenuBackground)
+for a,t in ipairs(e.Items)do
+if t.Separator then
+Drawing.DrawArea(e.X,e.Y+a,e.Width,1,'-',colours.grey,UIColours.MenuBackground)
+else
+local o=UIColours.MenuText
+if(t.Enabled and type(t.Enabled)=='function'and t.Enabled()==false)or t.Enabled==false then
+o=UIColours.MenuDisabledText
+end
+Drawing.DrawCharacters(e.X+1,e.Y+a,t.Title,o,UIColours.MenuBackground)
+end
+end
+else
+Drawing.DrawBlankArea(e.X,e.Y,e.Width,e.Height,UIColours.MenuBackground)
+for o,t in ipairs(e.Items)do
+if t.Separator then
+Drawing.DrawArea(e.X,e.Y+o-1,e.Width,1,'-',colours.grey,UIColours.MenuBackground)
+else
+local a=UIColours.MenuText
+if(t.Enabled and type(t.Enabled)=='function'and t.Enabled()==false)or t.Enabled==false then
+a=UIColours.MenuDisabledText
+end
+Drawing.DrawCharacters(e.X+1,e.Y+o-1,t.Title,a,UIColours.MenuBackground)
+Drawing.DrawCharacters(e.X-1+e.Width-#t.KeyName,e.Y+o-1,t.KeyName,a,UIColours.MenuBackground)
+end
+end
+end
+end,
+NameForKey=function(t,e)
+if e==keys.leftCtrl then
+return'^'
+elseif e==keys.tab then
+return'Tab'
+elseif e==keys.delete then
+return'Delete'
+elseif e==keys.n then
+return'N'
+elseif e==keys.s then
+return'S'
+elseif e==keys.o then
+return'O'
+elseif e==keys.z then
+return'Z'
+elseif e==keys.y then
+return'Y'
+elseif e==keys.c then
+return'C'
+elseif e==keys.x then
+return'X'
+elseif e==keys.v then
+return'V'
+elseif e==keys.r then
+return'R'
+elseif e==keys.l then
+return'L'
+elseif e==keys.t then
+return'T'
+elseif e==keys.h then
+return'H'
+elseif e==keys.e then
+return'E'
+elseif e==keys.p then
+return'P'
+elseif e==keys.f then
+return'F'
+elseif e==keys.m then
+return'M'
+else
+return'?'
+end
+end,
+Initialise=function(h,o,a,t,n,s)
+local e={}
+setmetatable(e,{__index=h})
+if not n then
+return
+end
+local i={}
+for e,a in ipairs(t)do
+t[e].KeyName=''
+if a.Keys then
+for o,a in ipairs(a.Keys)do
+t[e].KeyName=t[e].KeyName..h:NameForKey(a)
+end
+end
+if t[e].KeyName~=''then
+table.insert(i,t[e].KeyName)
+end
+end
+local i=LongestString(i)
+if i>0 then
+i=i+2
+end
+e.Width=LongestString(t,'Title')+2+i
+if e.Width<10 then
+e.Width=10
+end
+e.Height=#t+2
+e.RemoveTop=s or false
+if s then
+e.Height=e.Height-1
+end
+if a<1 then
+a=1
+end
+if o<1 then
+o=1
+end
+if a+e.Height>Drawing.Screen.Height+1 then
+a=Drawing.Screen.Height-e.Height
+end
+if o+e.Width>Drawing.Screen.Width+1 then
+o=Drawing.Screen.Width-e.Width
+end
+e.Y=a
+e.X=o
+e.Items=t
+e.Owner=n
+return e
+end,
+New=function(n,o,a,t,e,i)
+if Current.Menu and Current.Menu.Owner==e then
+Current.Menu=nil
+return
+end
+local e=n:Initialise(o,a,t,e,i)
+Current.Menu=e
+return e
+end,
+Click=function(e,t,t,a)
+local t=a-1
+if e.RemoveTop then
+t=a
+end
+if t>=1 and a<e.Height then
+if not((e.Items[t].Enabled and type(e.Items[t].Enabled)=='function'and e.Items[t].Enabled()==false)or e.Items[t].Enabled==false)and e.Items[t].Click then
+e.Items[t]:Click()
+if Current.Menu.Owner and Current.Menu.Owner.Toggle then
+Current.Menu.Owner.Toggle=false
+end
+Current.Menu=nil
+e=nil
+end
+return true
+end
+end
+}
+MenuBar={
+X=1,
+Y=1,
+Width=Drawing.Screen.Width,
+Height=1,
+MenuBarItems={},
+AbsolutePosition=function(e)
+return{X=e.X,Y=e.Y}
+end,
+Draw=function(e)
+Drawing.DrawBlankArea(e.X,e.Y,e.Width,e.Height,UIColours.Toolbar)
+for t,e in ipairs(e.MenuBarItems)do
+e:Draw()
+end
+end,
+Initialise=function(a,t)
+local e={}
+setmetatable(e,{__index=a})
+e.X=1
+e.Y=1
+e.MenuBarItems=t
+return e
+end,
+AddToolbarItem=function(e,t)
+table.insert(e.ToolbarItems,t)
+e:CalculateToolbarItemPositions()
+end,
+CalculateToolbarItemPositions=function(t)
+local e=1
+for a,t in ipairs(t.ToolbarItems)do
+t.Y=e
+e=e+t.Height
+end
+end,
+Click=function(e,a,t,o)
+for o,e in ipairs(e.MenuBarItems)do
+if e.X<=t and e.X+e.Width>t then
+if e:Click(e,a,t-e.X+1,1)then
+break
+end
+end
+end
+return false
+end
+}
+Modules={
+{
+Title="Colours",
+ToolbarItem=nil,
+Initialise=function(e)
+e.ToolbarItem=ToolbarItem:Initialise(e,nil,true,Current.Toolbar)
+local n={}
+local a=0
+local t=8
+local o={
+colours.brown,
+colours.yellow,
+colours.orange,
+colours.red,
+colours.green,
+colours.lime,
+colours.magenta,
+colours.pink,
+colours.purple,
+colours.blue,
+colours.cyan,
+colours.lightBlue,
+colours.lightGrey,
+colours.grey,
+colours.black,
+colours.white
+}
+for o,i in pairs(o)do
+if type(i)=='number'and i~=-1 then
+a=a+1
+local o=math.floor(a/(t/2))
+local a=(a%(t/2))
+if a==0 then
+a=(t/2)
+o=o-1
+end
+table.insert(n,
+{
+X=a*2-2+e.ToolbarItem.Width-t,
+Y=o+1,
+Width=2,
+Height=1,
+BackgroundColour=i,
+Click=function(e,t,t,t)
+SetColour(e.BackgroundColour)
+end
+}
+)
+end
+end
+for a,t in ipairs(n)do
+table.insert(e.ToolbarItem.ContentView.Views,
+Button:Initialise(t.X,t.Y,t.Width,t.Height,t.BackgroundColour,e.ToolbarItem.ContentView,t.Click))
+end
+table.insert(e.ToolbarItem.ContentView.Views,
+Button:Initialise(1,1,4,3,function()return Current.Colour end,e.ToolbarItem.ContentView,nil))
+Current.Toolbar:AddToolbarItem(e.ToolbarItem)
+end
+},
+{
+Title="Tools",
+ToolbarItem=nil,
+Update=function(t)
+for a,e in ipairs(t.ToolbarItem.ContentView.Views)do
+if(Current.Tool and Current.Tool.Name==e.Text)then
+e.TextColour=colours.white
+else
+e.TextColour=colours.lightGrey
+end
+end
+t.ToolbarItem.ContentView.Views[1].Text='Size: '..Current.ToolSize
+end,
+Initialise=function(e)
+e.ToolbarItem=ToolbarItem:Initialise(e,#Tools+2,true,Current.Toolbar,
+{{
+Title="Change Tool Size",
+Click=function()
+DisplayToolSizeWindow()
+end,
+}})
+table.insert(e.ToolbarItem.ContentView.Views,Button:Initialise(1,1,e.ToolbarItem.Width,1,UIColours.Toolbar,e.ToolbarItem.ContentView,DisplayToolSizeWindow,'Size: '..Current.ToolSize))
+local t=2
+for o,a in ipairs(Tools)do
+table.insert(e.ToolbarItem.ContentView.Views,Button:Initialise(1,t,e.ToolbarItem.Width,1,UIColours.Toolbar,e.ToolbarItem.ContentView,function()SetTool(a)e:Update(e.ToolbarItem)end,a.Name))
+t=t+1
+end
+e:Update(e.ToolbarItem)
+Current.Toolbar:AddToolbarItem(e.ToolbarItem)
+end
+},
+{
+Title="Layers",
+ToolbarItem=nil,
+Update=function(e)
+if Current.Artboard then
+e.ToolbarItem.ContentView.Views={}
+for t=1,#Current.Artboard.Layers do
+table.insert(e.ToolbarItem.ContentView.Views,LayerItem:Initialise(Current.Artboard.Layers[#Current.Artboard.Layers-t+1],e.ToolbarItem.ContentView))
+end
+end
+end,
+Initialise=function(e)
+e.ToolbarItem=ToolbarItem:Initialise(e,nil,true,Current.Toolbar,
+{{
+Title="New Layer",
+Click=function()
+MakeNewLayer()
+end,
+Enabled=function()
+return CheckOpenArtboard()
+end
+},
+{
+Title='Delete Layer',
+Click=function()
+DeleteLayer()
+end,
+Enabled=function()
+return CheckSelectedLayer()
+end
+},
+{
+Title='Rename Layer...',
+Click=function()
+RenameLayer()
+end,
+Enabled=function()
+return CheckSelectedLayer()
+end
+}})
+e:Update()
+Current.Toolbar:AddToolbarItem(e.ToolbarItem)
+end
+}
+}
+function ModuleNamed(t)
+for a,e in ipairs(Modules)do
+if e.Title==t then
+return e
+end
+end
+end
+function ToolAffectedPixels(e,t)
+if not CheckSelectedLayer()then
+return{}
+end
+if Current.ToolSize==1 then
+if Current.Layer.Pixels[e]and Current.Layer.Pixels[e][t]then
+return{{Current.Layer.Pixels[e][t],e,t}}
+end
+else
+local i={}
+local a=e-math.ceil(Current.ToolSize/2)
+local o=t-math.ceil(Current.ToolSize/2)
+for e=1,Current.ToolSize do
+for t=1,Current.ToolSize do
+if Current.Layer.Pixels[a+e]and Current.Layer.Pixels[a+e][o+t]then
+table.insert(i,{Current.Layer.Pixels[a+e][o+t],a+e,o+t})
+end
+end
+end
+return i
+end
+end
+local a={}
+Tools={
+{
+Name="Hand",
+Use=function(o,e,t,o,a)
+Current.Input=nil
+if a and Current.HandDragStart and Current.HandDragStart[1]and Current.HandDragStart[2]then
+local e=e-Current.HandDragStart[1]
+local t=t-Current.HandDragStart[2]
+Current.Artboard.X=Current.Artboard.X+e
+Current.Artboard.Y=Current.Artboard.Y+t
+else
+Current.HandDragStart={e,t}
+end
+sleep(0)
+end,
+Select=function(e)
+return true
+end
+},
+{
+Name="Pencil",
+Use=function(o,a,e,t,o)
+Current.Input=nil
+for a,e in ipairs(ToolAffectedPixels(a,e))do
+if t==1 then
+e[1].BackgroundColour=Current.Colour
+elseif t==2 then
+e[1].TextColour=Current.Colour
+end
+e[1]:Draw(e[2],e[3])
+end
+end,
+Select=function(e)
+return true
+end
+},
+{
+Name="Eraser",
+Use=function(a,t,e,a)
+Current.Input=nil
+Current.Layer:SetPixel(t,e,nil,Current.Layer.BackgroundColour,nil)
+for t,e in ipairs(ToolAffectedPixels(t,e))do
+Current.Layer:SetPixel(e[2],e[3],nil,Current.Layer.BackgroundColour,nil)
+end
+end,
+Select=function(e)
+return true
+end
+},
+{
+Name="Fill Bucket",
+Use=function(e,a,o,i)
+local s=Current.Layer.Pixels[a][o].BackgroundColour
+if i==2 then
+s=Current.Layer.Pixels[a][o].TextColour
+end
+local t={{X=a,Y=o}}
+while#t>0 do
+local e=t[1]
+if Current.Layer.Pixels[e.X]and Current.Layer.Pixels[e.X][e.Y]then
+local n=Current.Layer.Pixels[e.X][e.Y].BackgroundColour
+if i==2 then
+n=Current.Layer.Pixels[e.X][e.Y].TextColour
+end
+if n==s and n~=Current.Colour then
+if i==1 then
+Current.Layer.Pixels[e.X][e.Y].BackgroundColour=Current.Colour
+elseif i==2 then
+Current.Layer.Pixels[e.X][e.Y].TextColour=Current.Colour
+end
+table.insert(t,{X=e.X,Y=e.Y+1})
+table.insert(t,{X=e.X+1,Y=e.Y})
+if a>1 then
+table.insert(t,{X=e.X-1,Y=e.Y})
+end
+if o>1 then
+table.insert(t,{X=e.X,Y=e.Y-1})
+end
+end
+end
+table.remove(t,1)
+end
+Draw()
+end,
+Select=function(e)
+return true
+end
+},
+{
+Name="Select",
+Use=function(o,e,t,o,a)
+Current.Input=nil
+if not a then
+Current.Selection[1]=vector.new(e,t,0)
+Current.Selection[2]=nil
+else
+Current.Selection[2]=vector.new(e,t,0)
+end
+end,
+Select=function(e)
+return true
+end
+},
+{
+Name="Move",
+Use=function(i,e,t,i,o)
+Current.Input=nil
+if Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then
+if o and a then
+local i=Current.Layer:PixelsInSelection(true)
+local o=Current.Selection[1]-Current.Selection[2]
+Current.Selection[1]=vector.new(e-a[1],t-a[2],0)
+Current.Selection[2]=vector.new(e-a[1]-o.x,t-a[2]-o.y,0)
+Current.Layer:InsertPixels(i)
+else
+a={e-Current.Selection[1].x,t-Current.Selection[1].y}
+end
+end
+end,
+Select=function(e)
+return true
+end
+},
+{
+Name="Text",
+Use=function(a,e,t)
+Current.Input=TextInput:Initialise('',function(a)
+if a==keys.delete or a==keys.backspace then
+if#Current.Input.Value==0 then
+if Current.Layer.Pixels[e]and Current.Layer.Pixels[e][t]then
+Current.Layer.Pixels[e][t]:Set(nil,nil,' ')
+local e=Current.CursorPos[1]-Current.Artboard.X
+if e<Current.Artboard.X-1 then
+e=Current.Artboard.X-1
+end
+Current.Tool:Use(e,Current.CursorPos[2]-Current.Artboard.Y+1)
+Draw()
+end
+return
+else
+if Current.Layer.Pixels[e+#Current.Input.Value]and Current.Layer.Pixels[e+#Current.Input.Value][t]then
+Current.Layer.Pixels[e+#Current.Input.Value][t]:Set(nil,nil,' ')
+end
+end
+else
+local a=#Current.Input.Value
+if Current.Layer.Pixels[e+a-1]then
+Current.Layer.Pixels[e+a-1][t]:Set(Current.Colour,nil,Current.Input.Value:sub(a,a))
+Current.Layer.Pixels[e+a-1][t]:Draw(e+a-1,t)
+end
+end
+local a=e+Current.Input.CursorPos
+if a>Current.Artboard.Width then
+Current.Input.CursorPos=Current.Input.CursorPos-1
+end
+Current.CursorPos={e+Current.Input.CursorPos+Current.Artboard.X-1,t+Current.Artboard.Y-1}
+Current.CursorColour=Current.Colour
+Draw()
+end)
+Current.CursorPos={e+Current.Artboard.X-1,t+Current.Artboard.Y-1}
+Current.CursorColour=Current.Colour
+end,
+Select=function(e)
+if Current.Artboard.Format=='.nfp'then
+ButtonDialougeWindow:Initialise('NFP does not support text!','The format you are using, NFP, does not support text. Use NFT or SKCH to use text.','Ok',nil,function(e)
+e:Close()
+end):Show()
+return false
+else
+return true
+end
+end
+}
+}
+function ToolNamed(t)
+for a,e in ipairs(Tools)do
+if e.Name==t then
+return e
+end
+end
+end
+NewDocumentWindow={
+X=1,
+Y=1,
+Width=0,
+Height=0,
+CursorPos=1,
+Visible=true,
+Return=nil,
+OkButton=nil,
+Format='.skch',
+ImageBackgroundColour=colours.white,
+NameLabelHighlight=false,
+SizeLabelHighlight=false,
+AbsolutePosition=function(e)
+return{X=e.X,Y=e.Y}
+end,
+Draw=function(e)
+if not e.Visible then
+return
+end
+Drawing.DrawBlankArea(e.X+1,e.Y+1,e.Width,e.Height,colours.grey)
+Drawing.DrawBlankArea(e.X,e.Y,e.Width,1,colours.lightGrey)
+Drawing.DrawBlankArea(e.X,e.Y+1,e.Width,e.Height-1,colours.white)
+Drawing.DrawCharactersCenter(e.X,e.Y,e.Width,1,e.Title,colours.black,colours.lightGrey)
+local t=colours.black
+if e.NameLabelHighlight then
+t=colours.red
+end
+Drawing.DrawCharacters(e.X+1,e.Y+2,"Name",t,colours.white)
+Drawing.DrawCharacters(e.X+1,e.Y+4,"Type",colours.black,colours.white)
+local t=colours.black
+if e.SizeLabelHighlight then
+t=colours.red
+end
+Drawing.DrawCharacters(e.X+1,e.Y+6,"Size",t,colours.white)
+Drawing.DrawCharacters(e.X+11,e.Y+6,"x",colours.black,colours.white)
+Drawing.DrawCharacters(e.X+1,e.Y+8,"Background",colours.black,colours.white)
+e.OkButton:Draw()
+e.CancelButton:Draw()
+e.SKCHButton:Draw()
+e.NFTButton:Draw()
+e.NFPButton:Draw()
+e.PathTextBox:Draw()
+e.WidthTextBox:Draw()
+e.HeightTextBox:Draw()
+e.WhiteButton:Draw()
+e.BlackButton:Draw()
+e.TransparentButton:Draw()
+end,
+Initialise=function(t,o)
+local e={}
+setmetatable(e,{__index=t})
+e.Width=32
+e.Height=13
+e.Return=o
+e.X=math.ceil((Drawing.Screen.Width-e.Width)/2)
+e.Y=math.ceil((Drawing.Screen.Height-e.Height)/2)
+e.Title='New Document'
+e.Visible=true
+e.NameLabelHighlight=false
+e.SizeLabelHighlight=false
+e.Format='.skch'
+e.OkButton=Button:Initialise(e.Width-4,e.Height-1,nil,nil,colours.lightGrey,e,function(t,t,t,t,t)
+local t=e.PathTextBox.TextInput.Value
+local a=true
+e.NameLabelHighlight=false
+e.SizeLabelHighlight=false
+local i=fs
+if OneOS then
+i=OneOS.FS
+end
+if t:sub(-1)=='/'or i.isDir(t)or#t==0 then
+a=false
+e.NameLabelHighlight=true
+end
+if#e.WidthTextBox.TextInput.Value==0 or tonumber(e.WidthTextBox.TextInput.Value)<=0 then
+a=false
+e.SizeLabelHighlight=true
+end
+if#e.HeightTextBox.TextInput.Value==0 or tonumber(e.HeightTextBox.TextInput.Value)<=0 then
+a=false
+e.SizeLabelHighlight=true
+end
+if a then
+o(e,true,t,tonumber(e.WidthTextBox.TextInput.Value),tonumber(e.HeightTextBox.TextInput.Value),e.Format,e.ImageBackgroundColour)
+else
+Draw()
+end
+end,'Ok',colours.black)
+e.CancelButton=Button:Initialise(e.Width-13,e.Height-1,nil,nil,colours.lightGrey,e,function(t,t,t,t,t)o(e,false)end,'Cancel',colours.black)
+e.SKCHButton=Button:Initialise(7,5,nil,nil,colours.lightGrey,e,function(t,a,a,a,a)
+e.NFTButton.Toggle=false
+e.NFPButton.Toggle=false
+t.Toggle=false
+e.Format='.skch'
+end,'.skch',colours.black,true,colours.lightBlue)
+e.NFTButton=Button:Initialise(15,5,nil,nil,colours.lightGrey,e,function(t,a,a,a,a)
+e.SKCHButton.Toggle=false
+e.NFPButton.Toggle=false
+t.Toggle=false
+e.Format='.nft'
+end,'.nft',colours.black,false,colours.lightBlue)
+e.NFPButton=Button:Initialise(22,5,nil,nil,colours.lightGrey,e,function(t,a,a,a,a)
+e.SKCHButton.Toggle=false
+e.NFTButton.Toggle=false
+t.Toggle=false
+e.Format='.nfp'
+end,'.nfp',colours.black,false,colours.lightBlue)
+local t=''
+if OneOS then
+t='/Desktop/'
+end
+e.PathTextBox=TextBox:Initialise(7,3,e.Width-7,1,e,t,nil,nil,function(t)
+if t==keys.enter or t==keys.tab then
+Current.Input=e.WidthTextBox.TextInput
+end
+end)
+e.WidthTextBox=TextBox:Initialise(7,7,4,1,e,tostring(15),nil,nil,function()
+if key==keys.enter or key==keys.tab then
+Current.Input=e.HeightTextBox.TextInput
+end
+end,true)
+e.HeightTextBox=TextBox:Initialise(14,7,4,1,e,tostring(10),nil,nil,function()
+if key==keys.enter or key==keys.tab then
+Current.Input=e.PathTextBox.TextInput
+end
+end,true)
+Current.Input=e.PathTextBox.TextInput
+e.WhiteButton=Button:Initialise(2,10,nil,nil,colours.lightGrey,e,function(t,a,a,a,a)
+e.TransparentButton.Toggle=false
+e.BlackButton.Toggle=false
+t.Toggle=false
+e.ImageBackgroundColour=colours.white
+end,'White',colours.black,true,colours.lightBlue)
+e.BlackButton=Button:Initialise(10,10,nil,nil,colours.lightGrey,e,function(t,a,a,a,a)
+e.TransparentButton.Toggle=false
+e.WhiteButton.Toggle=false
+t.Toggle=false
+e.ImageBackgroundColour=colours.black
+end,'Black',colours.black,false,colours.lightBlue)
+e.TransparentButton=Button:Initialise(18,10,nil,nil,colours.lightGrey,e,function(t,a,a,a,a)
+e.WhiteButton.Toggle=false
+e.BlackButton.Toggle=false
+t.Toggle=false
+e.ImageBackgroundColour=colours.transparent
+end,'Transparent',colours.black,false,colours.lightBlue)
+return e
+end,
+Show=function(e)
+Current.Window=e
+return e
+end,
+Close=function(e)
+Current.Input=nil
+Current.Window=nil
+e=nil
+end,
+Flash=function(e)
+e.Visible=false
+Draw()
+sleep(.15)
+e.Visible=true
+Draw()
+sleep(.15)
+e.Visible=false
+Draw()
+sleep(.15)
+e.Visible=true
+Draw()
+end,
+ButtonClick=function(o,e,t,a)
+if e.X<=t and e.Y<=a and e.X+e.Width>t and e.Y+e.Height>a then
+e:Click()
+end
+end,
+Click=function(e,o,a,t)
+local e={e.OkButton,e.CancelButton,e.SKCHButton,e.NFTButton,e.NFPButton,e.PathTextBox,e.WidthTextBox,e.HeightTextBox,e.WhiteButton,e.BlackButton,e.TransparentButton}
+for i,e in ipairs(e)do
+if CheckClick(e,a,t)then
+e:Click(o,a,t)
+end
+end
+return true
+end
+}
+local o=function(e)
+e='/'..e
+local t=fs
+if OneOS then
+t=OneOS.FS
+end
+if t.isDir(e)then
+e=e..'/'
+end
+e,n=e:gsub("//","/")
+while n>0 do
+e,n=e:gsub("//","/")
+end
+return e
+end
+local n=function(t,o)
+local e={''}
+for a,t in t:gmatch('(%S+)(%s*)')do
+local i=e[#e]..a..t:gsub('\n','')
+if#i>o then
+table.insert(e,'')
+end
+if t:find('\n')then
+e[#e]=e[#e]..a
+t=t:gsub('\n',function()
+table.insert(e,'')
+return''
+end)
+else
+e[#e]=e[#e]..a..t
+end
+end
+return e
+end
+OpenDocumentWindow={
+X=1,
+Y=1,
+Width=0,
+Height=0,
+CursorPos=1,
+Visible=true,
+Return=nil,
+OpenButton=nil,
+PathTextBox=nil,
+CurrentDirectory='/',
+Scroll=0,
+MaxScroll=0,
+GoUpButton=nil,
+SelectedFile='',
+Files={},
+Typed=false,
+AbsolutePosition=function(e)
+return{X=e.X,Y=e.Y}
+end,
+Draw=function(e)
+if not e.Visible then
+return
+end
+Drawing.DrawBlankArea(e.X+1,e.Y+1,e.Width,e.Height,colours.grey)
+Drawing.DrawBlankArea(e.X,e.Y,e.Width,3,colours.lightGrey)
+Drawing.DrawBlankArea(e.X,e.Y+1,e.Width,e.Height-6,colours.white)
+Drawing.DrawCharactersCenter(e.X,e.Y,e.Width,1,e.Title,colours.black,colours.lightGrey)
+Drawing.DrawBlankArea(e.X,e.Y+e.Height-5,e.Width,5,colours.lightGrey)
+e:DrawFiles()
+local t=fs
+if OneOS then
+t=OneOS.FS
+end
+if(t.exists(e.PathTextBox.TextInput.Value))or(e.SelectedFile and#e.SelectedFile>0 and t.exists(e.CurrentDirectory..e.SelectedFile))then
+e.OpenButton.TextColour=colours.black
+else
+e.OpenButton.TextColour=colours.lightGrey
+end
+e.PathTextBox:Draw()
+e.OpenButton:Draw()
+e.CancelButton:Draw()
+e.GoUpButton:Draw()
+end,
+DrawFiles=function(e)
+local o=fs
+if OneOS then
+o=OneOS.FS
+end
+for a,t in ipairs(e.Files)do
+if a>e.Scroll and a-e.Scroll<=11 then
+if t==e.SelectedFile then
+Drawing.DrawCharacters(e.X+1,e.Y+a-e.Scroll,t,colours.white,colours.lightBlue)
+elseif string.find(t,'%.skch')or string.find(t,'%.nft')or string.find(t,'%.nfp')or o.isDir(e.CurrentDirectory..t)then
+Drawing.DrawCharacters(e.X+1,e.Y+a-e.Scroll,t,colours.black,colours.white)
+else
+Drawing.DrawCharacters(e.X+1,e.Y+a-e.Scroll,t,colours.grey,colours.white)
+end
+end
+end
+e.MaxScroll=#e.Files-11
+if e.MaxScroll<0 then
+e.MaxScroll=0
+end
+end,
+Initialise=function(t,a)
+local e={}
+setmetatable(e,{__index=t})
+e.Width=32
+e.Height=17
+e.Return=a
+e.X=math.ceil((Drawing.Screen.Width-e.Width)/2)
+e.Y=math.ceil((Drawing.Screen.Height-e.Height)/2)
+e.Title='Open Document'
+e.Visible=true
+e.CurrentDirectory='/'
+e.SelectedFile=nil
+if OneOS then
+e.CurrentDirectory='/Desktop/'
+end
+local t=fs
+if OneOS then
+t=OneOS.FS
+end
+e.OpenButton=Button:Initialise(e.Width-6,e.Height-1,nil,nil,colours.white,e,function(i,n,n,n,n)
+if t.exists(e.PathTextBox.TextInput.Value)and i.TextColour==colours.black and not t.isDir(e.PathTextBox.TextInput.Value)then
+a(e,true,o(e.PathTextBox.TextInput.Value))
+elseif e.SelectedFile and i.TextColour==colours.black and t.isDir(e.CurrentDirectory..e.SelectedFile)then
+e:GoToDirectory(e.CurrentDirectory..e.SelectedFile)
+elseif e.SelectedFile and i.TextColour==colours.black then
+a(e,true,o(e.CurrentDirectory..'/'..e.SelectedFile))
+end
+end,'Open',colours.black)
+e.CancelButton=Button:Initialise(e.Width-15,e.Height-1,nil,nil,colours.white,e,function(t,t,t,t,t)
+a(e,false)
+end,'Cancel',colours.black)
+e.GoUpButton=Button:Initialise(2,e.Height-1,nil,nil,colours.white,e,function(a,a,a,a,a)
+local t=t.getName(e.CurrentDirectory)
+local t=e.CurrentDirectory:sub(1,#e.CurrentDirectory-#t-1)
+e:GoToDirectory(t)
+end,'Go Up',colours.black)
+e.PathTextBox=TextBox:Initialise(2,e.Height-3,e.Width-2,1,e,e.CurrentDirectory,colours.white,colours.black)
+e:GoToDirectory(e.CurrentDirectory)
+return e
+end,
+Show=function(e)
+Current.Window=e
+return e
+end,
+Close=function(e)
+Current.Input=nil
+Current.Window=nil
+e=nil
+end,
+GoToDirectory=function(e,t)
+t=o(t)
+e.CurrentDirectory=t
+e.Scroll=0
+e.SelectedFile=nil
+e.Typed=false
+e.PathTextBox.TextInput.Value=t
+local t=fs
+if OneOS then
+t=OneOS.FS
+end
+e.Files=t.list(e.CurrentDirectory)
+Draw()
+end,
+Flash=function(e)
+e.Visible=false
+Draw()
+sleep(.15)
+e.Visible=true
+Draw()
+sleep(.15)
+e.Visible=false
+Draw()
+sleep(.15)
+e.Visible=true
+Draw()
+end,
+Click=function(e,n,i,t)
+local s={e.OpenButton,e.CancelButton,e.PathTextBox,e.GoUpButton}
+local a=false
+for o,e in ipairs(s)do
+if CheckClick(e,i,t)then
+e:Click(n,i,t)
+a=true
+end
+end
+if not a then
+if t<=12 then
+local a=fs
+if OneOS then
+a=OneOS.FS
+end
+e.SelectedFile=a.list(e.CurrentDirectory)[t-1]
+e.PathTextBox.TextInput.Value=o(e.CurrentDirectory..'/'..e.SelectedFile)
+Draw()
+end
+end
+return true
+end
+}
+ButtonDialougeWindow={
+X=1,
+Y=1,
+Width=0,
+Height=0,
+CursorPos=1,
+Visible=true,
+CancelButton=nil,
+OkButton=nil,
+Lines={},
+AbsolutePosition=function(e)
+return{X=e.X,Y=e.Y}
+end,
+Draw=function(e)
+if not e.Visible then
+return
+end
+Drawing.DrawBlankArea(e.X+1,e.Y+1,e.Width,e.Height,colours.grey)
+Drawing.DrawBlankArea(e.X,e.Y,e.Width,1,colours.lightGrey)
+Drawing.DrawBlankArea(e.X,e.Y+1,e.Width,e.Height-1,colours.white)
+Drawing.DrawCharactersCenter(e.X,e.Y,e.Width,1,e.Title,colours.black,colours.lightGrey)
+for t,a in ipairs(e.Lines)do
+Drawing.DrawCharacters(e.X+1,e.Y+1+t,a,colours.black,colours.white)
+end
+e.OkButton:Draw()
+if e.CancelButton then
+e.CancelButton:Draw()
+end
+end,
+Initialise=function(s,i,h,t,o,a)
+local e={}
+setmetatable(e,{__index=s})
+e.Width=28
+e.Lines=n(h,e.Width-2)
+e.Height=5+#e.Lines
+e.Return=a
+e.X=math.ceil((Drawing.Screen.Width-e.Width)/2)
+e.Y=math.ceil((Drawing.Screen.Height-e.Height)/2)
+e.Title=i
+e.Visible=true
+e.Visible=true
+e.OkButton=Button:Initialise(e.Width-#t-2,e.Height-1,nil,1,nil,e,function()
+a(e,true)
+end,t)
+if o then
+e.CancelButton=Button:Initialise(e.Width-#t-2-1-#o-2,e.Height-1,nil,1,nil,e,function()
+a(e,false)
+end,o)
+end
+return e
+end,
+Show=function(e)
+Current.Window=e
+return e
+end,
+Close=function(e)
+Current.Window=nil
+e=nil
+end,
+Flash=function(e)
+e.Visible=false
+Draw()
+sleep(.15)
+e.Visible=true
+Draw()
+sleep(.15)
+e.Visible=false
+Draw()
+sleep(.15)
+e.Visible=true
+Draw()
+end,
+Click=function(e,o,a,t)
+local e={e.OkButton,e.CancelButton}
+local i=false
+for n,e in ipairs(e)do
+if CheckClick(e,a,t)then
+e:Click(o,a,t)
+i=true
+end
+end
+return true
+end
+}
+TextDialougeWindow={
+X=1,
+Y=1,
+Width=0,
+Height=0,
+CursorPos=1,
+Visible=true,
+CancelButton=nil,
+OkButton=nil,
+Lines={},
+TextInput=nil,
+AbsolutePosition=function(e)
+return{X=e.X,Y=e.Y}
+end,
+Draw=function(e)
+if not e.Visible then
+return
+end
+Drawing.DrawBlankArea(e.X+1,e.Y+1,e.Width,e.Height,colours.grey)
+Drawing.DrawBlankArea(e.X,e.Y,e.Width,1,colours.lightGrey)
+Drawing.DrawBlankArea(e.X,e.Y+1,e.Width,e.Height-1,colours.white)
+Drawing.DrawCharactersCenter(e.X,e.Y,e.Width,1,e.Title,colours.black,colours.lightGrey)
+for a,t in ipairs(e.Lines)do
+Drawing.DrawCharacters(e.X+1,e.Y+1+a,t,colours.black,colours.white)
+end
+Drawing.DrawBlankArea(e.X+1,e.Y+e.Height-4,e.Width-2,1,colours.lightGrey)
+Drawing.DrawCharacters(e.X+2,e.Y+e.Height-4,e.TextInput.Value,colours.black,colours.lightGrey)
+Current.CursorPos={e.X+2+e.TextInput.CursorPos,e.Y+e.Height-4}
+Current.CursorColour=colours.black
+e.OkButton:Draw()
+if e.CancelButton then
+e.CancelButton:Draw()
+end
+end,
+Initialise=function(r,h,s,a,o,t,i)
+local e={}
+setmetatable(e,{__index=r})
+e.Width=28
+e.Lines=n(s,e.Width-2)
+e.Height=7+#e.Lines
+e.Return=t
+e.X=math.ceil((Drawing.Screen.Width-e.Width)/2)
+e.Y=math.ceil((Drawing.Screen.Height-e.Height)/2)
+e.Title=h
+e.Visible=true
+e.Visible=true
+e.OkButton=Button:Initialise(e.Width-#a-2,e.Height-1,nil,1,nil,e,function()
+if#e.TextInput.Value>0 then
+t(e,true,e.TextInput.Value)
+end
+end,a)
+if o then
+e.CancelButton=Button:Initialise(e.Width-#a-2-1-#o-2,e.Height-1,nil,1,nil,e,function()
+t(e,false)
+end,o)
+end
+e.TextInput=TextInput:Initialise('',function(t)
+if t then
+e.OkButton:Click()
+end
+Draw()
+end,i)
+Current.Input=e.TextInput
+return e
+end,
+Show=function(e)
+Current.Window=e
+return e
+end,
+Close=function(e)
+Current.Window=nil
+Current.Input=nil
+e=nil
+end,
+Flash=function(e)
+e.Visible=false
+Draw()
+sleep(.15)
+e.Visible=true
+Draw()
+sleep(.15)
+e.Visible=false
+Draw()
+sleep(.15)
+e.Visible=true
+Draw()
+end,
+Click=function(e,o,t,a)
+local e={e.OkButton,e.CancelButton}
+local i=false
+for n,e in ipairs(e)do
+if CheckClick(e,t,a)then
+e:Click(o,t,a)
+i=true
+end
+end
+return true
+end
+}
+ResizeDocumentWindow={
+X=1,
+Y=1,
+Width=0,
+Height=0,
+CursorPos=1,
+Visible=true,
+Return=nil,
+OkButton=nil,
+AnchorPosition=5,
+WidthLabelHighlight=false,
+HeightLabelHighlight=false,
+AbsolutePosition=function(e)
+return{X=e.X,Y=e.Y}
+end,
+Draw=function(e)
+if not e.Visible then
+return
+end
+Drawing.DrawBlankArea(e.X+1,e.Y+1,e.Width,e.Height,colours.grey)
+Drawing.DrawBlankArea(e.X,e.Y,e.Width,1,colours.lightGrey)
+Drawing.DrawBlankArea(e.X,e.Y+1,e.Width,e.Height-1,colours.white)
+Drawing.DrawCharactersCenter(e.X,e.Y,e.Width,1,e.Title,colours.black,colours.lightGrey)
+Drawing.DrawCharacters(e.X+1,e.Y+2,"New Size",colours.lightGrey,colours.white)
+if(#e.WidthTextBox.TextInput.Value>0 and tonumber(e.WidthTextBox.TextInput.Value)<Current.Artboard.Width)or(#e.HeightTextBox.TextInput.Value>0 and tonumber(e.HeightTextBox.TextInput.Value)<Current.Artboard.Height)then
+Drawing.DrawCharacters(e.X+1,e.Y+8,"Clipping will occur!",colours.red,colours.white)
+end
+local t=colours.black
+if e.WidthLabelHighlight then
+t=colours.red
+end
+local a=colours.black
+if e.HeightLabelHighlight then
+a=colours.red
+end
+Drawing.DrawCharacters(e.X+1,e.Y+4,"Width",t,colours.white)
+Drawing.DrawCharacters(e.X+1,e.Y+6,"Height",a,colours.white)
+Drawing.DrawCharacters(e.X+14,e.Y+2,"Anchor",colours.lightGrey,colours.white)
+e.WidthTextBox:Draw()
+e.HeightTextBox:Draw()
+e.OkButton:Draw()
+e.Anchor1:Draw()
+e.Anchor2:Draw()
+e.Anchor3:Draw()
+e.Anchor4:Draw()
+e.Anchor5:Draw()
+e.Anchor6:Draw()
+e.Anchor7:Draw()
+e.Anchor8:Draw()
+e.Anchor9:Draw()
+end,
+Initialise=function(t,a)
+local e={}
+setmetatable(e,{__index=t})
+e.Width=27
+e.Height=10
+e.Return=a
+e.X=math.ceil((Drawing.Screen.Width-e.Width)/2)
+e.Y=math.ceil((Drawing.Screen.Height-e.Height)/2)
+e.Title='Resize Document'
+e.Visible=true
+e.WidthTextBox=TextBox:Initialise(9,5,4,1,e,tostring(Current.Artboard.Width),nil,nil,function()
+e:UpdateAnchorButtons()
+end,true)
+e.HeightTextBox=TextBox:Initialise(9,7,4,1,e,tostring(Current.Artboard.Height),nil,nil,function()
+e:UpdateAnchorButtons()
+end,true)
+e.OkButton=Button:Initialise(e.Width-4,e.Height-1,nil,nil,colours.lightGrey,e,function(t,t,t,t,t)
+local t=true
+e.WidthLabelHighlight=false
+e.HeightLabelHighlight=false
+if#e.WidthTextBox.TextInput.Value==0 or tonumber(e.WidthTextBox.TextInput.Value)<=0 then
+t=false
+e.WidthLabelHighlight=true
+end
+if#e.HeightTextBox.TextInput.Value==0 or tonumber(e.HeightTextBox.TextInput.Value)<=0 then
+t=false
+e.HeightLabelHighlight=true
+end
+if t then
+a(e,tonumber(e.WidthTextBox.TextInput.Value),tonumber(e.HeightTextBox.TextInput.Value),e.AnchorPosition)
+else
+Draw()
+end
+end,'Ok',colours.black)
+local a=15
+local t=5
+e.Anchor1=Button:Initialise(a,t,1,1,colours.lightGrey,e,function(t,t,t,t,t)e.AnchorPosition=1 e:UpdateAnchorButtons()end,' ',colours.black)
+e.Anchor2=Button:Initialise(a+1,t,1,1,colours.lightGrey,e,function(t,t,t,t,t)e.AnchorPosition=2 e:UpdateAnchorButtons()end,'^',colours.black)
+e.Anchor3=Button:Initialise(a+2,t,1,1,colours.lightGrey,e,function(t,t,t,t,t)e.AnchorPosition=3 e:UpdateAnchorButtons()end,' ',colours.black)
+e.Anchor4=Button:Initialise(a,t+1,1,1,colours.lightGrey,e,function(t,t,t,t,t)e.AnchorPosition=4 e:UpdateAnchorButtons()end,'<',colours.black)
+e.Anchor5=Button:Initialise(a+1,t+1,1,1,colours.lightGrey,e,function(t,t,t,t,t)e.AnchorPosition=5 e:UpdateAnchorButtons()end,'#',colours.black)
+e.Anchor6=Button:Initialise(a+2,t+1,1,1,colours.lightGrey,e,function(t,t,t,t,t)e.AnchorPosition=6 e:UpdateAnchorButtons()end,'>',colours.black)
+e.Anchor7=Button:Initialise(a,t+2,1,1,colours.lightGrey,e,function(t,t,t,t,t)e.AnchorPosition=7 e:UpdateAnchorButtons()end,' ',colours.black)
+e.Anchor8=Button:Initialise(a+1,t+2,1,1,colours.lightGrey,e,function(t,t,t,t,t)e.AnchorPosition=8 e:UpdateAnchorButtons()end,'v',colours.black)
+e.Anchor9=Button:Initialise(a+2,t+2,1,1,colours.lightGrey,e,function(t,t,t,t,t)e.AnchorPosition=9 e:UpdateAnchorButtons()end,' ',colours.black)
+return e
+end,
+UpdateAnchorButtons=function(e)
+local r=' '
+local n=' '
+local d=' '
+local a=' '
+local t=' '
+local o=' '
+local h=' '
+local i=' '
+local s=' '
+e.AnchorPosition=e.AnchorPosition or 5
+if e.AnchorPosition==1 then
+r='#'
+n='>'
+a='v'
+elseif e.AnchorPosition==2 then
+r='<'
+n='#'
+d='>'
+t='v'
+elseif e.AnchorPosition==3 then
+n='<'
+d='#'
+o='v'
+elseif e.AnchorPosition==4 then
+r='^'
+a='#'
+t='>'
+h='v'
+elseif e.AnchorPosition==5 then
+n='^'
+a='<'
+t='#'
+o='>'
+i='v'
+elseif e.AnchorPosition==6 then
+d='^'
+o='#'
+t='<'
+s='v'
+elseif e.AnchorPosition==7 then
+a='^'
+h='#'
+i='>'
+elseif e.AnchorPosition==8 then
+t='^'
+i='#'
+h='<'
+s='>'
+elseif e.AnchorPosition==9 then
+o='^'
+s='#'
+i='<'
+end
+if#e.HeightTextBox.TextInput.Value>0 and Current.Artboard.Height>tonumber(e.HeightTextBox.TextInput.Value)then
+local e=function(e)
+if string.find(e,"%^")then
+e=e:gsub('%^','v')
+elseif string.find(e,"v")then
+e=e:gsub('v','%^')
+end
+return e
+end
+r=e(r)
+n=e(n)
+d=e(d)
+a=e(a)
+t=e(t)
+o=e(o)
+h=e(h)
+i=e(i)
+s=e(s)
+end
+if#e.WidthTextBox.TextInput.Value>0 and Current.Artboard.Width>tonumber(e.WidthTextBox.TextInput.Value)then
+local e=function(e)
+if string.find(e,">")then
+e=e:gsub('>','<')
+elseif string.find(e,"<")then
+e=e:gsub('<','>')
+end
+return e
+end
+r=e(r)
+n=e(n)
+d=e(d)
+a=e(a)
+t=e(t)
+o=e(o)
+h=e(h)
+i=e(i)
+s=e(s)
+end
+e.Anchor1.Text=r
+e.Anchor2.Text=n
+e.Anchor3.Text=d
+e.Anchor4.Text=a
+e.Anchor5.Text=t
+e.Anchor6.Text=o
+e.Anchor7.Text=h
+e.Anchor8.Text=i
+e.Anchor9.Text=s
+end,
+Show=function(e)
+Current.Window=e
+return e
+end,
+Close=function(e)
+Current.Input=nil
+Current.Window=nil
+e=nil
+end,
+Flash=function(e)
+e.Visible=false
+Draw()
+sleep(.15)
+e.Visible=true
+Draw()
+sleep(.15)
+e.Visible=false
+Draw()
+sleep(.15)
+e.Visible=true
+Draw()
+end,
+ButtonClick=function(o,e,t,a)
+if e.X<=t and e.Y<=a and e.X+e.Width>t and e.Y+e.Height>a then
+e:Click()
+end
+end,
+Click=function(e,o,t,a)
+local e={e.OkButton,e.WidthTextBox,e.HeightTextBox,e.Anchor1,e.Anchor2,e.Anchor3,e.Anchor4,e.Anchor5,e.Anchor6,e.Anchor7,e.Anchor8,e.Anchor9}
+for i,e in ipairs(e)do
+if CheckClick(e,t,a)then
+e:Click(o,t,a)
+end
+end
+return true
+end
+}
+function CheckOpenArtboard()
+if Current.Artboard then
+return true
+else
+return false
+end
+end
+function CheckSelectedLayer()
+if Current.Artboard and Current.Layer then
+return true
+else
+return false
+end
+end
+function DisplayNewDocumentWindow()
+NewDocumentWindow:Initialise(function(i,a,e,n,o,t,s)
+if a then
+if e:sub(-4)~=t then
+e=e..t
+end
+local a=i
+Current.Input=nil
+Current.Window=nil
+makeDocument=function()a:Close()NewDocument(e,n,o,t,s)end
+local o=fs
+if OneOS then
+o=OneOS.FS
+end
+if o.exists(e)then
+ButtonDialougeWindow:Initialise('File Exists',e..' already exists! Use a different name and try again.','Ok',nil,function(e,t)
+e:Close()
+a:Show()
+end):Show()
+elseif t=='.nfp'then
+Current.Window=nil
+ButtonDialougeWindow:Initialise('Use NFP?','The NFT format does not support text or layers, if you use it you will only be able to use 1 layer and not have any text.','Use NFP','Cancel',function(t,e)
+t:Close()
+if e then
+makeDocument()
+else
+a:Show()
+end
+end):Show()
+elseif t=='.nft'then
+ButtonDialougeWindow:Initialise('Use NFT?','The NFT format does not support layers, if you use it you will only be able to use 1 layer.','Use NFT','Cancel',function(t,e)
+t:Close()
+if e then
+makeDocument()
+else
+a:Show()
+end
+end):Show()
+else
+makeDocument()
+end
+else
+i:Close()
+end
+end):Show()
+end
+function NewDocument(e,o,i,a,n)
+local t=fs
+if OneOS then
+t=OneOS.FS
+end
+ab=Artboard:New(t.getName(e),e,o,i,a,n)
+Current.Tool=Tools[2]
+Current.Toolbar:Update()
+Current.Modified=false
+Draw()
+end
+function DisplayToolSizeWindow()
+if not CheckOpenArtboard()then
+return
+end
+TextDialougeWindow:Initialise('Change Tool Size','Enter the new tool size you\'d like to use.','Ok','Cancel',function(a,e,t)
+if e then
+Current.ToolSize=math.ceil(tonumber(t))
+if Current.ToolSize<1 then
+Current.ToolSize=1
+elseif Current.ToolSize>50 then
+Current.ToolSize=50
+end
+ModuleNamed('Tools'):Update()
+end
+a:Close()
+end,true):Show()
+end
+function GetFormat(t)
+local e=fs
+if OneOS then
+e=OneOS.FS
+end
+local t=e.open(t,'r')
+local e=t.readAll()
+t.close()
+if type(textutils.unserialize(e))=='table'then
+return'.skch'
+elseif string.find(e,string.char(30))or string.find(e,string.char(31))then
+return'.nft'
+else
+return'.nfp'
+end
+end
+function DisplayOpenDocumentWindow()
+OpenDocumentWindow:Initialise(function(a,t,e)
+a:Close()
+if t then
+OpenDocument(e)
+end
+end):Show()
+end
+local function o(e,t)
+if not e then
+return nil
+elseif not string.find(fs.getName(e),'%.')then
+if not t then
+return fs.getName(e)
+else
+return''
+end
+else
+local a=e
+if e:sub(#e)=='/'then
+a=e:sub(1,#e-1)
+end
+local e=a:gmatch('%.[0-9a-z]+$')()
+if e then
+e=e:sub(2)
+else
+return''
+end
+if t then
+e='.'..e
+end
+return e:lower()
+end
+end
+local e=function(e)
+if e:sub(1,1)=='.'then
+return e
+end
+local t=o(e)
+if t==e then
+return fs.getName(e)
+end
+return string.gsub(e,t,''):sub(1,-2)
+end
+function OpenDocument(a)
+local e=fs
+if OneOS then
+e=OneOS.FS
+end
+if e.exists(a)and not e.isDir(a)then
+local e=o(a,true)
+if(not e or e=='')and(e~='.nfp'and e~='.nft'and e~='.skch')then
+e=GetFormat(a)
+end
+local t={}
+if e=='.nfp'then
+t=ReadNFP(a)
+elseif e=='.nft'then
+t=ReadNFT(a)
+elseif e=='.skch'then
+t=ReadSKCH(a)
+end
+for t,e in ipairs(t)do
+if e.Visible==nil then
+e.Visible=true
+end
+if e.Index==nil then
+e.Index=1
+end
+if e.Name==nil then
+if e.Index==1 then
+e.Name='Background'
+else
+e.Name='Layer'
+end
+end
+if e.BackgroundColour==nil then
+e.BackgroundColour=colours.white
+end
+end
+if not t[1]then
+return
+end
+local i=#t[1].Pixels
+local n=#t[1].Pixels[1]
+Current.Artboard=nil
+local o=fs
+if OneOS then
+o=OneOS.FS
+end
+ab=Artboard:New(o.getName('Image'),a,i,n,e,nil,t)
+Current.Tool=Tools[2]
+Current.Toolbar:Update()
+Current.Modified=false
+Draw()
+end
+end
+function MakeNewLayer()
+if not CheckOpenArtboard()then
+return
+end
+if Current.Artboard.Format=='.skch'then
+TextDialougeWindow:Initialise('New Layer Name','Enter the name you want for the next layer.','Ok','Cancel',function(a,e,t)
+if e then
+Current.Artboard:MakeLayer(t,colours.transparent)
+end
+a:Close()
+end):Show()
+else
+local e='NFP'
+if Current.Artboard.Format=='.nft'then
+e='NFT'
+end
+ButtonDialougeWindow:Initialise(e..' does not support layers!','The format you are using, '..e..', does not support multiple layers. Use SKCH to have more than one layer.','Ok',nil,function(e)
+e:Close()
+end):Show()
+end
+end
+function ResizeDocument()
+if not CheckOpenArtboard()then
+return
+end
+ResizeDocumentWindow:Initialise(function(e,s,n,i)
+e:Close()
+local t=0
+local a=0
+local e=0
+local o=0
+if i==1 then
+a=1
+e=1
+elseif i==2 then
+a=.5
+o=.5
+e=1
+elseif i==3 then
+o=1
+e=1
+elseif i==4 then
+a=1
+e=.5
+t=.5
+elseif i==5 then
+a=.5
+o=.5
+e=.5
+t=.5
+elseif i==6 then
+o=1
+e=.5
+t=.5
+elseif i==7 then
+a=1
+t=1
+elseif i==8 then
+a=.5
+o=.5
+t=1
+elseif i==9 then
+o=1
+t=1
+end
+t=t*(n-Current.Artboard.Height)
+if t>0 then
+t=math.floor(t)
+else
+t=math.ceil(t)
+end
+e=e*(n-Current.Artboard.Height)
+if e>0 then
+e=math.ceil(e)
+else
+e=math.floor(e)
+end
+o=o*(s-Current.Artboard.Width)
+if o>0 then
+o=math.floor(o)
+else
+o=math.ceil(o)
+end
+a=a*(s-Current.Artboard.Width)
+if a>0 then
+a=math.ceil(a)
+else
+a=math.floor(a)
+end
+Current.Artboard:Resize(t,e,o,a)
+end):Show()
+end
+function RenameLayer()
+if not CheckOpenArtboard()then
+return
+end
+if Current.Artboard.Format=='.skch'then
+TextDialougeWindow:Initialise("Rename Layer '"..Current.Layer.Name.."'",'Enter the new name you want the layer to be called.','Ok','Cancel',function(t,e,a)
+if e then
+Current.Layer.Name=a
+end
+t:Close()
+end):Show()
+else
+local e='NFP'
+if Current.Artboard.Format=='.nft'then
+e='NFT'
+end
+ButtonDialougeWindow:Initialise(e..' does not support layers!','The format you are using, '..e..', does not support renaming layers. Use SKCH to rename layers.','Ok',nil,function(e)
+e:Close()
+end):Show()
+end
+end
+function DeleteLayer()
+if not CheckOpenArtboard()then
+return
+end
+if Current.Artboard.Format=='.skch'then
+if#Current.Artboard.Layers>1 then
+ButtonDialougeWindow:Initialise("Delete Layer '"..Current.Layer.Name.."'?",'Are you sure you want delete the layer?','Ok','Cancel',function(e,t)
+if t then
+Current.Layer:Remove()
+end
+e:Close()
+end):Show()
+else
+ButtonDialougeWindow:Initialise('Can not delete layer!','You can not delete the last layer of an image! Make another layer to delete this one.','Ok',nil,function(e)
+e:Close()
+end):Show()
+end
+else
+local e='NFP'
+if Current.Artboard.Format=='.nft'then
+e='NFT'
+end
+ButtonDialougeWindow:Initialise(e..' does not support layers!','The format you are using, '..e..', does not support deleting layers. Use SKCH to deleting layers.','Ok',nil,function(e)
+e:Close()
+end):Show()
+end
+end
+needsDraw=false
+isDrawing=false
+function Draw()
+if isDrawing then
+needsDraw=true
+return
+end
+needsDraw=false
+isDrawing=true
+if not Current.Window then
+Drawing.Clear(UIColours.Background)
+else
+Drawing.DrawArea(1,2,Drawing.Screen.Width,Drawing.Screen.Height,'|',colours.black,colours.lightGrey)
+end
+if Current.Artboard then
+ab:Draw()
+end
+if Current.InterfaceVisible then
+Current.MenuBar:Draw()
+Current.Toolbar.Width=Current.Toolbar.ExpandedWidth
+Current.Toolbar:Draw()
+else
+Current.Toolbar.Width=Current.Toolbar.ExpandedWidth
+end
+if Current.InterfaceVisible and Current.Menu then
+Current.Menu:Draw()
+end
+if Current.Window then
+Current.Window:Draw()
+end
+if not Current.InterfaceVisible then
+ShowInterfaceButton:Draw()
+end
+Drawing.DrawBuffer()
+if Current.Input and not Current.Menu then
+term.setCursorPos(Current.CursorPos[1],Current.CursorPos[2])
+term.setCursorBlink(true)
+term.setTextColour(Current.CursorColour)
+else
+term.setCursorBlink(false)
+end
+if Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then
+Current.SelectionDrawTimer=os.startTimer(.5)
+end
+isDrawing=false
+if needsDraw then
+Draw()
+end
+end
+function LoadMenuBar()
+Current.MenuBar=MenuBar:Initialise({
+Button:Initialise(1,1,nil,nil,colours.grey,Current.MenuBar,function(e,a,a,a,t)
+if t then
+Menu:New(1,2,{
+{
+Title="New...",
+Click=function()
+DisplayNewDocumentWindow()
+end,
+Keys={
+keys.leftCtrl,
+keys.n
+}
+},
+{
+Title='Open...',
+Click=function()
+DisplayOpenDocumentWindow()
+end,
+Keys={
+keys.leftCtrl,
+keys.o
+}
+},
+{
+Separator=true
+},
+{
+Title='Save...',
+Click=function()
+Current.Artboard:Save()
+end,
+Keys={
+keys.leftCtrl,
+keys.s
+},
+Enabled=function()
+return CheckOpenArtboard()
+end
+},
+{
+Separator=true
+},
+{
+Title='Quit',
+Click=function()
+if Close()then
+OneOS.Close()
+end
+end
+},
+},e,true)
+else
+Current.Menu=nil
+end
+return true
+end,'File',colours.lightGrey,false),
+Button:Initialise(7,1,nil,nil,colours.grey,Current.MenuBar,function(e,t,t,t,t)
+if not e.Toggle then
+Menu:New(7,2,{
+{
+Title='Cut',
+Click=function()
+Clipboard.Cut(Current.Layer:PixelsInSelection(true),'sketchpixels')
+end,
+Keys={
+keys.leftCtrl,
+keys.x
+},
+Enabled=function()
+return Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil
+end
+},
+{
+Title='Copy',
+Click=function()
+Clipboard.Copy(Current.Layer:PixelsInSelection(),'sketchpixels')
+end,
+Keys={
+keys.leftCtrl,
+keys.c
+},
+Enabled=function()
+return Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil
+end
+},
+{
+Title='Paste',
+Click=function()
+Current.Layer:InsertPixels(Clipboard.Paste())
+end,
+Keys={
+keys.leftCtrl,
+keys.v
+},
+Enabled=function()
+return(not Clipboard.isEmpty())and Clipboard.Type=='sketchpixels'
+end
+}
+},e,true)
+else
+Current.Menu=nil
+end
+return true
+end,'Edit',colours.lightGrey,false),
+Button:Initialise(13,1,nil,nil,colours.grey,Current.MenuBar,function(i,t,t,t,e)
+if e then
+Menu:New(13,2,{
+{
+Title="Resize...",
+Click=function()
+ResizeDocument()
+end,
+Keys={
+keys.leftCtrl,
+keys.r
+},
+Enabled=function()
+return CheckOpenArtboard()
+end
+},
+{
+Title="Crop",
+Click=function()
+local o=0
+local a=0
+local t=0
+local e=0
+if Current.Selection[1].x<Current.Selection[2].x then
+a=Current.Selection[1].x-1
+e=Current.Artboard.Width-Current.Selection[2].x
+else
+a=Current.Selection[2].x-1
+e=Current.Artboard.Width-Current.Selection[1].x
+end
+if Current.Selection[1].y<Current.Selection[2].y then
+o=Current.Selection[1].y-1
+t=Current.Artboard.Height-Current.Selection[2].y
+else
+o=Current.Selection[2].y-1
+t=Current.Artboard.Height-Current.Selection[1].y
+end
+Current.Artboard:Resize(-1*o,-1*t,-1*a,-1*e)
+Current.Selection[2]=nil
+end,
+Enabled=function()
+if CheckSelectedLayer()and Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then
+return true
+else
+return false
+end
+end
+},
+{
+Separator=true
+},
+{
+Title='New Layer...',
+Click=function()
+MakeNewLayer()
+end,
+Keys={
+keys.leftCtrl,
+keys.l
+},
+Enabled=function()
+return CheckOpenArtboard()
+end
+},
+{
+Title='Delete Layer',
+Click=function()
+DeleteLayer()
+end,
+Enabled=function()
+return CheckSelectedLayer()
+end
+},
+{
+Title='Rename Layer...',
+Click=function()
+RenameLayer()
+end,
+Enabled=function()
+return CheckSelectedLayer()
+end
+},
+{
+Separator=true
+},
+{
+Title='Erase Selection',
+Click=function()
+Current.Layer:EraseSelection()
+end,
+Keys={
+keys.delete
+},
+Enabled=function()
+if CheckSelectedLayer()and Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then
+return true
+else
+return false
+end
+end
+},
+{
+Separator=true
+},
+{
+Title='Hide Interface',
+Click=function()
+Current.InterfaceVisible=not Current.InterfaceVisible
+end,
+Keys={
+keys.tab
+}
+}
+},i,true)
+else
+Current.Menu=nil
+end
+return true
+end,'Image',colours.lightGrey,false),
+Button:Initialise(20,1,nil,nil,colours.grey,Current.MenuBar,function(a,t,t,t,e)
+if e then
+local t={{
+Title="Change Size",
+Click=function()
+DisplayToolSizeWindow()
+end,
+Keys={
+keys.leftCtrl,
+keys.t
+}
+},
+{
+Separator=true
+}
+}
+local o={'h','p','e','f','s','m','t'}
+for a,e in ipairs(Tools)do
+table.insert(t,{
+Title=e.Name,
+Click=function()
+SetTool(e)
+local e=ModuleNamed('Tools')
+e:Update(e.ToolbarItem)
+end,
+Keys={
+keys[o[a]]
+},
+Enabled=function()
+return CheckOpenArtboard()
+end
+})
+end
+Menu:New(20,2,t,a,true)
+else
+Current.Menu=nil
+end
+return true
+end,'Tools',colours.lightGrey,false),
+})
+end
+function Timer(t,e)
+if e==Current.ControlPressedTimer then
+Current.ControlPressedTimer=nil
+elseif e==Current.SelectionDrawTimer then
+if Current.Artboard then
+Current.Artboard.SelectionIsBlack=not Current.Artboard.SelectionIsBlack
+Draw()
+end
+end
+end
+function Initialise(e)
+if not OneOS then
+SplashScreen()
+end
+EventRegister('mouse_click',TryClick)
+EventRegister('mouse_drag',function(o,a,t,e)TryClick(o,a,t,e,true)end)
+EventRegister('mouse_scroll',Scroll)
+EventRegister('key',HandleKey)
+EventRegister('char',HandleKey)
+EventRegister('timer',Timer)
+EventRegister('terminate',function(e)if Close()then error("Terminated",0)end end)
+Current.Toolbar=Toolbar:New('right',true)
+for t,e in pairs(Modules)do
+e:Initialise()
+end
+term.setBackgroundColour(UIColours.Background)
+term.clear()
+LoadMenuBar()
+local t=fs
+if OneOS then
+t=OneOS.FS
+end
+if e and t.exists(e)then
+OpenDocument(e)
+else
+DisplayNewDocumentWindow()
+Current.Window.Visible=false
+end
+ShowInterfaceButton=Button:Initialise(Drawing.Screen.Width-15,1,nil,1,colours.grey,nil,function(e)
+Current.InterfaceVisible=true
+Draw()
+end,'Show Interface')
+Draw()
+if Current.Window then
+Current.Window.Visible=true
+Draw()
+end
+EventHandler()
+end
+function SplashScreen()
+local e={{1,1,1,256,256,256,256,256,256,256,256,1,1,1,},{1,256,256,8,8,8,8,8,8,8,8,256,256,1,},{256,8,8,8,8,8,8,8,8,8,8,8,8,256,},{256,256,256,8,8,8,8,8,8,8,8,256,256,256,},{256,256,256,256,256,256,256,256,256,256,256,256,256,256,},{2048,2048,256,256,256,256,256,256,256,256,256,256,2048,2048,},{2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,},{2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,},{2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,},{2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,},{256,256,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,256,256,},{1,256,256,256,256,256,256,256,256,256,256,256,256,1,},{1,1,1,256,256,256,256,256,256,256,256,1,1,1,},["text"]={{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," ","S","k","e","t","c","h"," "," "," "," ",},{" "," "," "," "," "," ","b","y"," "," "," "," "," "," ",},{" "," "," "," "," ","o","e","e","d"," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},},["textcol"]={{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,256,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,1,1,1,1,1,1,32768,32768,32768,32768,},{32768,32768,32768,32768,8,8,8,8,8,8,8,32768,32768,32768,},{32768,32768,32768,32768,1,1,1,1,1,32768,8,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},},}
+Drawing.Clear(colours.white)
+Drawing.DrawImage((Drawing.Screen.Width-14)/2,(Drawing.Screen.Height-13)/2,e,14,13)
+Drawing.DrawBuffer()
+parallel.waitForAny(function()sleep(1)end,function()os.pullEvent('mouse_click')end)
+end
+LongestString=function(e,a)
+local t=0
+for o=1,#e do
+local e=e[o]
+if a then
+if e[a]then
+e=e[a]
+else
+e=''
+end
+end
+local e=string.len(e)
+if e>t then
+t=e
+end
+end
+return t
+end
+function HandleKey(...)
+local e={...}
+local a=e[1]
+local t=e[2]
+if a=='key'and Current.Tool and Current.Tool.Name=='Text'and Current.Input and(t==keys.up or t==keys.down or t==keys.left or t==keys.right)then
+local e={Current.CursorPos[1]-Current.Artboard.X+1,Current.CursorPos[2]-Current.Artboard.Y+1}
+if t==keys.up then
+e[2]=e[2]-1
+elseif t==keys.down then
+e[2]=e[2]+1
+elseif t==keys.left then
+e[1]=e[1]-1
+elseif t==keys.right then
+e[1]=e[1]+1
+end
+if e[1]<1 then
+e[1]=1
+end
+if e[1]>Current.Artboard.Width then
+e[1]=Current.Artboard.Width
+end
+if e[2]<1 then
+e[2]=1
+end
+if e[2]>Current.Artboard.Height then
+e[2]=Current.Artboard.Height
+end
+Current.Tool:Use(e[1],e[2])
+Current.Modified=true
+Draw()
+elseif Current.Input then
+if a=='char'then
+Current.Input:Char(t)
+elseif a=='key'then
+Current.Input:Key(t)
+end
+elseif a=='key'then
+CheckKeyboardShortcut(t)
+end
+end
+function Scroll(t,e,t,t)
+if Current.Window and Current.Window.OpenButton then
+Current.Window.Scroll=Current.Window.Scroll+e
+if Current.Window.Scroll<0 then
+Current.Window.Scroll=0
+elseif Current.Window.Scroll>Current.Window.MaxScroll then
+Current.Window.Scroll=Current.Window.MaxScroll
+end
+end
+Draw()
+end
+function CheckKeyboardShortcut(t)
+local e={}
+if t==keys.leftCtrl then
+Current.ControlPressedTimer=os.startTimer(.5)
+return
+end
+if Current.ControlPressedTimer then
+e[keys.n]=function()DisplayNewDocumentWindow()end
+e[keys.o]=function()DisplayOpenDocumentWindow()end
+e[keys.s]=function()Current.Artboard:Save()end
+e[keys.x]=function()if Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then Clipboard.Cut(Current.Layer:PixelsInSelection(true),'sketchpixels')end end
+e[keys.c]=function()if Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then Clipboard.Copy(Current.Layer:PixelsInSelection(),'sketchpixels')end end
+e[keys.v]=function()if(not Clipboard.isEmpty())and Clipboard.Type=='sketchpixels'then Current.Layer:InsertPixels(Clipboard.Paste())end end
+e[keys.r]=function()ResizeDocument()end
+e[keys.l]=function()MakeNewLayer()end
+end
+e[keys.delete]=function()if CheckSelectedLayer()and Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then Current.Layer:EraseSelection()Draw()end end
+e[keys.backspace]=e[keys.delete]
+e[keys.tab]=function()Current.InterfaceVisible=not Current.InterfaceVisible Draw()end
+e[keys.h]=function()SetTool(ToolNamed('Hand'))ModuleNamed('Tools'):Update()Draw()end
+e[keys.e]=function()SetTool(ToolNamed('Eraser'))ModuleNamed('Tools'):Update()Draw()end
+e[keys.p]=function()SetTool(ToolNamed('Pencil'))ModuleNamed('Tools'):Update()Draw()end
+e[keys.f]=function()SetTool(ToolNamed('Fill Bucket'))ModuleNamed('Tools'):Update()Draw()end
+e[keys.m]=function()SetTool(ToolNamed('Move'))ModuleNamed('Tools'):Update()Draw()end
+e[keys.s]=function()SetTool(ToolNamed('Select'))ModuleNamed('Tools'):Update()Draw()end
+e[keys.t]=function()SetTool(ToolNamed('Text'))ModuleNamed('Tools'):Update()Draw()end
+if e[t]then
+e[t]()
+return true
+else
+return false
+end
+end
+function CheckClick(e,t,a)
+if e.X<=t and e.Y<=a and e.X+e.Width>t and e.Y+e.Height>a then
+return true
+end
+end
+function DoClick(e,i,a,t,o)
+if e and CheckClick(e,a,t)then
+return e:Click(i,a-e.X+1,t-e.Y+1,o)
+end
+end
+function TryClick(e,a,i,o,t)
+if Current.InterfaceVisible and Current.Menu then
+if DoClick(Current.Menu,a,i,o,t)then
+Draw()
+return
+else
+if Current.Menu.Owner and Current.Menu.Owner.Toggle then
+Current.Menu.Owner.Toggle=false
+end
+Current.Menu=nil
+Draw()
+return
+end
+elseif Current.Window then
+if DoClick(Current.Window,a,i,o,t)then
+Draw()
+return
+else
+Current.Window:Flash()
+return
+end
+end
+local e={}
+if Current.InterfaceVisible then
+table.insert(e,Current.MenuBar)
+else
+table.insert(e,ShowInterfaceButton)
+end
+for a,t in ipairs(Lists.Interface.Toolbars)do
+for a,t in ipairs(t.ToolbarItems)do
+table.insert(e,t)
+end
+table.insert(e,t)
+end
+table.insert(e,Current.Artboard)
+for n,e in ipairs(e)do
+if DoClick(e,a,i,o,t)then
+Draw()
+return
+end
+end
+Draw()
+end
+function EventRegister(e,t)
+if not Events[e]then
+Events[e]={}
+end
+table.insert(Events[e],t)
+end
+function EventHandler()
+while true do
+local e,t,a,i,n=os.pullEventRaw()
+if Events[e]then
+for s,o in ipairs(Events[e])do
+o(e,t,a,i,n)
+end
+end
+end
+end
+local t={[10]="a",[11]="b",[12]="c",[13]="d",[14]="e",[15]="f"}
+local function a(e)
+if e==colours.transparent or not e or not tonumber(e)then
+return" "
+end
+local e=math.log(e)/math.log(2)
+if e>9 then
+e=t[e]
+end
+return e
+end
+local function h(e)
+if e==' 'then
+return colours.transparent
+end
+local e=tonumber(e,16)
+if not e then return nil end
+e=math.pow(2,e)
+return e
+end
+function SaveSKCH()
+local t={}
+for a,e in ipairs(Current.Artboard.Layers)do
+local a=SaveNFT(a)
+local e={
+Name=e.Name,
+Pixels=a,
+BackgroundColour=e.BackgroundColour,
+Visible=e.Visible,
+Index=e.Index,
+}
+table.insert(t,e)
+end
+return t
+end
+function SaveNFT(t)
+t=t or 1
+local n={}
+local h=Current.Artboard.Width
+local e=Current.Artboard.Height
+for s=1,e do
+local e=''
+local i=nil
+local o=nil
+for n=1,h do
+local t=Current.Artboard.Layers[t].Pixels[n][s]
+if t.BackgroundColour~=i then
+e=e..string.char(30)..a(t.BackgroundColour)
+i=t.BackgroundColour
+end
+if t.TextColour~=o then
+e=e..string.char(31)..a(t.TextColour)
+o=t.TextColour
+end
+e=e..t.Character
+end
+table.insert(n,e)
+end
+return n
+end
+function SaveNFP()
+local t={}
+local o=Current.Artboard.Width
+local e=Current.Artboard.Height
+for i=1,e do
+local e=''
+for t=1,o do
+e=e..a(Current.Artboard.Layers[1].Pixels[t][i].BackgroundColour)
+end
+table.insert(t,e)
+end
+return t
+end
+function ReadNFP(t)
+local a={}
+local e=fs
+if OneOS then
+e=OneOS.FS
+end
+local o=e.open(t,'r')
+local t=o.readLine()
+local i=1
+while t do
+for e=1,#t do
+if not a[e]then
+a[e]={}
+end
+a[e][i]={BackgroundColour=h(t:sub(e,e))}
+end
+i=i+1
+t=o.readLine()
+end
+o.close()
+return{{Pixels=a}}
+end
+function ReadNFT(t)
+local e=fs
+if OneOS then
+e=OneOS.FS
+end
+local t=e.open(t,'r')
+local e=t.readLine()
+local a={}
+while e do
+table.insert(a,e)
+e=t.readLine()
+end
+t.close()
+return{{Pixels=ParseNFT(a)}}
+end
+function ParseNFT(e)
+local a={}
+for d,r in ipairs(e)do
+local s,n=false,false
+local o,i=nil,nil
+local t=1
+for e=1,#r do
+if not a[t]then
+a[t]={}
+end
+local e=string.sub(r,e,e)
+if e:byte()==30 then
+s=true
+elseif e:byte()==31 then
+n=true
+elseif s then
+o=h(e)
+if o==nil then
+o=colours.transparent
+end
+s=false
+elseif n then
+i=h(e)
+n=false
+else
+if e~=" "and i==nil then
+i=colours.white
+end
+a[t][d]={BackgroundColour=o,TextColour=i,Character=e}
+t=t+1
+end
+end
+end
+return a
+end
+function ReadSKCH(t)
+local e=fs
+if OneOS then
+e=OneOS.FS
+end
+local e=e.open(t,'r')
+local a=textutils.unserialize(e.readAll())
+e.close()
+local t={}
+for a,e in ipairs(a)do
+local e={
+Name=e.Name,
+Pixels=ParseNFT(e.Pixels),
+BackgroundColour=e.BackgroundColour,
+Visible=e.Visible,
+Index=e.Index,
+}
+table.insert(t,e)
+end
+return t
+end
+if term.isColor and term.isColor()then
+Initialise(...)
+else
+print('Sorry, but Sketch only works on Advanced (gold) Computers')
 end
