@@ -18,7 +18,7 @@ Defaults = {
 	DownloadPrereleases = {
 		Type = 'Bool',
 		Label = 'Download Betas',
-		Default = true,
+		Default = false,
 	},
 	StartupProgram = {
 		Type = 'Program',

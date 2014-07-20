@@ -621,9 +621,11 @@ function HandleTimer(self, event, timer)
 	if self.Timers[timer] then
 		local oldTimer = self.Timers[timer]
 		self.Timers[timer] = nil
-		oldTimer[1]()
-		if oldTimer[2] then
-			self:StartRepeatingTimer(oldTimer[1], oldTimer[3])
+		if oldTimer and oldTimer[1] then
+			oldTimer[1]()
+			if oldTimer[2] then
+				self:StartRepeatingTimer(oldTimer[1], oldTimer[3])
+			end
 		end
 	elseif self.OnTimer then
 		self.OnTimer(self, event, timer)

@@ -85,6 +85,7 @@ function downloadBlob(v)
 		local h = OneOS.FS.open('/'..v.path, 'w')
 		h.write(f.readAll())
 		h.close()
+		OneOS.Log.i('Downloaded: '..v.path)
 
 		if v.size then
 			downloadedBytes = downloadedBytes + v.size

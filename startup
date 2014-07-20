@@ -131,10 +131,7 @@ if h then
 	version = h.readAll()
 	h.close()
 else
-	local h = fs.open('/System/.version', 'w')
-	h.write('v1.2.0') --assumed minimum version. if there's a newer one it'll update them
-	h.close()
-	version = 'Not set. Using v1.2.0'
+	version = 'Not set'
 end
 Log.i('OneOS Version: '..version)
 
@@ -232,6 +229,7 @@ function LoadingScreen()
 		if not isDebug then
 			if math.floor(_*(8/#apis)) ~= currentImage then
 				currentImage = math.floor(_*(8/#apis))
+				Log.i('Loading image: System/Images/Boot/boot'..currentImage)
 				local image = paintutils.loadImage('System/Images/Boot/boot'..currentImage)
 				paintutils.drawImage(image, x, y)
 				sleep(0)
@@ -516,34 +514,6 @@ if not term.isColour() then
 	term.setCursorPos(1,1)
 
 elseif Start() then
-	if fs.exists('/.update/') and fs.isDir('/.update/') then
-		if not fs.exists('/.update/.version') then
-			fs.delete('/.update/')
-		else
-
-			function installFolder(path)
-				for i, v in ipairs(fs.list('/.update/'..path)) do
-					Drawing.DrawArea(1, math.floor(Drawing.Screen.Height / 2), Drawing.Screen.Width, 1, ' ', colours.lightGrey, colours.white)
-					Drawing.DrawCharactersCenter(nil, 0, nil, nil, path .. v, colours.lightGrey, colours.white)
-					Drawing.DrawBuffer()
-					if fs.isDir('/.update/'..path .. v) then
-						fs.makeDir('/'..path .. v)
-						installFolder(path .. v .. '/')
-					else
-						fs.delete('/'..path .. v)
-						fs.move('/.update/'..path .. v, '/'..path .. v)
-					end
-					sleep(0)
-				end
-			end
-			Drawing.Clear(colours.white)
-			Drawing.DrawCharactersCenter(nil, -3, nil, nil, 'Installing Update', colours.blue, colours.white)
-			Drawing.DrawCharactersCenter(nil, -2, nil, nil, 'This may take a moment.', colours.grey, colours.white)
-			Drawing.DrawBuffer()
-			installFolder('')
-			fs.delete('/.update/')
-		end
-	end
 	os.run(getfenv(), '/System/main.lua')
 
 	local ok = nil
@@ -583,6 +553,7 @@ elseif Start() then
 			term.clear()
 			local w,h = term.getSize()
 			if fs.exists('System/Images/crash') then
+				Log.i('Loading image: System/Images/crash')
 				paintutils.drawImage(paintutils.loadImage('System/Images/crash'), (w-7)/2 + 1, 3)
 			end
 			term.setBackgroundColor(colours.grey)
@@ -604,7 +575,11 @@ elseif Start() then
 		term.clear()
 		local w,h = term.getSize()
 		if fs.exists('/System/Images/crash') then
-			paintutils.drawImage(paintutils.loadImage('/System/Images/crash'), (w-7)/2 + 1, 3)
+			Log.i('Loading image: System/Images/crash')
+			local img = paintutils.loadImage('/System/Images/crash')
+			if img and w then
+				paintutils.drawImage(img, (w-7)/2 + 1, 3)
+			end
 		else
 			table.insert(ok, 'Crash image nonexistent!')
 		end
