@@ -399,7 +399,7 @@ local function addFolder(path, input)
 		local _path = path .. '/' .. file
 		if fs.isDir(_path) then
 			input = addFolder(_path, input)
-		elseif file:sub(1,1) ~= '.' then
+		elseif file:sub(1,1) ~= '.' and not file:find('.log') then
 			input = addFile(_path, input)
 		end
 	end
@@ -674,7 +674,7 @@ elseif Start() then
 
 					local detailString = textutils.serialize(detail) ..'\n\n'
 
-					local h = fs.open('/System/OneOS.log')
+					local h = fs.open('/System/OneOS.log', 'r')
 					if h then
 						detailString = detailString .. 'Log:\n'..h.readAll()
 						h.close()

@@ -48,14 +48,18 @@ UpdateButtons = function(self)
 	if Current.Program then
 		if Current.Program.Environment.OneOS.ToolBarColor ~= colours.white then
 			self.BackgroundColour = Current.Program.Environment.OneOS.ToolBarColor
+			Current.Program.Environment.OneOS.ToolBarColour = Current.Program.Environment.OneOS.ToolBarColor
 		else
 			self.BackgroundColour = Current.Program.Environment.OneOS.ToolBarColour
+			Current.Program.Environment.OneOS.ToolBarColor = Current.Program.Environment.OneOS.ToolBarColour
 		end
 		
 		if Current.Program.Environment.OneOS.ToolBarTextColor ~= colours.black then
 			self.TextColour = Current.Program.Environment.OneOS.ToolBarTextColor
+			Current.Program.Environment.OneOS.ToolBarTextColour = Current.Program.Environment.OneOS.ToolBarTextColor
 		else
 			self.TextColour = Current.Program.Environment.OneOS.ToolBarTextColour
+			Current.Program.Environment.OneOS.ToolBarTextColor = Current.Program.Environment.OneOS.ToolBarTextColour
 		end
 	else
 		self.BackgroundColour = colours.white

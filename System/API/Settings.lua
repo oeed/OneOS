@@ -25,6 +25,11 @@ Defaults = {
 		Label = 'Startup Program',
 		Default = nil,
 	},
+	DoubleClick = {
+		Type = 'Bool',
+		Label = 'Double Click',
+		Default = false,
+	},
 	Monitor = {
 		Type = 'Side',
 		Label = 'Monitor Side',

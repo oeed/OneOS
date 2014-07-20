@@ -201,7 +201,7 @@ end)
 end
 Drawing.DrawBlankArea(e.X+1,e.Y+1,e.Width,e.Height,colours.grey)
 Drawing.DrawBlankArea(e.X,e.Y,e.Width,e.Height,colours.white)
-Drawing.DrawCharacters(e.X+8,e.Y+1,e.Title,colours.black,colours.white)
+Drawing.DrawCharacters(e.X+8,e.Y+1,tostring(e.Title),colours.black,colours.white)
 if e.Type~=2 then
 Drawing.DrawCharacters(e.X+8,e.Y+2,"by "..e.Author,colours.grey,colours.white)
 Drawing.DrawCharacters(e.Width-8,e.Y+t-1," Install ",colours.white,colours.green)
@@ -284,7 +284,7 @@ elseif e.Type==2 then
 t=1
 end
 for o,a in ipairs(e.Description)do
-Drawing.DrawCharacters(e.X+8,e.Y+t+o,a,colours.lightGrey,colours.white)
+Drawing.DrawCharacters(e.X+8,e.Y+t+o,tostring(a),colours.lightGrey,colours.white)
 end
 end,
 Initialise=function(o,i,r,n,c,l,u,d,s,h,a,t)

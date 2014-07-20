@@ -424,6 +424,7 @@ end
 
 function ForceDraw(self)
 	if not self.DrawTimer or self.DrawTimerExpiry <= os.clock() then
+		self.DrawTimer = true
 		self.DrawTimer = self:StartTimer(function()
 			self.DrawTimer = nil
 			self:Draw()
@@ -600,7 +601,6 @@ function StartRepeatingTimer(self, func, interval)
 		return
 	end
 	local timer = os.startTimer(int)
-
 	self.Timers[timer] = {func, true, interval}
 	return timer
 end

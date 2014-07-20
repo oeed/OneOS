@@ -170,11 +170,11 @@ function NoFileClick(self, event, side, x, y)
 		end
 
 		program:GetObject('NewFolderMenuItem').OnClick = function(_item)
-			OneOS.Helpers.NewFolder(OneOS.Helpers.ParentFolder(item.Path)..'/', RefreshFiles, program)
+			OneOS.Helpers.NewFolder(Current.Path, RefreshFiles, program)
 		end
 
 		program:GetObject('NewFileMenuItem').OnClick = function(_item)
-			OneOS.Helpers.NewFile(OneOS.Helpers.ParentFolder(item.Path)..'/', RefreshFiles, program)
+			OneOS.Helpers.NewFile(Current.Path, RefreshFiles, program)
 		end
 			
 	end

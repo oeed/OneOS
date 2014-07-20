@@ -118,7 +118,6 @@ OnDraw = function(self, x, y)
 		if Current.Overlay and self.CachedProgram and self.CachedProgram.Environment and (Current.Program.Environment.OneOS.ToolBarColor ~= Current.Overlay.BackgroundColour or Current.Program.Environment.OneOS.ToolBarColour ~= Current.Overlay.BackgroundColour  or Current.Program.Environment.OneOS.ToolBarTextColor ~= Current.Overlay.TextColour  or Current.Program.Environment.OneOS.ToolBarTextColour ~= Current.Overlay.TextColour) then
 			UpdateOverlay()
 		end
-
 		self:DrawProgram(Current.Program, x, y)
 		self.CachedProgram = Current.Program
 		self.CachedIndex = currentIndex
@@ -139,15 +138,22 @@ OnDraw = function(self, x, y)
 end
 
 DrawAnimation = function(self)
-	self.Animation.Function(self.Animation.Count)
-	self.Animation.Count = self.Animation.Count - 1
-	if self.Animation.Count <= 0 then
+	if Settings:GetValues()['UseAnimations'] then
+		self.Animation.Function(self.Animation.Count)
+		self.Animation.Count = self.Animation.Count - 1
+		if self.Animation.Count <= 0 then
+			self.Animation = nil
+			self.CachedProgram = Current.Program
+			self.CachedIndex = currentIndex
+		end
+		self:ForceDraw()
+	else
 		self.Animation = nil
 		self.CachedProgram = Current.Program
 		self.CachedIndex = currentIndex
+		self:ForceDraw()
+		self.Bedrock:Draw()
 	end
-	self:ForceDraw()
-	--self.Bedrock:Draw()
 end
 
 DrawProgram = function(self, program, x, y)
@@ -174,34 +180,3 @@ end
 
 OnDrag = OnClick
 OnScroll = OnClick
-
-
---[[
-for i, program in ipairs(Current.Programs) do
-			if program == self then
-				table.remove(Current.Programs, i)
-
-				if Current.Programs[i] then
-					--Current.Program = Current.Programs[i]
-					Animation.SwipeProgram(self, Current.Programs[i], 1)
-				elseif Current.Programs[i-1] then
-					--Current.Program = Current.Programs[i-1]
-					Animation.SwipeProgram(self, Current.Programs[i-1], -1)
-				end
-				break
-			end
-		end
-
-		if Desktop then
-			Desktop:RefreshFiles()
-		UpdateOverlay()
-		if Current.Program then
-			Drawing.Clear(colours.black)
-			Drawing.DrawBuffer()
-			os.queueEvent('oneos_draw')
-		else
-			if Desktop then
-				--Desktop:Draw()
-			end
-		end
-]]--

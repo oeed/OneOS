@@ -63,11 +63,11 @@ bedrock.EventHandler = function(self)
 	end
 	local event = { os.pullEventRaw() }
 
-	-- local s = 'Event: '
-	-- for i, v in ipairs(event) do
-	-- 	s = s..tostring(v)..', '
-	-- end
-	-- Log.i(s)
+	local s = 'Event: '
+	for i, v in ipairs(event) do
+		s = s..tostring(v)..', '
+	end
+	Log.i(s)
 
 	if self.EventHandlers[event[1]] then
 		for i, e in ipairs(self.EventHandlers[event[1]]) do
@@ -116,7 +116,6 @@ function AnimateShutdown(restart, animate)
 		Drawing.Clear(colours.white)
 		Drawing.DrawBuffer()
 		sleep(0)
-		Log.i('out')
 		local x = 0
 		local y = 0
 		local w = 0

@@ -4,6 +4,7 @@ BackgroundColour = colours.transparent
 Path = ''
 Width = 10
 Height = 4
+ClickTime = nil
 
 OnLoad = function(self)
 	self.Width = 10
@@ -38,7 +39,21 @@ OnLoad = function(self)
 			Name = 'ShortcutLabel'
 		})
 	end
-	local click = function(obj, event, side, x, y) self:OnClick(event, side, x, y, obj) end
+	local click = function(obj, event, side, x, y)
+		--local settings = OneOS.Settings or Settings
+		local setting = false
+		if OneOS then
+			setting = OneOS.Settings:GetValues()['DoubleClick']
+		else
+			setting = Settings:GetValues()['DoubleClick'] 
+		end
+		--s:GetValues()['DoubleClick']
+		if side == 1 and setting and (not self.ClickTime or os.clock() - self.ClickTime <= 0.5) then
+			self.ClickTime = os.clock()
+		else
+			self:OnClick(event, side, x, y, obj)
+		end
+	end
 
 	label.OnClick = click
 	image.OnClick = click

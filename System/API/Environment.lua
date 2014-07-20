@@ -270,7 +270,7 @@ end
 
 FS = function(env, program, path)
 	local function doIndex()
-		_G.indexTimer = os.startTimer(Indexer.FSIndexRate)
+		Current.Bedrock:StartTimer(Indexer.DoIndex, 4)
 	end
 	local relPath = Helpers.RemoveFileName(path)
 	local list = {}

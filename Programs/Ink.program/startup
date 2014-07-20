@@ -58,7 +58,93 @@ end
 local s=function(e)
 return e:gsub('['..string.char(14)..'-'..string.char(29)..']','')
 end
-OneOS.LoadAPI('System/API/Printer.lua')
+Printer = {
+Name = nil,
+PeripheralType = 'printer',
+paperLevel = function(self)
+return Peripheral.CallNamed(self.Name, 'getPaperLevel')
+end,
+newPage = function(self)
+return Peripheral.CallNamed(self.Name, 'newPage')
+end,
+endPage = function(self)
+return Peripheral.CallNamed(self.Name, 'endPage')
+end,
+pageWrite = function(self, text)
+return Peripheral.CallNamed(self.Name, 'write', text)
+end,
+setPageTitle = function(self, title)
+return Peripheral.CallNamed(self.Name, 'setPageTitle', title)
+end,
+inkLevel = function(self)
+return Peripheral.CallNamed(self.Name, 'getInkLevel')
+end,
+getCursorPos = function(self)
+return Peripheral.CallNamed(self.Name, 'getCursorPos')
+end,
+setCursorPos = function(self, x, y)
+return Peripheral.CallNamed(self.Name, 'setCursorPos', x, y)
+end,
+pageSize = function(self)
+return Peripheral.CallNamed(self.Name, 'getPageSize')
+end,
+Present = function()
+if Peripheral.GetPeripheral(Printer.PeripheralType) == nil then
+return false
+else
+return true
+end
+end,
+PrintLines = function(self, lines, title, copies)
+local pages = {}
+local pageLines = {}
+for i, line in ipairs(lines) do
+table.insert(pageLines, TextLine:Initialise(s(line)))
+if i % 25 == 0 then
+table.insert(pages, pageLines)
+pageLines = {}
+end
+end
+if #pageLines ~= 0 then
+table.insert(pages, pageLines)
+end
+return self:PrintPages(pages, title, copies)
+end,
+PrintPages = function(self, pages, title, copies)
+copies = copies or 1
+for c = 1, copies do
+for p, page in ipairs(pages) do
+if self:paperLevel() < #pages * copies then
+return 'Add more paper to the printer'
+end
+if self:inkLevel() < #pages * copies then
+return 'Add more ink to the printer'
+end
+self:newPage()
+for i, line in ipairs(page) do
+self:setCursorPos(1, i)
+self:pageWrite(s(line.Text))
+end
+if title then
+self:setPageTitle(title)
+end
+self:endPage()
+end
+end
+end,
+Initialise = function(self, name)
+if Printer.Present() then --fix
+local new = {}    -- the new instance
+setmetatable( new, {__index = self} )
+if name and Peripheral.PresentNamed(name) then
+new.Name = name
+else
+new.Name = Peripheral.GetPeripheral(Printer.PeripheralType).Side
+end
+return new
+end
+end
+}
 Clipboard=OneOS.Clipboard
 OneOS.LoadAPI('System/API/Drawing.lua')
 Current={
