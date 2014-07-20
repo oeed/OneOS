@@ -294,7 +294,7 @@ function AutoUpdateResponse(self, event, url, data)
 			end
 			return
 		elseif SematicVersionIsNewer(GetSematicVersion(latestReleaseTag), GetSematicVersion(version)) then			
-			Log.i('New version of OneOS available.')
+			Log.i('New version of OneOS available. (from '..version..' to '..latestReleaseTag..')')
 			if bedrock.Window then
 				bedrock.Window:Close()
 			end

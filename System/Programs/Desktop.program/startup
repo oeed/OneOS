@@ -113,6 +113,7 @@ function FileClick(self, event, side, x, y, obj)
 	if side == 1 then
 		OneOS.Helpers.OpenFile(self.Path)
 	elseif side == 2 then
+		obj = obj or self
 		if obj:ToggleMenu('filemenu', x, y) then
 			self.Bedrock:GetObject('OpenMenuItem').OnClick = function(itm)
 				OneOS.Helpers.OpenFile(self.Path)
