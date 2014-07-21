@@ -23,14 +23,16 @@ OpenFile = function(path, args)
 			Helpers.OpenFile(shortcutPointer, tArgs)
 		elseif extension == 'program' and fs.isDir(path) and fs.exists(path..'/startup') then
 			return LaunchProgram(path..'/startup', args, Helpers.RemoveExtension(fs.getName(path)))
+		elseif extension == 'program' and not fs.isDir(path) then
+			return LaunchProgram(path, args, Helpers.RemoveExtension(fs.getName(path)))
 		elseif fs.isDir(path) then
 			LaunchProgram('/System/Programs/Files.program/startup', {path}, 'Files')
 		elseif extension then
 			local _path = Indexer.FindFileInFolder(extension, 'Icons')
-			if _path then
+			if _path and not _path:find('System/Images/Icons/') then
 				Helpers.OpenFile(Helpers.ParentFolder(Helpers.ParentFolder(_path)), {path})
-			else
-
+			elseif _path then
+				OpenFileWith(path)
 			end
 		else
 			OpenFileWith(path)
@@ -382,7 +384,7 @@ OpenFileWith = function(path, bedrock)
 	local view = {
 		Children = {children},
 		Width=28,
-		Height=10+height,
+		Height=10+height
 	}
 	bedrock:DisplayWindow(view, 'Open With')
 

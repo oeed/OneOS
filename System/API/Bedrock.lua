@@ -166,12 +166,6 @@ function HandleKeyChar(self, event, keychar)
 				--self:Draw()
 			end
 		end
---[[
-	elseif keychar == keys.up then
-		Scroll('mouse_scroll', -1)
-	elseif keychar == keys.down then
-		Scroll('mouse_scroll', 1)
-]]--
 	end
 end
 
@@ -388,7 +382,7 @@ function ObjectFromFile(self, file, view)
 		end
 		return object
 	elseif not file.Type then
-		error('No object type specified. (e.g. Type = "Button")')
+		error('No object type specified. (e.g. Type = "Button") Name: '..(file.Name or '?'))
 	else
 		error('No Object: '..file.Type..'. The API probably isn\'t loaded')
 	end
@@ -632,9 +626,12 @@ function HandleTimer(self, event, timer)
 	end
 end
 
+local prevObj = nil
 function SetActiveObject(self, object)
-	if object then
+	if object or (not object and prevObj) then
+		object = object or prevObj
 		if object ~= self.ActiveObject then
+			prevObj = self.ActiveObject
 			self.ActiveObject = object
 			object:ForceDraw()
 		end

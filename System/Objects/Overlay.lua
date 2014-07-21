@@ -12,7 +12,7 @@ end
 OnLoad = function(self)
 	self:GetObject('OneButton').OnClick = function(btn)
 		if btn:ToggleMenu('onemenu') then
-			--TODO: updating
+
 			self.Bedrock:GetObject('DesktopMenuItem').OnClick = function(itm)
 				Current.Desktop:SwitchTo()
 			end
@@ -23,6 +23,10 @@ OnLoad = function(self)
 
 			self.Bedrock:GetObject('SettingsMenuItem').OnClick = function(itm)
 				Helpers.OpenFile('System/Programs/Settings.program')
+			end
+
+			self.Bedrock:GetObject('UpdateMenuItem').OnClick = function(itm)
+				CheckAutoUpdate(true)
 			end
 
 			self.Bedrock:GetObject('RestartMenuItem').OnClick = function(itm)

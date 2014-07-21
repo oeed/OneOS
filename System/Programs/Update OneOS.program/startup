@@ -119,13 +119,8 @@ function StartUpdate()
 	OneOS.Log.i('Latest release: '..latestReleaseTag)
 
 	OneOS.Log.i('Optaining Latest Version URL')
-	local refs = downloadJSON('https://api.github.com/repos/oeed/OneOS/git/refs')
-	local latestReleaseSha = ''
-	for i, v in ipairs(refs) do
-		if v.ref == 'refs/tags/'..latestReleaseTag then
-			latestReleaseSha = v.object.sha
-		end
-	end
+	local refs = downloadJSON('https://api.github.com/repos/'..Settings.GitHubUsername..'/'..Settings.GitHubRepoName..'/git/refs/tags/'..latestReleaseTag)
+	local latestReleaseSha = refs.object.sha
 
 	OneOS.Log.i('Downloading tree for SHA: '..latestReleaseSha)
 	local tree = downloadJSON('https://api.github.com/repos/oeed/OneOS/git/trees/'..latestReleaseSha..'?recursive=1').tree
