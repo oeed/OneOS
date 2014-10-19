@@ -240,7 +240,7 @@ program.OnKeyChar = function(self, event, key)
 end
 
 program:Run(function()
-	program:LoadView('main', false)
+	program:LoadView('main')
 	UpdateBackground()
 	OneOS.Settings.SetDesktopColourChange(UpdateBackground)
 	ReloadFiles()

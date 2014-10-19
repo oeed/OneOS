@@ -10,7 +10,8 @@ local e=10^(e or 0)
 return math.floor(t*e+.5)/e
 end
 Clipboard=OneOS.Clipboard
-OneOS.LoadAPI('System/API/Drawing.lua')
+OneOS.LoadAPI('System/API/LegacyDrawing.lua')
+local Drawing = LegacyDrawing
 UIColours={
 Toolbar=colours.grey,
 ToolbarText=colours.lightGrey,

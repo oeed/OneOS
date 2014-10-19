@@ -1,5 +1,8 @@
-local bedrock = Bedrock:Initialise()
-
+-- Bedrock.Helpers = Helpers
+local bedrock = Bedrock:Initialise('/System')
+bedrock.ViewPath ='/System/Views/'
+-- _G.Helpers = Helpers
+-- error(Helpers.IconForFile)
 bedrock.AllowTerminate = false
 
 if type(term.native) == 'function' then

@@ -31,9 +31,19 @@ function addErrorHandler(program, api, apiName)
 	return newApi
 end
 
+GetCleanEnvironment = function(self)
+	local cleanEnv = {}
+	for k, v in pairs(cleanEnvironment) do
+		cleanEnv[k] = v
+	end
+	return cleanEnv
+end
+
 Initialise = function(self, program, shell, path)
 	local env = {}    -- the new instance
-	setmetatable( env, {__index = _G} )
+	local cleanEnv = self:GetCleanEnvironment()
+	setmetatable( env, {__index = cleanEnv} )
+	env._G = cleanEnv
 	env.fs = addErrorHandler(program, self.FS(env, program, path), 'FS API')
 	env.io = addErrorHandler(program, self.IO(env, program, path), 'IO API')
 	env.os = addErrorHandler(program, self.OS(env, program, path), 'OS API')
@@ -200,7 +210,6 @@ OneOS = function(env, program, path)
 			end
 			
 			env[sName] = tAPI
-
 			tAPIsLoading[sName] = nil
 			return true
 		end,

@@ -361,7 +361,7 @@ OpenFileWith = function(path, bedrock)
 			["Name"]="ListView",
 			["Type"]="ListView",
 			["TextColour"]=128,
-			["BackgroundColour"]=-1,
+			["BackgroundColour"]=0,
 			["CanSelect"]=true,
 			["Items"]={
 				{["Text"] = 'Desktop', ["Path"] = '/Desktop/'},
@@ -388,4 +388,37 @@ OpenFileWith = function(path, bedrock)
 	}
 	bedrock:DisplayWindow(view, 'Open With')
 
+end
+
+LongestString = function(input, key, isKey)
+	local length = 0
+	if isKey then
+		for k, v in pairs(input) do
+			local titleLength = string.len(k)
+			if titleLength > length then
+				length = titleLength
+			end
+		end
+	else
+		for i = 1, #input do
+			local value = input[i]
+			if key then
+				if value[key] then
+					value = value[key]
+				else
+					value = ''
+				end
+			end
+			local titleLength = string.len(value)
+			if titleLength > length then
+				length = titleLength
+			end
+		end
+	end
+	return length
+end
+
+Round = function(num, idp)
+	local mult = 10^(idp or 0)
+	return math.floor(num * mult + 0.5) / mult
 end

@@ -23,7 +23,7 @@
       ["Name"]="Sidebar",
       ["Type"]="ListView",
       ["TextColour"]=128,
-      ["BackgroundColour"]=-1,
+      ["BackgroundColour"]=0,
       ["TopMargin"]=1,
       ["Items"]={
         ["Places"]={
@@ -52,7 +52,7 @@
       ["Name"]="FilesCollectionView",
       ["Type"]="CollectionView",
       ["TextColour"]=128,
-      ["BackgroundColour"]=-1,
+      ["BackgroundColour"]=0,
       ["Items"]={}
     },
     [6]={
@@ -63,7 +63,7 @@
       ["Name"]="FilesListView",
       ["Type"]="ListView",
       ["TextColour"]=128,
-      ["BackgroundColour"]=-1,
+      ["BackgroundColour"]=0,
       ["Items"]={}
     },
     [7]={
@@ -74,7 +74,7 @@
       ["Name"]="FilesPeripheralView",
       ["Type"]="PeripheralView",
       ["TextColour"]=128,
-      ["BackgroundColour"]=-1,
+      ["BackgroundColour"]=0,
       ["Items"]={}
     },
   },

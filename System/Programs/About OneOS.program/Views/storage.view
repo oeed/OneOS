@@ -2,7 +2,7 @@
   ["Width"]="100%",
   ["Height"]=5,
   ["Type"]="View",
-  ["BackgroundColour"]=-1,
+  ["BackgroundColour"]=0,
   ["Children"]={
 	[1]={
       ["Y"]=1,

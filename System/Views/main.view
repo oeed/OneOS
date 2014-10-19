@@ -15,7 +15,7 @@
       ["Y"]=1,
       ["Width"]="100%",
       ["Height"]="100%",
-      ["BackgroundColour"]=-1,
+      ["BackgroundColour"]=0,
     },
     [3]={
       ["Y"]=2,

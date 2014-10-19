@@ -13,7 +13,7 @@
       ["Type"]="Button",
       ["Text"]="One",
       ["Toggle"]=false,
-      ["BackgroundColour"]=-1
+      ["BackgroundColour"]=0
     },
     [2]={
       ["Y"]=1,
@@ -22,7 +22,7 @@
       ["Type"]="Button",
       ["Text"]="@",
       ["Toggle"]=false,
-      ["BackgroundColour"]=-1 
+      ["BackgroundColour"]=0 
     },
   },
 }

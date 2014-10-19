@@ -1,4 +1,9 @@
-isDebug = false
+cleanEnvironment = {}
+for k, v in pairs(_G) do
+	cleanEnvironment[k] = v
+end
+
+isDebug = true
 
 oldTerm = term
 
@@ -92,15 +97,15 @@ function LoadAPI(_sPath)
 	if not tAPI then
 		log('Could not find API: '..sName)
 		error('Could not find API: '..sName)
-	elseif _sPath:find('Objects') then
-		tAPI.__index = Object
-		if tAPI.Inherit then
-			if not getfenv()[tAPI.Inherit] then
-				LoadAPI('System/Objects/'..tAPI.Inherit..'.lua')
-			end
-			tAPI.__index = getfenv()[tAPI.Inherit]
-		end
-		setmetatable(tAPI, tAPI)
+	-- elseif _sPath:find('Objects') then
+	-- 	tAPI.__index = Object
+	-- 	if tAPI.Inherit then
+	-- 		if not getfenv()[tAPI.Inherit] then
+	-- 			LoadAPI('System/Objects/'..tAPI.Inherit..'.lua')
+	-- 		end
+	-- 		tAPI.__index = getfenv()[tAPI.Inherit]
+	-- 	end
+	-- 	setmetatable(tAPI, tAPI)
 	end
 
 	getfenv()[sName] = tAPI
@@ -136,7 +141,7 @@ end
 Log.i('OneOS Version: '..version)
 
 LoadAPI('System/API/Settings.lua')
-LoadAPI('System/API/Object.lua')
+-- LoadAPI('System/API/Object.lua')
 local _side = Settings:GetValues()['Monitor']
 if not term.setTextScale and _side then
 	if peripheral.isPresent(_side) and peripheral.getType(_side) == 'monitor' and peripheral.call(_side, 'isColour') == true then
@@ -212,18 +217,18 @@ function LoadingScreen()
 	end
 		
 	local currentImage = -1
-	local totalAPIs = #fs.list(root .. 'System/API/') + #fs.list(root .. 'System/Objects/')
+	local totalAPIs = #fs.list(root .. 'System/API/')-- + #fs.list(root .. 'System/Objects/')
 	local apis = {}
 	for _, file in pairs(fs.list(root .. 'System/API/')) do
 		if string.sub(file,1,1) ~= "." then
 			table.insert(apis, 'System/API/' .. file)
 		end
 	end
-	for _, file in pairs(fs.list(root .. 'System/Objects/')) do
-		if string.sub(file,1,1) ~= "." then
-			table.insert(apis, 'System/Objects/' .. file)
-		end
-	end
+	-- for _, file in pairs(fs.list(root .. 'System/Objects/')) do
+	-- 	if string.sub(file,1,1) ~= "." then
+	-- 		table.insert(apis, 'System/Objects/' .. file)
+	-- 	end
+	-- end
 
 	for _, file in pairs(apis) do
 		if not isDebug then
@@ -536,7 +541,7 @@ elseif Start() then
 		end
 	end
 
-	if not ok[1] then
+	if not isDebug and not ok[1] then
 
 		xpcall(function()loadfile('/System/main.lua')end, function(err)
 			log('Syntaxt error (probably): '..err)
