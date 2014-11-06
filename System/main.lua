@@ -246,8 +246,9 @@ function AutoUpdateFail(self, event, url, data)
 			end
 			bedrock:DisplayAlertWindow("Update Check Failed", "Check your connection and try again.", {'Ok'})
 		end
+	else
+		Current.Program:QueueEvent(event, url, data)
 	end
-	Current.Program:QueueEvent(event, url, data)
 end
 
 function AutoUpdateResponse(self, event, url, data)
@@ -309,8 +310,9 @@ function AutoUpdateResponse(self, event, url, data)
 		else
 			Log.i('OneOS is neither up to date or behind. (.version probably edited)')
 		end
+	else
+		Current.Program:QueueEvent(event, url, data)
 	end
-	Current.Program:QueueEvent(event, url, data)
 end
 
 bedrock:RegisterEvent('http_success', AutoUpdateResponse)
@@ -327,7 +329,6 @@ function FirstSetup()
 	end)
 end
 
---TODO: auto updating
 function Initialise()
 	bedrock:Run(function()
 		Log.i('Reached GUI')

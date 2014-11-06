@@ -1,3 +1,4 @@
+BackgroundColour = colours.lightGrey
 SelectedBackgroundColour = colours.blue
 SelectedTextColour = colours.white
 PlaceholderTextColour = colours.grey

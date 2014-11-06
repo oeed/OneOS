@@ -2,6 +2,7 @@ UpdateDrawBlacklist = {['CachedProgram']=true, ['CachedIndex']=true}
 CachedProgram = false
 CachedIndex = false
 Animation = false
+Ready = false
 
 OnUpdate = function(self, value)
 	--TODO: resize the buffer
@@ -27,6 +28,10 @@ OnDraw = function(self, x, y)
 		elseif Current.Programs[self.CachedIndex-1] then
 			Current.Program = Current.Programs[self.CachedIndex-1]
 		end
+	end
+
+	if not self.Ready and #Current.Programs > 0 then
+		self.Ready = true
 	end
 
 	if not self.Animation then
@@ -129,11 +134,13 @@ OnDraw = function(self, x, y)
 				self.Bedrock.CursorPos = nil
 			end
 		end
-	else
+	elseif self.Ready then
 		Drawing.DrawBlankArea(x, y, self.Width, self.Height, colours.grey)
 		Drawing.DrawCharactersCenter(nil,-1,nil,nil, 'Something went wrong :(', colours.white, colours.transparent)
 		Drawing.DrawCharactersCenter(nil,1,nil,nil, 'The desktop crashed or something bugged out.', colours.lightGrey, colours.transparent)
 		Drawing.DrawCharactersCenter(nil,2,nil,nil, 'Try restarting.', colours.lightGrey, colours.transparent)
+	else
+		Drawing.DrawBlankArea(x, y, self.Width, self.Height, Settings:GetValues()['DesktopColour'])
 	end
 end
 
