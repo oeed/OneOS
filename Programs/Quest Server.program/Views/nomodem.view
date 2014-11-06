@@ -1,0 +1,31 @@
+{
+  ["Children"]={
+    [1]={
+      ["Y"]="50%,-2",
+      ["X"]=1,
+      ["Width"]="100%",
+      ["Type"]="Label",
+      ["Text"]="No Modem Attached!",
+      ["TextColour"]=16384,
+      ["Align"]="Center"
+    },
+    [2]={
+      ["Y"]="50%",
+      ["X"]="10%",
+      ["Width"]="80%",
+      ["Type"]="Label",
+      ["Text"]="Please attach a wireless modem to use Quest Server.",
+      ["Align"]="Center"
+    },
+    [3]={
+      ["Y"]="100%,-1",
+      ["X"]="100%,-6",
+      ["Name"]="QuitButton",
+      ["Type"]="Button",
+      ["Text"]="Quit",
+    },
+  },
+  ["BackgroundColour"]=1,
+  ["ToolBarColour"]=128,
+  ["ToolBarTextColour"]=1
+}

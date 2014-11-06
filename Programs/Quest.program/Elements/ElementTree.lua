@@ -5,7 +5,7 @@ Initialise = function(self, html)
 	local new = {}    -- the new instance
 	setmetatable( new, {__index = self} )
 	local err = nil
-	if html:sub(1,15) ~= '<!DOCTYPE ccml>' then
+	if html:sub(1,15):lower() ~= '<!doctype ccml>' then
 		err = Errors.InvalidDoctype
 	end
 
@@ -98,6 +98,10 @@ GetElementClass = function(self, tag, attr)
 			return SecureTextInput
 		elseif attr.type == 'submit' or attr.type == 'button' then
 			return ButtonInput
+		elseif attr.type == 'file' then
+			return FileInput
+		elseif attr.type == 'hidden' then
+			return HiddenInput
 		else
 			return Element
 		end

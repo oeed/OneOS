@@ -1,0 +1,353 @@
+local bedrockPath='' if OneOS then OneOS.LoadAPI('/System/API/Bedrock.lua', false)elseif fs.exists(bedrockPath..'/Bedrock')then os.loadAPI(bedrockPath..'/Bedrock')else if http then print('Downloading Bedrock...')local h=http.get('http://pastebin.com/raw.php?i=0MgKNqpN')if h then local f=fs.open(bedrockPath..'/Bedrock','w')f.write(h.readAll())f.close()h.close()os.loadAPI(bedrockPath..'/Bedrock')else error('Failed to download Bedrock. Is your internet working?') end else error('This program needs to download Bedrock to work. Please enable HTTP.') end end if Bedrock then Bedrock.BasePath = bedrockPath Bedrock.ProgramPath = shell.getRunningProgram() end
+
+local program = Bedrock:Initialise()
+
+os.loadAPI(program.ProgramPath .. '/APIs/Peripheral')
+os.loadAPI(program.ProgramPath .. '/APIs/Wireless')
+
+local serverRunning = false
+
+local messageLevel = {
+	Info 	= 'Info',
+	Success	= 'Success',
+	Warning = 'Warning',
+	Error 	= 'Error',
+}
+
+local function logMsg(msg, level)
+	level = level or messageLevel.Info
+	program:GetObject('LogView'):AddItem('[' .. level .. '] '..msg, level)
+end
+
+local defaultSettings = {
+	address = nil
+}
+
+local settings = {}
+
+local function saveSettings()
+	logMsg('Saving settings.')
+	local f = fs.open('.QuestServer.settings', 'w')
+	settings.address = program:GetObject('AddressTextBox').Text
+	if f then
+		f.write(textutils.serialize(settings))
+		f.close()
+	end
+end
+
+local function loadSettings()
+	logMsg('Loading settings.')
+	local f = fs.open('.QuestServer.settings', 'r')
+	if f then
+		settings = textutils.unserialize(f.readAll())
+		f.close()
+	else
+		logMsg('No settings file, using default.', messageLevel.Warning)
+		settings = defaultSettings
+		saveSettings()
+	end
+
+	program:GetObject('AddressTextBox').Text = settings.address or ''
+end
+
+local function switchView(name)
+	local viewNames = {
+		'Settings',
+		'Log',
+	}
+
+	for i, v in ipairs(viewNames) do
+		if name == v then
+			program:GetObject(v .. 'View').Visible = true
+			program:GetObject(v .. 'Button').Toggle = true
+		else
+			program:GetObject(v .. 'View').Visible = false
+			program:GetObject(v .. 'Button').Toggle = false
+		end
+	end
+
+	program:SetActiveObject()
+end
+
+local availableTimer = nil
+
+local startServer = nil
+local stopServer = nil
+
+local function checkNameAvailable(name)
+	logMsg('Checking address clashes: '..name)
+	if name:match("%W") then
+		logMsg('Invalid address!', messageLevel.Error)
+		stopServer('Invalid Address')
+		switchView('Settings')
+	else
+		Wireless.SendMessage(Wireless.Channels.QuestServerNameAvailable, name)
+		availableTimer = program:StartTimer(function()
+			if availableTimer and name == settings.address then
+				logMsg('No address clashes found!', messageLevel.Success)
+				availableTimer = nil
+				startServer(true)
+			end
+		end, 1)
+	end
+end
+
+function stopServer(reason)
+	logMsg('Stopping server: ' .. reason or 'Stopped', messageLevel.Warning)
+	serverRunning = false
+	program:GetObject('GoStopButton').Text = '>'
+	program:GetObject('StatusLabel').Text = reason or 'Stopped'
+end
+
+function startServer(available)
+	logMsg('Starting server...')
+	if settings.address and #settings.address > 0 then
+		if available then
+			logMsg('Server started!', messageLevel.Success)
+			serverRunning = true
+			program:GetObject('GoStopButton').Text = 'x'
+			program:GetObject('StatusLabel').Text = 'Running'
+		else
+			program:GetObject('StatusLabel').Text = 'Checking Name'
+			checkNameAvailable(settings.address)
+		end
+	else
+		logMsg('Server could not start, address not set!', messageLevel.Error)
+		stopServer('Address Not Set')
+		switchView('Settings')
+	end
+end
+
+program.OnKeyChar = function(self, event, keychar)
+	if keychar == '\\' then
+		os.reboot()
+	end
+end
+
+program:RegisterEvent('modem_message', function(self, event, side, channel, replyChannel, message, distance)
+	Wireless.HandleMessage(event, side, channel, replyChannel, message, distance)
+end)
+
+local function split(str, pat)
+   local t = {}
+   local fpat = "(.-)" .. pat
+   local last_end = 1
+   local s, e, cap = str:find(fpat, 1)
+   while s do
+      if s ~= 1 or cap ~= "" then
+	 table.insert(t,cap)
+      end
+      last_end = e+1
+      s, e, cap = str:find(fpat, last_end)
+   end
+   if last_end <= #str then
+      cap = str:sub(last_end)
+      table.insert(t, cap)
+   end
+   return t
+end
+
+local function findLast(haystack, needle)
+    local i=haystack:match(".*"..needle.."()")
+    if i==nil then return nil else return i-1 end
+end
+
+local hex_to_char = function(x)
+  return string.char(tonumber(x, 16))
+end
+
+local function urlUnencode( str )
+	-- essentially reverses textutils.urlDecode
+    if str then
+        str = string.gsub(str, "+", " ")
+        str = string.gsub(str, "\r\n", "\n")
+        term.setTextColor(colors.black)
+        str = str:gsub("%%(%x%x)", hex_to_char)
+    end
+    return str    
+end
+
+local function urlComponents(url)
+	if url then
+		urlUnencode(textutils.urlEncode(url))
+		local components = {}
+		local parts = split(url, '[\\/]+')
+		if url:find('://') and parts[1]:sub(#parts[1]) == ':' then
+			components.protocol = parts[1]:sub(1, #parts[1]-1)
+			components.sansprotocol = url:sub(#components.protocol + 4)
+			components.host = parts[2]
+			components.fullhost = components.protocol .. '://' .. parts[2] .. '/'
+			components.filename = fs.getName(url)
+			components.filepath = url:sub(#components.fullhost)
+			if components.filename == components.host then
+				components.filename = ''
+			end
+			components.base = url:sub(1, findLast(url, '/'))
+			components.get = {}
+			components.filepathsansget = components.sansprotocol
+			if url:find('?') then
+				local start = url:find('?')
+				components.filepathsansget = url:sub(#components.protocol + 4, start - 1)
+				local getString = url:sub(start + 1)
+				local values = split(getString, '&')
+				for i, v in ipairs(values) do
+					local keyvalue = split(v, '=')
+					components.get[keyvalue[1]] =  urlUnencode(keyvalue[2])
+				end
+			end
+			return components
+		end
+	end
+end
+
+local function resolveFile(path)
+	local parts = split(path, '[\\/]+')
+	local realPath = '/Server Files'
+	if #parts == 0 then
+		parts = {''}
+	end
+	for i, v in ipairs(parts) do
+		local tmpPath
+		if #v == 0 then
+		 	tmpPath = realPath
+		else
+		 	tmpPath = realPath .. '/' ..v
+		end
+		if fs.exists(tmpPath) then
+			if fs.isDir(tmpPath) and i == #parts then
+				local attempts = {
+					tmpPath .. '/index.ccml',
+					tmpPath .. '/index.html',
+				}
+
+				for i2, v2 in ipairs(attempts) do
+					if fs.exists(v2) then
+						return v2
+					end
+				end
+				return nil
+			end
+			realPath = tmpPath
+		else
+			return nil
+		end
+	end
+	return realPath
+end
+
+Wireless.Responder = function(event, side, channel, replyChannel, message, distance)
+	if channel == Wireless.Channels.QuestServerRequest and serverRunning then
+		if message.content:find('wifi://') == 1 then
+			local parts = urlComponents(message.content)
+			if parts.host and parts.host == settings.address then
+				local path = resolveFile(parts.filepath)
+				local content
+				if path then
+					local f = fs.open(path, 'r')
+					if f then
+						content = f.readAll()
+						logMsg('File request successful: '..message.content, messageLevel.Success)
+					end
+				end
+				if not content then
+					logMsg('File request failed: '..message.content, messageLevel.Warning)
+				end
+				Wireless.SendMessage(replyChannel, {url = message.content, content = content}, nil, message.messageID)
+			end
+		end
+	elseif channel == Wireless.Channels.QuestServerNameAvailable then
+		if message.content == settings.address then
+			logMsg('External address clash request clashed with this server: '..message.content, messageLevel.Warning)
+			Wireless.SendMessage(replyChannel, 'IN_USE', nil, message.messageID)
+		end
+	elseif channel == Wireless.Channels.QuestServerNameAvailableReply and running then
+		availableTimer = nil
+		logMsg('Address clash request failed, address in use: '..message.content, messageLevel.Error)
+		stopServer('Address In Use')
+		switchView('Settings')
+	end
+end
+
+local debounce = nil
+
+program.OnTimer = function(self, event, timer)
+	if timer == debounce then
+		saveSettings()
+	end
+end
+
+program:Run(function()
+	if Wireless.Present() then
+		program:LoadView('main')
+
+		if not fs.exists('/Server Files/') then
+			fs.makeDir('/Server Files/')
+			local f = fs.open('/Server Files/index.ccml', 'w')
+			if f then
+				f.write([[<!DOCTYPE ccml>
+<html>
+    <head>
+        <title>Welcome to your Quest Server Website!</title>
+    </head>
+
+    <body>
+        <br>
+        <h colour="green">Welcome to your Quest Server Website!</h>
+        <br>
+        <center>
+	        <p width="46" align="center">
+	            The files for this website are stored in the /Server Files/ folder on the server.
+	        </p>
+	        <br>
+	        <p width="46" align="center">
+	            If you haven't made a Quest web page before you should look for the CCML tutorial on the ComputerCraft forums.
+	        </p>
+        </center>
+    </body>
+</html>]])
+				f.close()
+			end
+		end
+
+		loadSettings()
+		Wireless.Initialise()
+
+		switchView('Log')
+		startServer()
+
+		program:GetObject('SettingsButton').OnClick = function(self, event, side, x, y)
+			switchView('Settings')
+		end
+
+		program:GetObject('LogButton').OnClick = function(self, event, side, x, y)
+			switchView('Log')
+		end
+
+		program:GetObject('GoStopButton').OnClick = function(self, event, side, x, y)
+			if serverRunning then
+				stopServer()
+			else
+				startServer()
+			end
+		end
+
+		program:GetObject('AddressTextBox').OnChange = function(self, event, keychar)
+			if settings.address ~= program:GetObject('AddressTextBox').Text then
+				stopServer('Address Changed')
+				debounce = os.startTimer(1)
+			end
+		end
+
+	else
+		program:LoadView('nomodem')
+	end
+
+	program:GetObject('QuitButton').OnClick = function(self, event, side, x, y)
+		term.setBackgroundColour(colours.black)
+		term.setTextColor(colours.white)
+		term.clear()
+		term.setCursorPos(1, 1)
+		print('Thanks for using Quest Server by oeed')
+		program:Quit()
+	end
+end)

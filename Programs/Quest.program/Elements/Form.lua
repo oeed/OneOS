@@ -29,9 +29,9 @@ Submit = function(self, onEnter)
 
 	local url = false
 	if self.Attributes.action and #self.Attributes.action > 0 then
-		url = resolveQuestHostUrl(resolveFullUrl(self.Attributes.action))
+		url = resolveFullUrl(self.Attributes.action) --TODO: this needs to show the fake url to the user
 	else
-		url = getCurrentUrl()
+		url = getCurrentFakeUrl()
 	end
 	local data = ''
 	for k, v in pairs(values) do

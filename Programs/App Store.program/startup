@@ -26,7 +26,8 @@ local t=string.format("([^%s]+)",t)
 a:gsub(t,function(t)e[#e+1]=t end)
 return e
 end
-OneOS.LoadAPI('System/API/Drawing.lua')
+OneOS.LoadAPI('System/API/LegacyDrawing.lua')
+local Drawing = LegacyDrawing
 Drawing.Offset={
 X=0,
 Y=0

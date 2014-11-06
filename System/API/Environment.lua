@@ -169,6 +169,12 @@ OneOS = function(env, program, path)
 		OSRun = os.run,
 		Shell = shell,
 		ProgramLocation = program.Path,
+		SetTitle = function(title)
+			if title and type(title) == 'string' then
+				program.Title = title
+			end
+			UpdateOverlay()
+		end,
 		CanClose = function()end,
 		Close = function()
 			program:Close(true)

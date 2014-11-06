@@ -1,0 +1,21 @@
+<!DOCTYPE ccml>
+<html>
+    <head>
+        <title>Welcome to your Quest Server Website!</title>
+    </head>
+
+    <body>
+        <br>
+        <h colour="green">Welcome to your Quest Server Website!</h>
+        <br>
+        <center>
+	        <p width="46" align="center">
+	            The files for this website are stored in the /Server Files/ folder on the server.
+	        </p>
+	        <br>
+	        <p width="46" align="center">
+	            If you haven't made a Quest web page before you should look for the CCML tutorial on the ComputerCraft forums.
+	        </p>
+        </center>
+    </body>
+</html>

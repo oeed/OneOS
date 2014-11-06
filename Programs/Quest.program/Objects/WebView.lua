@@ -1,10 +1,12 @@
 Inherit = 'ScrollView'
 URL = nil
+FakeURL = nil
 LoadingURL = nil
 Tree = nil
 BackgroundColour = colours.white
 ScriptEnvironment = nil
 Timers = nil
+Download = nil
 
 -- TODO: strip this down to remove positioning stuff
 UpdateLayout = function(self)
@@ -123,6 +125,9 @@ GoToURL = function(self, url, nonVerbose, noHistory, post)
 		self:OnPageLoadStart(url, noHistory)
 	end
 	self.LoadingURL = url
+	if not nonVerbose then
+		self.FakeURL = url
+	end
 	self:InitialiseScriptEnvironment()
 
 	if not http and url:find('http://') then
@@ -130,6 +135,32 @@ GoToURL = function(self, url, nonVerbose, noHistory, post)
 			self:OnPageLoadFailed(url, 4, noHistory)
 		end
 		return
+	end
+
+	-- error(fs.getName(url))
+	local parts = urlComponents(url)
+	-- if url:sub(#url) ~= '/' and url:find('?') then
+	-- 	fileName = fs.getName(url:sub(1, url:find('?') - 1))
+	-- else
+	-- 	fileName = fs.getName(url)
+	-- end
+
+	local fileName = parts.filename
+	local extension
+	if fileName == '' or url:sub(#url) == '/' then
+		extension = true
+	else
+		extension = fileName:match('%.[0-9a-z%?%%]+$')
+		if extension then
+			extension = extension:sub(2)
+		end
+	end
+
+	-- local nonDownloadExtensions = {}
+	-- local shouldDownload =  not extension or (extension ~= true and extension ~= '' and extension ~= 'ccml' and extension ~= 'html' and extension ~= 'php' and extension ~= 'asp' and extension ~= 'aspx' and extension ~= 'jsp' and extension ~= 'qst' and extension ~= 'com' and extension ~= 'me' and extension ~= 'net' and extension ~= 'info' and extension ~= 'au' and extension ~= 'nz' and extension ~= 'de') 
+
+	if not url:find('quest://download.ccml') and not url:find('quest://downloaded.ccml') then
+		self.Download = nil
 	end
 
 	fetchHTTPAsync(url, function(ok, event, response)
@@ -145,17 +176,51 @@ GoToURL = function(self, url, nonVerbose, noHistory, post)
 					return
 				end
 			end
-			self.Tree, err = ElementTree:Initialise(response.readAll())
+
+			local html = response.readAll()
 			response.close()
-			if not err then
-				self.URL = url
-				self:UpdateLayout()
-				if self.OnPageLoadEnd and not nonVerbose then
-					self:OnPageLoadEnd(url, noHistory)
+			if html:sub(1,9):lower() == '<!doctype' then
+				--web page
+				self.Tree, err = ElementTree:Initialise(html)
+				if not err then
+					self.URL = url
+					self:UpdateLayout()
+					if self.OnPageLoadEnd and not nonVerbose then
+						self:OnPageLoadEnd(url, noHistory)
+					end
+				else
+					if self.OnPageLoadFailed then
+						self:OnPageLoadFailed(url, err, noHistory)
+					end
 				end
 			else
-				if self.OnPageLoadFailed then
-					self:OnPageLoadFailed(url, err, noHistory)
+				--download
+				local downloadsFolder = '/Downloads/'
+				local _fs = fs
+				if OneOS then
+					downloadsFolder = '/Desktop/Documents/Downloads/'
+					_fs = OneOS.FS
+				end
+				if not _fs.exists(downloadsFolder) then
+					_fs.makeDir(downloadsFolder)
+				end
+
+				local downloadPath = downloadsFolder..fileName
+				local i = 1
+				local name = Bedrock.Helpers.RemoveExtension(fileName)
+				local ext = Bedrock.Helpers.Extension(fileName, true)
+				while _fs.exists(downloadPath) do
+					i = i + 1
+					downloadPath = downloadsFolder..name .. ' (' .. i .. ')' .. ext
+				end
+				local f = _fs.open(downloadPath, 'w')
+				if f then
+					f.write(html)
+					f.close()
+					self:GoToURL('quest://downloaded.ccml?path='..textutils.urlEncode(downloadPath), true, true)
+					self:OnPageLoadEnd(url, noHistory)
+				else
+					self:OnPageLoadFailed(url, 6, noHistory)
 				end
 			end
 		elseif self.OnPageLoadFailed and not nonVerbose then

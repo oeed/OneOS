@@ -1,0 +1,16 @@
+<!DOCTYPE ccml>
+<html>
+	<head>
+	  <title>Download Failed</title>
+	</head>
+	<body>
+		<br/>
+		<br/>
+		<h colour="red">Download Failed</h>
+		<br/>
+		<center>
+			<br>
+			<p width="38" align="center">The file you wanted failed to download. Try again or contact the file owner.</p>
+		</center>
+	</body>
+</html>

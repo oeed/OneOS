@@ -1,0 +1,33 @@
+{
+  ["Children"]={
+    [1]={
+      ["Y"]=1,
+      ["X"]=1,
+      ["Name"]="Toolbar",
+      ["Type"]="View",
+      ["InheritView"]="toolbar"
+    },
+    [2]={
+      ["X"]=1,
+      ["Y"]=4,
+      ["Name"]="SettingsView",
+      ["Type"]="SettingsView",
+      ["Width"]="100%",
+      ["Height"]="100%,-3",
+      ["Visible"]=false,
+      ["InheritView"]="settings"
+    },
+    [3]={
+      ["X"]=1,
+      ["Y"]=4,
+      ["Name"]="LogView",
+      ["Type"]="LogView",
+      ["Width"]="100%",
+      ["Height"]="100%,-3",
+      ["Visible"]=false
+    },
+  },
+  ["BackgroundColour"]=1,
+  ["ToolBarColour"]=128,
+  ["ToolBarTextColour"]=1
+}

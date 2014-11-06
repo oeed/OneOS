@@ -1,4 +1,4 @@
---Bedrock Build: 188
+--Bedrock Build: 262
 --This code is squished down in to one, rather hard to read file.
 --As such it is not much good for anything other than being loaded as an API.
 --If you want to look at the code to learn from it, copy parts or just take a look,
@@ -948,10 +948,9 @@ local function AddItem(self, v, x, y, group)
 		["Group"]=group,
 		OnClick = function(itm)
 			if self.CanSelect then
-				for i2, _v in ipairs(self.Children) do
-					_v.Toggle = false
-				end
-				self.Selected = itm
+				self:SelectItem(itm)
+			elseif self.OnSelect then
+				self:OnSelect(itm.Text)
 			end
 		end
     }
@@ -965,7 +964,7 @@ local function AddItem(self, v, x, y, group)
 	
 	local itm = self:AddObject(item)
 	if v.Selected then
-		self.Selected = itm
+		self:SelectItem(itm)
 	end
 end
 
@@ -1052,6 +1051,9 @@ SelectItem = function(self, item)
 	end
 	self.Selected = item
 	item.Toggle = true
+	if self.OnSelect then
+		self:OnSelect(item.Text)
+	end
 end
 
 OnUpdate = function(self, value)
@@ -1217,7 +1219,7 @@ OnDraw = function(self, x, y)
     local percentage = (self.Scroll/self.MaxScroll)
 
     Drawing.DrawBlankArea(x, y, self.Width, self.Height, self.BackgroundColour)
-    Drawing.DrawBlankArea(x, y + self.Bedrock.Helpers.Round(self.Height*percentage - barHeight*percentage), self.Width, barHeight, self.BarColour)
+    Drawing.DrawBlankArea(x, y + math.ceil(self.Height*percentage - barHeight*percentage), self.Width, barHeight, self.BarColour)
 end
 
 OnScroll = function(self, event, direction, x, y)
@@ -1250,7 +1252,7 @@ OnClick = function(self, event, side, x, y)
 		local delta = ((y - self.ClickPoint)/gapHeight)*self.MaxScroll
 		--l(((y - self.ClickPoint)/gapHeight))
 		--l(delta)
-		self.Scroll = delta
+		self.Scroll = self.Bedrock.Helpers.Round(delta)
 		--l(self.Scroll)
 		--l('----')
 		if self.Scroll < 0 then
@@ -1559,7 +1561,13 @@ OnKeyChar = function(self, event, keychar)
 		elseif keychar == keys.left then
 			-- Left
 			if self.CursorPos > 0 then
-				self.CursorPos = self.CursorPos - 1
+				if self.Selected then
+					self.CursorPos = self.DragStart
+					self.DragStart = nil
+					self.Selected = false
+				else
+					self.CursorPos = self.CursorPos - 1
+				end
 				if self.OnChange then
 					self:OnChange(event, keychar)
 				end
@@ -1568,7 +1576,13 @@ OnKeyChar = function(self, event, keychar)
 		elseif keychar == keys.right then
 			-- Right				
 			if self.CursorPos < string.len(self.Text) then
-				self.CursorPos = self.CursorPos + 1
+				if self.Selected then
+					self.CursorPos = self.CursorPos
+					self.DragStart = nil
+					self.Selected = false
+				else
+					self.CursorPos = self.CursorPos + 1
+				end
 				if self.OnChange then
 					self:OnChange(event, keychar)
 				end
@@ -2504,6 +2518,163 @@ function DisplayTextBoxWindow(self, title, text, callback, textboxText, cursorAt
 		end
 	end
 	self:SetActiveObject(self.Window:GetObject('TextBox'))
+	self.Window.OnCloseButton = function()callback(false)end
+end
+
+function DisplayOpenFileWindow(self, title, callback)
+	title = title or 'Open File'
+	local func = function(btn)
+		self.Window:Close()
+		if callback then
+			callback(btn.Text)
+		end
+	end
+
+	local sidebarItems = {}
+
+	--this is a really, really super bad way of doing it
+	local separator = '                               !'
+
+	local function addFolder(path, level)
+		for i, v in ipairs(fs.list(path)) do
+			local fPath = path .. '/' .. v
+			if fPath ~= '/rom' and fs.isDir(fPath) then
+				table.insert(sidebarItems, level .. v..separator..fPath)
+				addFolder(fPath, level .. '  ')
+			end
+		end
+	end
+	addFolder('','')
+
+	local currentFolder = ''
+	local selectedPath = nil
+
+	local goToFolder = nil
+
+	local children = {
+		{
+			["Y"]="100%,-2",
+			["X"]=1,
+			["Height"]=3,
+			["Width"]="100%",
+			["BackgroundColour"]=colours.lightGrey,
+			["Name"]="SidebarListView",
+			["Type"]="View"
+		},
+		{
+			["Y"]="100%,-1",
+			["X"]="100%,-4",
+			["Name"]="OkButton",
+			["Type"]="Button",
+			["Text"]="Ok",
+			["BackgroundColour"]=colours.white,
+			["Enabled"]=false,
+			OnClick = function()
+				if selectedPath then
+					self.Window:Close()
+					callback(true, Helpers.TidyPath(selectedPath))
+				end
+			end
+		},
+		{
+			["Y"]="100%,-1",
+			["X"]="100%,-13",
+			["Name"]="CancelButton",
+			["Type"]="Button",
+			["Text"]="Cancel",
+			["BackgroundColour"]=colours.white,
+			OnClick = function()
+				self.Window:Close()
+				callback(false)
+			end
+		},
+		{
+			["Y"]=1,
+			["X"]=1,
+			["Height"]="100%,-3",
+			["Width"]="40%,-1",
+			["Name"]="SidebarListView",
+			["Type"]="ListView",
+			["CanSelect"]=true,
+			["Items"]={
+				["Computer"] = sidebarItems
+			},
+			OnSelect = function(listView, text)
+				local _,s = text:find(separator)
+				if s then
+					local path = text:sub(s + 1)
+					goToFolder(path)
+				end
+			end,
+			OnClick = function(listView, event, side, x, y)
+				if y == 1 then
+					goToFolder('/')
+				end
+			end
+		},
+		{
+			["Y"]=1,
+			["X"]="40%",
+			["Height"]="100%,-3",
+			["Width"]=1,
+			["Type"]="Separator"
+		},
+		{
+			["Y"]=1,
+			["X"]="40%,2",
+			["Width"]="65%,-3",
+			["Height"]=1,
+			["Type"]="Label",
+			["Name"]="PathLabel",
+			["TextColour"]=colours.lightGrey,
+			["Text"]='/hello/there'
+		},
+		{
+			["Y"]=2,
+			["X"]="40%,1",
+			["Height"]="100%,-4",
+			["Width"]="65%,-1",
+			["Name"]="FilesListView",
+			["Type"]="ListView",
+			["CanSelect"]=true,
+			["Items"]={},
+			OnSelect = function(listView, text)
+				selectedPath = Helpers.TidyPath(currentFolder .. '/' .. text)
+				self.Window:GetObject('OkButton').Enabled = true
+			end,
+			OnClick = function(listView, event, side, x, y)
+				if y == 1 then
+					goToFolder('/')
+				end
+			end
+		},
+	}
+	local view = {
+		Children = children,
+		Width=40,
+		Height= Drawing.Screen.Height - 4
+	}
+	self:DisplayWindow(view, title)
+
+	goToFolder = function(path)
+		path = Helpers.TidyPath(path)
+		self.Window:GetObject('PathLabel').Text = path
+		currentFolder = path
+
+		local filesListItems = {}
+		for i, v in ipairs(fs.list(path)) do
+			if not fs.isDir(currentFolder .. v) then
+				table.insert(filesListItems, v)
+			end
+		end
+		self.Window:GetObject('OkButton').Enabled = false
+		selectedPath = nil
+		self.Window:GetObject('FilesListView').Items = filesListItems
+
+	end
+
+	goToFolder('')
+
 	self.Window.OnCloseButton = function()callback(false)end
 end
 

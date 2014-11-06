@@ -1,0 +1,16 @@
+<!DOCTYPE ccml>
+<html>
+	<head>
+	  <title>No Modem Connected</title>
+	</head>
+	<body>
+		<br/>
+		<br/>
+		<h colour="red">No Modem Connected</h>
+		<br/>
+		<center>
+			<br>
+			<p width="38" align="center">Please attach a wirelss modem and restart Quest.</p>
+		</center>
+	</body>
+</html>

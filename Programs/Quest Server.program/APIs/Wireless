@@ -1,0 +1,125 @@
+--This is just the OneOS Wireless API
+
+--OneOS uses channels between 4200 and 4300, avoid use where possible
+
+Channels = {
+	Ignored = 4299,
+	Ping = 4200,
+	PingReply = 4201,
+	QuestServerRequest = 4250,
+	QuestServerRequestReply = 4251,
+	QuestServerNameAvailable = 4252,
+	QuestServerNameAvailableReply = 4253,
+}
+
+local function isOpen(channel)
+	return Peripheral.CallType('wireless_modem', 'isOpen', channel)
+end
+
+local function open(channel)
+	if not isOpen(channel) then
+		Peripheral.CallType('wireless_modem', 'open', channel)
+	end
+end
+
+Open = open
+
+local function close(channel)
+	Peripheral.CallType('wireless_modem', 'close', channel)
+end
+
+local function closeAll()
+	Peripheral.CallType('wireless_modem', 'closeAll')
+end
+
+local function transmit(channel, replyChannel, message)
+	Peripheral.CallType('wireless_modem', 'transmit', channel, replyChannel, textutils.serialize(message))
+end
+
+function Present()
+	if Peripheral.GetPeripheral('wireless_modem') == nil then
+		return false
+	else
+		return true
+	end
+end
+
+local function FormatMessage(message, messageID, destinationID)
+	return {
+		content = textutils.serialize(message),
+		senderID = os.getComputerID(),
+		senderName = os.getComputerLabel(),
+		channel = channel,
+		replyChannel = reply,
+		messageID = messageID or math.random(10000),
+		destinationID = destinationID
+	}
+end
+
+local Timeout = function(func, time)
+	time = time or 1
+	parallel.waitForAny(func, function()
+		sleep(time)
+		--log('Timeout!'..time)
+	end)
+end
+
+RecieveMessage = function(_channel, messageID, timeout)
+	open(_channel)
+	local done = false
+	local event, side, channel, replyChannel, message = nil
+	Timeout(function()
+		while not done do
+			event, side, channel, replyChannel, message = os.pullEvent('modem_message')
+			if channel ~= _channel then
+				event, side, channel, replyChannel, message = nil
+			else
+				message = textutils.unserialize(message)
+				message.content = textutils.unserialize(message.content)
+				if messageID and messageID ~= message.messageID or (message.destinationID ~= nil and message.destinationID ~= os.getComputerID()) then
+					event, side, channel, replyChannel, message = nil
+				else
+					done = true
+				end
+			end
+		end
+	end,
+	timeout)
+	return event, side, channel, replyChannel, message
+end
+
+Initialise = function()
+	if Present() then
+		for i, c in pairs(Channels) do
+			open(c)
+		end
+	end
+end
+
+HandleMessage = function(event, side, channel, replyChannel, message, distance)
+	message = textutils.unserialize(message)
+	message.content = textutils.unserialize(message.content)
+
+	if channel == Channels.Ping then
+		if message.content == 'Ping!' then
+			SendMessage(replyChannel, 'Pong!', nil, message.messageID)
+		end
+	elseif message.destinationID ~= nil and message.destinationID ~= os.getComputerID() then
+	elseif Wireless.Responder then
+		Wireless.Responder(event, side, channel, replyChannel, message, distance)
+	end
+end
+
+SendMessage = function(channel, message, reply, messageID, destinationID)
+	reply = reply or channel + 1
+	open(channel)
+	open(reply)
+	local _message = FormatMessage(message, messageID, destinationID)
+	transmit(channel, reply, _message)
+	return _message
+end
+
+Ping = function()
+	local message = SendMessage(Channels.Ping, 'Ping!', Channels.PingReply)
+	RecieveMessage(Channels.PingReply, message.messageID)
+end

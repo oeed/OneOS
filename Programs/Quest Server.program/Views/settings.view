@@ -1,0 +1,48 @@
+{
+  ["Children"]={
+    [1]={
+      ["Y"]=2,
+      ["X"]=3,
+      ["Type"]="Label",
+      ["Text"]="Server Address",
+      ["TextColour"]=128
+    },
+    [2]={
+      ["Y"]=2,
+      ["X"]=19,
+      ["Type"]="Label",
+      ["Text"]="wifi://",
+      ["TextColour"]=256
+    },
+    [3]={
+      ["Y"]=2,
+      ["X"]=26,
+      ["Width"]=20,
+      ["Name"]="AddressTextBox",
+      ["Type"]="TextBox",
+      ["Placeholder"]="e.g. basesite",
+    },
+    [4]={
+      ["Y"]=5,
+      ["X"]=3,
+      ["Width"]="100%,-4",
+      ["Type"]="Label",
+      ["Text"]="Ok... so maybe there aren't that many settings. But hey, at least it's easy to use.",
+      ["TextColour"]=256
+    },
+    [5]={
+      ["Y"]=9,
+      ["X"]=3,
+      ["Type"]="Label",
+      ["Text"]="Quest Server v1.0.0",
+    },
+    [6]={
+      ["Y"]=11,
+      ["X"]=3,
+      ["Width"]="100%,-4",
+      ["Type"]="Label",
+      ["Text"]="Quest and Quest Server were made by oeed using Bedrock, the source of all awesomeness. If you find a bug or have any questions give me a PM or post on the forum topic.",
+      ["TextColour"]=128
+    },
+  },
+}

@@ -1,13 +1,13 @@
 <!DOCTYPE ccml>
 <html>
 	<head>
-	  <title>An Error Occured</title>
+	  <title>Failed to Download Page</title>
 	</head>
 	<body>
 		<br/>
 		<br/>
 		<h colour="red">Failed to Download Page</h>
-
+		<br/>
 		<center>
 			<br>
 			<p width="38" align="center">The page you requested failed to download. The page may not exist, the server may be experiencing problems or you have connection issues.</p>

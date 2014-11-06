@@ -1,0 +1,1 @@
+Inherit = 'View'

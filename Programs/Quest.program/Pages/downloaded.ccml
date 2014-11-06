@@ -1,0 +1,21 @@
+<!DOCTYPE ccml>
+<html>
+	<head>
+		<title>Download Complete</title>
+	    <script type="lua">
+	    	if window.get.path then
+	        	l('p').text('Your file has been saved to ' .. window.get.path .. '. You can now leave this page (use the back button).')
+	    	end
+	    </script>
+	</head>
+	<body>
+		<br/>
+		<br/>
+		<h colour="blue">Download Complete</h>
+
+		<center>
+			<br>
+			<p width="48" align="center"></p>
+		</center>
+	</body>
+</html>
