@@ -1,0 +1,46 @@
+<!DOCTYPE ccml>
+<html>
+
+<head>
+    <title>Home</title>
+    <script type="lua"> -- note, this is actually line 1
+        l('p').text(os.version())
+        local testValue = 'one'
+        secondValue = 'two'
+        l('p').text(testValue)
+    </script>
+
+    <script type="lua">
+        l('h').text(testValue) -- testValue is nil
+        -- second value is 'two'
+    </script>
+</head>
+
+<body bgcolour="grey">
+    <div bgcolour="white">
+        <br/>
+        <center>
+            <float width="30">
+                <div width="1"></div>
+                <a href="index.html" align="center" width="6">Home</a>
+                <a href="test.html" align="center" width="6">Time</a>
+                <a href="form.php" align="center" width="7">Forms</a>
+            </float>
+        </center>
+        <br/>
+    </div>
+    <div bgcolour="grey" height="2"></div>
+    <center bgcolour="green">
+        <div bgcolour="white" width="40">
+            <br/>
+            <h>Home</h>
+            <br/>
+            <center>
+                <p width="34">Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt ut laoreet dolore magna aliquam erat volutpat. Ut wisi enim adminim veniam, quis nostrud exerci tation ullamcorper suscipit lobortis nisl utaliquip ex ea commodo consequat.</p>
+            </center>
+            <br/>
+        </div>
+    </center>
+</body>
+
+</html>

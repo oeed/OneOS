@@ -1,0 +1,35 @@
+{
+  ["Type"]="Menu",
+  ["Owner"]="OptionsButton",
+  ["Children"]={
+    [1]={
+      ["Name"]="StopMenuItem",
+      ["Type"]="Button",
+      ["Text"]="Stop"
+    },
+    [2]={
+      ["Name"]="ReloadMenuItem",
+      ["Type"]="Button",
+      ["Text"]="Reload"
+    },
+    [3]={
+      ["Name"]="GoHomeMenuItem",
+      ["Type"]="Button",
+      ["Text"]="Go Home"
+    },
+    [4]={
+      ["Name"]="SetHomeMenuItem",
+      ["Type"]="Button",
+      ["Text"]="Set Home"
+    },
+    [5]={
+      ["Name"]="Separator",
+      ["Type"]="Separator"
+    },
+    [6]={
+      ["Name"]="QuitMenuItem",
+      ["Type"]="Button",
+      ["Text"]="Quit"
+    }
+  },
+}

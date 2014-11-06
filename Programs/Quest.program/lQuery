@@ -1,0 +1,101 @@
+function fn(selector)
+	if not selector then
+	else
+		local elements = lQuery.webView:ResolveElements(selector)
+		local function relayout()
+			lQuery.webView:RepositionLayout()
+		end
+		if elements and #elements > 0 then
+			local each = function(func)
+				for i, v in ipairs(elements) do
+					func(v, i)
+				end
+			end
+
+			local response = {
+				text = function(text)
+					each(function(elem)
+						if elem.Text then
+							elem.Text = tostring(text)
+						end
+					end)
+				end,
+
+				width = function(width)
+					if type(width) == 'number' then
+						each(function(elem)
+							elem.Width = width
+						end)
+						relayout()
+					end
+				end,
+
+				height = function(height)
+					if type(height) == 'number' then
+						each(function(elem)
+							elem.Height = height
+						end)
+						relayout()
+					end
+				end,
+
+				colour = function(colour)
+					if type(colour) == 'number' then
+						each(function(elem)
+							if elem.TextColour then
+								elem.TextColour = colour
+							end
+						end)
+					end
+				end,
+
+				bgcolour = function(bgcolour)
+					if type(bgcolour) == 'number' then
+						each(function(elem)
+							if elem.BackgroundColour then
+								elem.BackgroundColour = bgcolour
+							end
+						end)
+					end
+				end,
+
+				align = function(align)
+					if type(align) == 'string' and align:lower() == 'left' or align:lower() == 'center' or align:lower() == 'right'  then
+						each(function(elem)
+							if elem.Align then
+								elem.Align = align:lower():gsub("^%l", string.upper)
+							end
+						end)
+					end
+				end,
+
+				attr = function(name)
+					local values = {}
+					each(function(elem)
+						if elem.Element.Attributes and elem.Element.Attributes[name] then
+							table.insert(values, elem.Element.Attributes[name])
+						end
+					end)
+					return values
+				end,
+
+				remove = function()
+					each(function(elem)
+						lQuery.webView:RemoveElement(elem)
+						relayout()
+					end)
+				end,
+
+				focus = function()
+					each(function(elem)
+						elem.Bedrock:SetActiveObject(elem)
+					end)
+				end
+			}
+			response.color = response.colour
+			response.bgcolor = response.bgcolour
+
+			return response
+		end
+	end
+end

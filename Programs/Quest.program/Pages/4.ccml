@@ -1,0 +1,16 @@
+<!DOCTYPE ccml>
+<html>
+	<head>
+	  <title>HTTP Not Enabled</title>
+	</head>
+	<body>
+		<br/>
+		<br/>
+		<h colour="red">HTTP Not Enabled</h>
+
+		<center>
+			<br>
+			<p width="38" align="center">You haven't enabled the HTTP API. To do so, take a look on the HTTP API page on the wiki for a link to a tutorial.</p>
+		</center>
+	</body>
+</html>

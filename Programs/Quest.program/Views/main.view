@@ -1,0 +1,32 @@
+{
+  ["Children"]={
+    [1]={
+      ["Y"]=1,
+      ["X"]=1,
+      ["Name"]="Toolbar",
+      ["Type"]="View",
+      ["InheritView"]="toolbar"
+    },
+    [2]={
+      ["Y"]=4,
+      ["X"]=1,
+      ["Height"]="100%,-3",
+      ["Width"]="100%",
+      ["Name"]="WebView",
+      ["Type"]="WebView"
+    },
+    [3]={
+      ["Y"]=1,
+      ["X"]=1,
+      ["Height"]=1,
+      ["Width"]="100%",
+      ["Name"]="PageTitleLabel",
+      ["Type"]="Label",
+      ["Align"]="Center",
+      ["TextColour"]=128,
+    },
+  },
+  ["BackgroundColour"]=1,
+  ["ToolBarColour"]=256,
+  ["ToolBarTextColour"]=1
+}

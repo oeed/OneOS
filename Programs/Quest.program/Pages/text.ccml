@@ -1,0 +1,21 @@
+<!DOCTYPE ccml>
+<html>
+	<head>
+		<title>An Error Occured</title>
+	    <script type="lua">
+	    	if window.get.reason then
+	        	l('p').text(window.get.reason)
+	    	end
+	    </script>
+	</head>
+	<body>
+		<br/>
+		<br/>
+		<h colour="red">An Error Occured</h>
+
+		<center>
+			<br>
+			<p width="48" align="center">Unknown Reason</p>
+		</center>
+	</body>
+</html>

@@ -1,0 +1,34 @@
+Align = "Left"
+
+OnInitialise = function(self, node)
+	local attr = self.Attributes
+	self.Text = self.Text or ''
+	if attr.align then
+		if attr.align:lower() == 'left' or attr.align:lower() == 'center' or attr.align:lower() == 'right' then
+			self.Align = attr.align:lower():gsub("^%l", string.upper)
+		end
+	end
+end
+
+OnCreateObject = function(self, parentObject, y)
+	return {
+		Element = self,
+		Y = y,
+		X = 1,
+		Width = self.Width,
+		Height = self.Height,
+		Align = self.Align,
+		Type = "Label",
+		Text = self.Text,
+		TextColour = self.TextColour,
+		BackgroundColour = self.BackgroundColour,
+		OnUpdate = function(_self, value)
+		    if value == 'Text' then
+		        if not self.Attributes.height then
+            		_self.Height = #_self.Bedrock.Helpers.WrapText(_self.Text, _self.Width)
+					_self.Bedrock:GetObject('WebView'):RepositionLayout()
+		        end
+		    end
+		end
+	}
+end

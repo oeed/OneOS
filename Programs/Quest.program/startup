@@ -1,0 +1,521 @@
+local QuestVersion = 'v0.9.0 Private Beta'
+if OneOS then
+	QuestVersion = QuestVersion .. '-OneOS ' .. OneOS.Version
+end
+
+-- TODO: have a much simpler API loader... not a 70+ line one
+local Extension = function(path, addDot)
+	if not path then
+		return nil
+	elseif not string.find(fs.getName(path), '%.') then
+		if not addDot then
+			return fs.getName(path)
+		else
+			return ''
+		end
+	else
+		local _path = path
+		if path:sub(#path) == '/' then
+			_path = path:sub(1,#path-1)
+		end
+		local extension = _path:gmatch('%.[0-9a-z]+$')()
+		if extension then
+			extension = extension:sub(2)
+		else
+			--extension = nil
+			return ''
+		end
+		if addDot then
+			extension = '.'..extension
+		end
+		return extension:lower()
+	end
+end
+
+local RemoveExtension = function(path)
+	if path:sub(1,1) == '.' then
+		return path
+	end
+	local extension = Extension(path)
+	if extension == path then
+		return fs.getName(path)
+	end
+	return string.gsub(path, extension, ''):sub(1, -2)
+end
+
+local tAPIsLoading = {}
+local function LoadAPI(_sPath)
+	local sName = RemoveExtension(fs.getName( _sPath ))
+	if tAPIsLoading[sName] == true then
+	end
+	tAPIsLoading[sName] = true
+		
+	local tEnv = {isStartup = true }
+	setmetatable( tEnv, { __index = getfenv()} )
+	local fnAPI, err = loadfile( _sPath )
+	if fnAPI then
+		setfenv( fnAPI, tEnv )
+		fnAPI()
+	else
+		printError( err )
+		log('Error: '..err)
+        tAPIsLoading[sName] = nil
+		return false
+	end
+	
+	local tAPI = {}
+	for k,v in pairs( tEnv ) do
+		tAPI[k] =  v
+	end
+	
+	_G[sName] = tAPI
+end
+
+_G.Errors = {
+	Unknown = 1,
+	InvalidDoctype = 2,
+	ParseFailed = 3,
+	NotFound = 404,
+	TimeoutStop = 408,
+}
+
+local bedrockPath='/' if OneOS then OneOS.LoadAPI('/System/API/Bedrock.lua', false)elseif fs.exists(bedrockPath..'/Bedrock')then os.loadAPI(bedrockPath..'/Bedrock')else if http then print('Downloading Bedrock...')local h=http.get('http://pastebin.com/raw.php?i=0MgKNqpN')if h then local f=fs.open(bedrockPath..'/Bedrock','w')f.write(h.readAll())f.close()h.close()os.loadAPI(bedrockPath..'/Bedrock')else error('Failed to download Bedrock. Is your internet working?') end else error('This program needs to download Bedrock to work. Please enable HTTP.') end end if Bedrock then Bedrock.BasePath = bedrockPath Bedrock.ProgramPath = shell.getRunningProgram() end
+
+os.loadAPI('parser')
+os.loadAPI('hash')
+os.loadAPI('lQuery')
+LoadAPI('Elements/Element.lua')
+
+LoadAPI('Elements/ElementTree.lua')
+
+local elements = {
+	'Script',
+	'Center',
+	'Link',
+	'Image',
+	'Divider',
+	'Heading',
+	'Paragraph',
+	'Float',
+	'TextInput',
+	'SecureTextInput',
+	'Select',
+	'Form',
+	'SelectOption',
+	'ButtonInput',
+}
+
+for i, v in ipairs(elements) do
+	LoadAPI('Elements/' .. v .. '.lua')
+	local env = getfenv()
+	local super = Element
+	if env[v].Inherit then
+		super = env[env[v].Inherit]
+	end
+	env[v].__index = super
+	setmetatable(env[v], env[v])
+end
+
+local program = Bedrock:Initialise()
+
+local httpQueue = {}
+
+program:RegisterEvent('http_success', function(self, event, url, response)
+	for i, request in ipairs(httpQueue) do
+		if request[3] == url then
+			request[2](true, url, response)
+			table.remove(httpQueue, i)
+			break
+		end
+	end
+end)
+
+program:RegisterEvent('http_failure', function(self, event, url)
+	for i, request in ipairs(httpQueue) do
+		if request[3] == url then
+			request[2](false, Errors.Unknown)
+			table.remove(httpQueue, i)
+			break
+		end
+	end
+end)
+
+local function cancelHTTPAsync(url)
+	for i, request in ipairs(httpQueue) do
+		if request[1] == url then
+			request[2](false, Errors.TimeoutStop)
+			table.remove(httpQueue, i)
+			break
+		end
+	end
+end
+
+local settings = false
+
+local function fetchHTTPAsync(url, callback, post)
+	local components = urlComponents(url)
+	if components.protocol == 'quest' then
+		local file = fs.open(program.ProgramPath .. '/Pages/' .. components.filepathsansget, 'r')
+		callback(true, url, file)
+	elseif components.protocol == 'file' then
+		local file = fs.open(components.sansprotocol, 'r')
+		if file then
+			callback(true, url, file)
+		else
+			callback(false)
+		end
+	elseif components.protocol == 'http' then
+		local _url = resolveQuestHostUrl(url)
+		table.insert(httpQueue, {url, callback, _url})
+
+		if not post then
+			post = 'questClientIdentifier=' .. textutils.urlEncode(settings.ClientIdentifier)
+		else
+			post = post .. '&questClientIdentifier=' .. textutils.urlEncode(settings.ClientIdentifier)
+		-- error(post)
+		end
+		http.request(_url, post, {
+			['User-Agent'] = 'Quest/'..QuestVersion
+		})
+	end
+end
+
+local questHost = 'http://quest.net76.net/sites/'
+
+local function split(str, pat)
+   local t = {}
+   local fpat = "(.-)" .. pat
+   local last_end = 1
+   local s, e, cap = str:find(fpat, 1)
+   while s do
+      if s ~= 1 or cap ~= "" then
+	 table.insert(t,cap)
+      end
+      last_end = e+1
+      s, e, cap = str:find(fpat, last_end)
+   end
+   if last_end <= #str then
+      cap = str:sub(last_end)
+      table.insert(t, cap)
+   end
+   return t
+end
+
+local function findLast(haystack, needle)
+    local i=haystack:match(".*"..needle.."()")
+    if i==nil then return nil else return i-1 end
+end
+
+local hex_to_char = function(x)
+  return string.char(tonumber(x, 16))
+end
+
+local function urlUnencode( str )
+	-- essentially reverses textutils.urlDecode
+    if str then
+        str = string.gsub(str, "+", " ")
+        str = string.gsub(str, "\r\n", "\n")
+        term.setTextColor(colors.black)
+        str = str:gsub("%%(%x%x)", hex_to_char)
+    end
+    return str    
+end
+
+local function urlComponents(url)
+	if url then
+		urlUnencode(textutils.urlEncode(url))
+		local components = {}
+		local parts = split(url, '[\\/]+')
+		if url:find('://') and parts[1]:sub(#parts[1]) == ':' then
+			components.protocol = parts[1]:sub(1, #parts[1]-1)
+			components.sansprotocol = url:sub(#components.protocol + 4)
+			components.host = parts[2]
+			components.fullhost = components.protocol .. '://' .. parts[2] .. '/'
+			components.filename = fs.getName(url)
+			components.filepath = url:sub(#components.fullhost)
+			if components.filename == components.host then
+				components.filename = ''
+			end
+			components.base = url:sub(1, findLast(url, '/'))
+			components.get = {}
+			components.filepathsansget = components.sansprotocol
+			if url:find('?') then
+				local start = url:find('?')
+				components.filepathsansget = url:sub(#components.protocol + 4, start - 1)
+				local getString = url:sub(start + 1)
+				local values = split(getString, '&')
+				for i, v in ipairs(values) do
+					local keyvalue = split(v, '=')
+					components.get[keyvalue[1]] =  urlUnencode(keyvalue[2])
+				end
+			end
+			return components
+		end
+	end
+end
+
+local function resolveQuestHostUrl(url)
+	local components = urlComponents(url)
+	local hostParts = split(components.host, '%.')
+	local tld = hostParts[#hostParts]
+	if tld == 'qst' and #hostParts == 2 then
+		return questHost .. hostParts[1] .. components.filepath
+	end
+	return url
+end
+
+local function resolveFullUrl(url)
+	if url and type(url) ~= 'string' then
+	elseif url:find('://') then
+		return url
+	else
+		local components = urlComponents(program:GetObject('WebView').URL)
+		if components then
+			if url:sub(1,1) == '/' then
+				return components.fullhost .. url:sub(2)
+			else
+				return components.base .. url
+			end
+		end
+	end
+end
+
+local function getCurrentUrl()
+	return program:GetObject('WebView').URL
+end
+
+local function goToUrl(url, post)
+	program:GetObject('WebView'):GoToURL(url, nil, nil, post)
+end
+
+--	Yes, it's evil and terrible, etc. But I'll hopefully change it later.
+_G.cancelHTTPAsync = cancelHTTPAsync
+_G.fetchHTTPAsync = fetchHTTPAsync
+_G.resolveFullUrl = resolveFullUrl
+_G.resolveQuestHostUrl = resolveQuestHostUrl
+_G.getCurrentUrl = getCurrentUrl
+_G.goToUrl = goToUrl
+_G.split = split
+_G.urlComponents = urlComponents
+_G.QuestVersion = QuestVersion
+
+local history = {}
+local historyItem = 0
+
+local function updateHistoryButtons()
+	if history[historyItem-1] then
+		program:GetObject('BackButton').Enabled = true
+	else
+		program:GetObject('BackButton').Enabled = false
+	end
+
+	if history[historyItem+1] then
+		program:GetObject('ForwardButton').Enabled = true
+	else
+		program:GetObject('ForwardButton').Enabled = false
+	end
+end
+
+local function addHistoryURL(url)
+	for i, v in ipairs(history) do
+		if i > historyItem then
+			history[i] = nil
+		end
+	end
+	table.insert(history, url)
+	historyItem = #history
+	updateHistoryButtons()
+end
+
+local defaultSettings = {
+	Home = 'http://thehub.qst/',
+	ClientIdentifier = nil
+}
+
+local function quit()
+	term.setBackgroundColour(colors.black)
+	shell.run('clear')
+	print('Thanks for using Quest, created by oeed.')
+	program:Quit()
+end
+
+local function goHome()
+	goToUrl(settings.Home)
+end
+
+local function saveSettings()
+	local f = fs.open('.Quest.settings', 'w')
+	if f then
+		f.write(textutils.serialize(settings))
+		f.close()
+	end
+end
+
+local function generateClientIdentifier()
+	program:DisplayWindow({
+		Children = {{
+			X = 2,
+			Y = 2,
+			Type = "Label",
+			Width = "100%,-2",
+			Height = 2,
+			Text = "Registering computer with central server..."
+		}},
+		Width = 28,
+		Height = 4
+	}, "Please Wait", false)
+	program:Draw()
+	local h = http.get('http://quest.net76.net/registerClient.php')
+	program.Window:Close()
+
+	if h then
+		settings.ClientIdentifier = h.readAll()
+		saveSettings()
+		h.close()
+		goHome()
+	else
+		program:DisplayAlertWindow("Register Failed", "Quest couldn't register your computer. There was something wrong with your internet connection. Please quit and try again.", {'Quit'}, function(value)
+			quit()
+		end)
+	end
+
+end
+
+local function loadSettings()
+	if fs.exists('.Quest.settings') then
+		local f = fs.open('.Quest.settings', 'r')
+		if f then
+			settings = textutils.unserialize(f.readAll())
+			if not settings.ClientIdentifier then
+				generateClientIdentifier()
+			end
+			return settings
+		end
+	end
+
+	settings = defaultSettings
+	generateClientIdentifier()
+end
+
+program:Run(function()
+	local timeoutTimer = false
+
+	program:LoadView('main')
+
+	loadSettings()
+
+	program:GetObject('BackButton').OnClick = function(self)
+		if history[historyItem-1] then
+			historyItem = historyItem - 1
+			program:GetObject('WebView'):GoToURL(history[historyItem], nil, true)
+			updateHistoryButtons()
+		end
+	end
+
+	program:GetObject('ForwardButton').OnClick = function(self)
+		if history[historyItem+1] then
+			historyItem = historyItem + 1
+			program:GetObject('WebView'):GoToURL(history[historyItem], nil, true)
+			updateHistoryButtons()
+		end
+	end
+
+	program:GetObject('URLTextBox').OnChange = function(self, event, keychar)
+		if keychar == keys.enter then
+			local url = self.Text
+			if not url:find('://') then
+				url = 'http://' .. url 
+				self.Text = url
+			end
+			program:GetObject('WebView'):GoToURL(url)
+		end
+	end
+
+	program:GetObject('OptionsButton').OnClick = function(self, event, side, x, y)
+		if self:ToggleMenu('optionsmenu', x, y) then
+			program:GetObject('StopMenuItem').OnClick = function(self, event, side, x, y)
+				program:GetObject('WebView'):Stop()
+			end
+
+			program:GetObject('ReloadMenuItem').OnClick = function(self, event, side, x, y)
+				program:GetObject('WebView'):GoToURL(program:GetObject('WebView').URL)
+			end
+
+			program:GetObject('GoHomeMenuItem').OnClick = function(self, event, side, x, y)
+				program:GetObject('WebView'):GoToURL('http://quest.net76.net/')
+			end
+
+			program:GetObject('SetHomeMenuItem').OnClick = function(self, event, side, x, y)
+				settings.Home = program:GetObject('WebView').URL
+				saveSettings()
+			end
+
+			program:GetObject('QuitMenuItem').OnClick = function(self, event, side, x, y)
+				quit()
+			end
+		end
+	end
+
+	program:GetObject('WebView').OnPageLoadStart = function(self, url)
+		program:SetActiveObject()
+		-- program:GetObject('GoButton').Text = 'x'
+		program:GetObject('URLTextBox').Visible = false
+		program:GetObject('LoadingLabel').Visible = true
+		program:GetObject('PageTitleLabel').Text = ''
+
+		
+		timeoutTimer = program:StartTimer(function()
+			program:GetObject('WebView'):Stop()
+		end, 10)
+	end
+
+	program:GetObject('WebView').OnPageLoadEnd = function(self, url, noHistory)
+		program:GetObject('URLTextBox').Text = url
+		program:GetObject('URLTextBox').Visible = true
+		program:GetObject('LoadingLabel').Visible = false
+
+		if self.Tree:GetElement('title') then
+			program:GetObject('PageTitleLabel').Text = self.Tree:GetElement('title').Text
+		end
+
+		if not noHistory then
+			addHistoryURL(url)
+		end
+
+		program.Timers[timeoutTimer] = nil
+	end
+
+	program:GetObject('WebView').OnPageLoadFailed = function(self, url, _error, noHistory)
+		program:GetObject('URLTextBox').Text = url
+		program:GetObject('URLTextBox').Visible = true
+		program:GetObject('LoadingLabel').Visible = false
+		program.Timers[timeoutTimer] = nil
+
+		if not noHistory then
+			addHistoryURL(url)
+		end
+
+		local get = ''
+		_error = _error or 1
+		if type(_error) == 'string' then
+			get = '?reason='..textutils.urlEncode(_error)
+			_error = 'text'
+		end
+
+		program:GetObject('WebView'):GoToURL('quest://'.._error..'.ccml'..get, true, true)
+	end
+
+	program:GetObject('Toolbar').OnClick = function(self, event, side, x, y)
+		program:SetActiveObject()
+	end
+
+	program:GetObject('WebView').OnClick = function(self, event, side, x, y)
+		program:SetActiveObject()
+	end
+
+	if settings.ClientIdentifier then
+		goHome()
+	end
+end)
+
+

@@ -1,0 +1,15 @@
+<!DOCTYPE ccml>
+<html>
+	<head>
+	  <title>Page Not Found</title>
+	</head>
+	<body>
+		<br/>
+		<br/>
+		<h colour="red">Page Load Cancelled</h>
+
+		<center>
+			<p width="38" align="center">The page either took too long to load or you cancelled loading it.</p>
+		</center>
+	</body>
+</html>
