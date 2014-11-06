@@ -1,62 +1,84 @@
-OneOS.LoadAPI('/System/API/Bedrock.lua', false)
+OneOS.Log.i('Starting update')
+local mainTitle = 'OneOS Updater'
+local subTitle = 'Please wait...'
 
-local program = Bedrock:Initialise()
-local latestReleaseTag = ''
-local canClose = false
-
-_fs = OneOS.FS
-
-OneOS.CanClose = function()
-	return canClose
+function Draw()
+	sleep(0)
+	term.setBackgroundColour(colours.white)
+	term.clear()
+	local w, h = term.getSize()
+	term.setTextColour(colours.lightBlue)
+	term.setCursorPos(math.ceil((w-#mainTitle)/2), 8)
+	term.write(mainTitle)
+	term.setTextColour(colours.blue)
+	term.setCursorPos(math.ceil((w-#subTitle)/2), 10)
+	term.write(subTitle)
 end
 
-local totalBytes, downloadedBytes, downloadedFiles, totalFiles = 0, 0, 0, 0
+tArgs = {...}
 
-function UpdaterRefresh()
-	program:GetObject('ProgressBar').Maximum = totalBytes
-	program:GetObject('ProgressBar').Value = downloadedBytes
-	if program:GetObject('ProgressBar').Value == program:GetObject('ProgressBar').Maximum and program:GetObject('ProgressBar').Value ~= 0 then
-		program:GetObject('UpdateLabel').Text = 'Download Complete!'
-		program:GetObject('StatusLabel').Text = 'Your computer will restart in 3 seconds...'
-	elseif program:GetObject('ProgressBar').Value ~= 0 then
-		program:GetObject('UpdateLabel').Text = 'Downloading Files...'
-		program:GetObject('StatusLabel').Text = FormatBytes(totalBytes - downloadedBytes) .. ' ('..totalFiles - downloadedFiles..' files) Remaining...'
-	else
-		program:GetObject('UpdateLabel').Text = 'Updating OneOS'
-		program:GetObject('StatusLabel').Text = 'Preparing Downloads'
-	end
-	program:Draw()
-end
+Settings = {
+	InstallPath = '/', --Where the program's installed, don't always asume root (if it's run under something like OneOS)
+	Hidden = false, --Whether or not the update is hidden (doesn't write to the screen), useful for background updates
+	GitHubUsername = 'oeed', --Your GitHub username as it appears in the URL
+	GitHubRepoName = 'OneOS', --The repo name as it appears in the URL
+	DownloadReleases = true, --If true it will download the latest release, otherwise it will download the files as they currently appear
+	UpdateFunction = nil, --Sent when something happens (file downloaded etc.)
+	TotalBytes = 0, --Do not change this value (especially programatically)!
+	DownloadedBytes = 0, --Do not change this value (especially programatically)!
+	Status = '',
+	SecondaryStatus = '',
+}
 
-function FormatBytes(bytes)
-	if bytes < 1024 then
-		return "< 1KB"
-	elseif bytes < 1024 * 1024 then
-		return math.ceil(bytes / 1024) .. 'KB'
-	elseif bytes < 1024 * 1024 * 1024 then
-		--string.format('%.2f', ...) wasn't working for some reason
-		local b = math.ceil((bytes / 1024 / 1024)*100)
-		return b/100 .. 'MB'
-	else
-		return '> 1GB'
-	end
+OneOS.LoadAPI('/System/JSON')
+if JSON then
+	OneOS.Log.i('Loaded JSON')
+else
+	error('Failed to load JSON API')
 end
 
 function downloadJSON(path)
-	OneOS.Log.i('Downloading JSON: '..path)
 	local _json = http.get(path)
 	if not _json then
-		error('Could not download, check your connection.')
+		error('Could not download: '..path..' Check your connection.')
 	end
 	return JSON.decode(_json.readAll())
 end
+
+if http then
+	subTitle = 'HTTP enabled, attempting update...'
+	Draw()
+else
+	subTitle = 'HTTP is required to update.'
+	Draw()
+	error('')
+end
+
+subTitle = 'Determining Latest Version'
+Draw()
+local releases = downloadJSON('https://api.github.com/repos/'..Settings.GitHubUsername..'/'..Settings.GitHubRepoName..'/releases')
+local latestReleaseTag = nil
+for i, v in ipairs(releases) do
+	if not v.prerelease then
+		latestReleaseTag = v.tag_name
+		break
+	end
+end
+subTitle = 'Optaining Latest Version URL'
+Draw()
+local refs = downloadJSON('https://api.github.com/repos/'..Settings.GitHubUsername..'/'..Settings.GitHubRepoName..'/git/refs/tags/'..latestReleaseTag)
+local latestReleaseSha = refs.object.sha
+
+subTitle = 'Downloading File Listing'
+Draw()
+
+local tree = downloadJSON('https://api.github.com/repos/'..Settings.GitHubUsername..'/'..Settings.GitHubRepoName..'/git/trees/'..latestReleaseSha..'?recursive=1').tree
 
 local blacklist = {
 	'/.gitignore',
 	'/README.md',
 	'/TODO',
 	'/Desktop/.Desktop.settings',
-	'/System/.OneOS.settings',
 	'/.version'
 }
 
@@ -69,91 +91,77 @@ function isBlacklisted(path)
 	return false
 end
 
+Settings.TotalFiles = 0
+Settings.TotalBytes = 0
+for i, v in ipairs(tree) do
+	if not isBlacklisted(Settings.InstallPath..v.path) and v.size then
+		Settings.TotalBytes = Settings.TotalBytes + v.size
+		Settings.TotalFiles = Settings.TotalFiles + 1
+	end
+end
+
+Settings.DownloadedBytes = 0
+Settings.DownloadedFiles = 0
 function downloadBlob(v)
-	if isBlacklisted(v.path) then
+	if isBlacklisted(Settings.InstallPath..v.path) then
 		return
 	end
 	if v.type == 'tree' then
-		OneOS.Log.i('Making folder: '..'/'..v.path)
-		OneOS.FS.makeDir('/'..v.path)
+		OneOS.Log.i('Making folder: '..'/'..Settings.InstallPath..v.path)
+		Draw()
+		OneOS.FS.makeDir('/'..Settings.InstallPath..v.path)
 	else
-		OneOS.Log.i('(' .. downloadedBytes .. 'B/' .. totalBytes .. 'B) Downloading file: '..v.path)
-		local f = http.get(('https://raw.github.com/oeed/OneOS/'..latestReleaseTag..'/'..v.path):gsub(' ','%%20'))
+		OneOS.Log.i('Starting download for: '..Settings.InstallPath..v.path)
+		Draw()
+
+        local tries, f = 0
+        repeat 
+			f = http.get(('https://raw.github.com/'..Settings.GitHubUsername..'/'..Settings.GitHubRepoName..'/'..latestReleaseTag..Settings.InstallPath..v.path):gsub(' ','%%20'))
+                if not f then sleep(5) end
+                tries = tries + 1
+        until tries > 5 or f
+
 		if not f then
-			error('Downloading failed, try again. '..('https://raw.github.com/oeed/OneOS/'..latestReleaseTag..'/'..v.path):gsub(' ','%%20'))
+			error('Downloading failed, try again. '..('https://raw.github.com/'..Settings.GitHubUsername..'/'..Settings.GitHubRepoName..'/'..latestReleaseTag..Settings.InstallPath..v.path):gsub(' ','%%20'))
 		end
-		local h = OneOS.FS.open('/'..v.path, 'w')
+
+		local h = OneOS.FS.open('/'..Settings.InstallPath..v.path, 'w')
 		h.write(f.readAll())
 		h.close()
-		OneOS.Log.i('Downloaded: '..v.path)
-
+		OneOS.Log.i('Downloaded File: '..'/'..Settings.InstallPath..v.path)
+		subTitle = 'Downloading: ' .. math.floor(100*(Settings.DownloadedFiles/Settings.TotalFiles))..'%' -- using the number of files over the number of bytes actually appears to be more accurate, the connection takes longer than sending the data
+		Draw()
 		if v.size then
-			downloadedBytes = downloadedBytes + v.size
+			Settings.DownloadedBytes = Settings.DownloadedBytes + v.size
+			Settings.DownloadedFiles = Settings.DownloadedFiles + 1
 		end
-		downloadedFiles = downloadedFiles + 1
-		UpdaterRefresh()
 	end
 end
 
-function StartUpdate()
-	OneOS.LoadAPI('/System/JSON')
-	if JSON then
-		OneOS.Log.i('Loaded JSON')
-	else
-		error('Failed to load JSON API')
+local connectionLimit = 5
+local downloads = {}
+for i, v in ipairs(tree) do
+	local queueNumber = math.ceil(i / connectionLimit)
+	if not downloads[queueNumber] then
+		downloads[queueNumber] = {}
 	end
-
-	OneOS.Log.i('Determining latest version...')
-	local releases = downloadJSON('https://api.github.com/repos/oeed/OneOS/releases')
-
-	latestReleaseTag = releases[1].tag_name
-
-	if not OneOS.Settings:GetValues()['DownloadPrereleases'] then
-		for i, v in ipairs(releases) do
-			if not v.prerelease then
-				latestReleaseTag = v.tag_name
-				break
-			end
-		end
-	end
-	OneOS.Log.i('Latest release: '..latestReleaseTag)
-
-	OneOS.Log.i('Optaining Latest Version URL')
-	local refs = downloadJSON('https://api.github.com/repos/'..Settings.GitHubUsername..'/'..Settings.GitHubRepoName..'/git/refs/tags/'..latestReleaseTag)
-	local latestReleaseSha = refs.object.sha
-
-	OneOS.Log.i('Downloading tree for SHA: '..latestReleaseSha)
-	local tree = downloadJSON('https://api.github.com/repos/oeed/OneOS/git/trees/'..latestReleaseSha..'?recursive=1').tree
-
-	for i, v in ipairs(tree) do
-		if not isBlacklisted(v.path) and v.size then
-			totalBytes = totalBytes + v.size
-			totalFiles = totalFiles + 1
-		end
-	end
-
-	local downloads = {}
-	fs.makeDir('/')
-	for i, v in ipairs(tree) do
-		--parallel.waitForAny(function() sleep(0) end, function()downloadBlob(v)end)
-		--downloadBlob(v)
-		table.insert(downloads, function()downloadBlob(v)end)
-	end
-
-	parallel.waitForAll(unpack(downloads))
-
-	local h = OneOS.FS.open('/System/.version', 'w')
-	h.write(latestReleaseTag)
-	h.close()
-	--sleep()
-	OneOS.Log.i('Done, rebooting now.')
-	OneOS.KillSystem()
+	table.insert(downloads[queueNumber], function()
+		downloadBlob(v)
+	end)
 end
 
+for i, queue in ipairs(downloads) do
+	parallel.waitForAll(unpack(queue))
+end
 
+local h = OneOS.FS.open('/System/.version', 'w')
+h.write(latestReleaseTag)
+h.close()
 
-program:Run(function()
-	program:LoadView('main')
-	OneOS.Log.i('Starting update')
-	StartUpdate()
-end)
+mainTitle = 'Installation Complete!'
+subTitle = 'Rebooting in 1 second...'
+Draw()
+sleep(1)
+
+OneOS.Log.i('Done, rebooting now.')
+OneOS.KillSystem()
