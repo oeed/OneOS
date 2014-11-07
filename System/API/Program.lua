@@ -201,3 +201,19 @@ SwitchTo = function(self)
 		Current.ProgramView:ForceDraw()
 	end
 end
+
+RenderPreview = function(self, width, height)
+	local preview = {}
+	local deltaX = self.AppRedirect.Size[1] / width
+	local deltaY = self.AppRedirect.Size[2] / height
+
+	for _x = 1, width do
+		local x = Helpers.Round(1 + (_x - 1) * deltaX)
+		preview[_x] = {}
+		for _y = 1, height do
+			local y = Helpers.Round(1 + (_y - 1) * deltaY)
+			preview[_x][_y] = self.AppRedirect.Buffer[y][x]
+		end
+	end
+	return preview
+end

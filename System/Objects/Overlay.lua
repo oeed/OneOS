@@ -1,7 +1,8 @@
 Inherit = 'View'
 
-TextColour = colours.black
-BackgroundColour = colours.white
+TextColour = colours.white
+BackgroundColour = colours.grey
+CenterPointMode = false
 
 OnDraw = function(self, x, y)
 	if self.BackgroundColour then
@@ -11,31 +12,36 @@ end
 
 OnLoad = function(self)
 	self:GetObject('OneButton').OnClick = function(btn)
-		if btn:ToggleMenu('onemenu') then
+		-- if btn:ToggleMenu('onemenu') then
 
-			self.Bedrock:GetObject('DesktopMenuItem').OnClick = function(itm)
-				Current.Desktop:SwitchTo()
-			end
+		-- 	self.Bedrock:GetObject('DesktopMenuItem').OnClick = function(itm)
+		-- 		Current.Desktop:SwitchTo()
+		-- 	end
 
-			self.Bedrock:GetObject('AboutMenuItem').OnClick = function(itm)
-				Helpers.OpenFile('System/Programs/About OneOS.program')
-			end
+		-- 	self.Bedrock:GetObject('AboutMenuItem').OnClick = function(itm)
+		-- 		Helpers.OpenFile('System/Programs/About OneOS.program')
+		-- 	end
 
-			self.Bedrock:GetObject('SettingsMenuItem').OnClick = function(itm)
-				Helpers.OpenFile('System/Programs/Settings.program')
-			end
+		-- 	self.Bedrock:GetObject('SettingsMenuItem').OnClick = function(itm)
+		-- 		Helpers.OpenFile('System/Programs/Settings.program')
+		-- 	end
 
-			self.Bedrock:GetObject('UpdateMenuItem').OnClick = function(itm)
-				CheckAutoUpdate(true)
-			end
+		-- 	self.Bedrock:GetObject('UpdateMenuItem').OnClick = function(itm)
+		-- 		CheckAutoUpdate(true)
+		-- 	end
 
-			self.Bedrock:GetObject('RestartMenuItem').OnClick = function(itm)
-				Restart()
-			end
+		-- 	self.Bedrock:GetObject('RestartMenuItem').OnClick = function(itm)
+		-- 		Restart()
+		-- 	end
 
-			self.Bedrock:GetObject('ShutdownMenuItem').OnClick = function(itm)
-				Shutdown()
-			end
+		-- 	self.Bedrock:GetObject('ShutdownMenuItem').OnClick = function(itm)
+		-- 		Shutdown()
+		-- 	end
+		-- end
+		if btn.Toggle then
+			self.Bedrock:GetObject('CentrePoint'):Show()
+		else
+			self.Bedrock:GetObject('CentrePoint'):Hide()
 		end
 	end
 
@@ -48,8 +54,11 @@ OnLoad = function(self)
 	self:UpdateButtons()
 end
 
-UpdateButtons = function(self)
-	if Current.Program then
+UpdateButtons = function(self, backgroundColour, textColour)
+	if self.CenterPointMode then
+		self.BackgroundColour = colours.grey
+		self.TextColour = colours.white
+	elseif Current.Program then
 		if Current.Program.Environment.OneOS.ToolBarColor ~= colours.white then
 			self.BackgroundColour = Current.Program.Environment.OneOS.ToolBarColor
 			Current.Program.Environment.OneOS.ToolBarColour = Current.Program.Environment.OneOS.ToolBarColor
@@ -85,7 +94,7 @@ UpdateButtons = function(self)
 			local bg = self.BackgroundColour
 			local tc = self.TextColour
 			local button = ''
-			if Current.Program and Current.Program == program then
+			if not self.CenterPointMode and Current.Program and Current.Program == program then
 				bg = colours.lightBlue
 				tc = colours.white
 				button = 'x '
@@ -112,6 +121,9 @@ UpdateButtons = function(self)
 		    			obj.Program:Close()
 		    		end
 		    	else
+		    		if self.CenterPointMode then
+						self.Bedrock:GetObject('CentrePoint'):Hide()
+					end
 		    		obj.Program:SwitchTo()
 		    	end
 				self:UpdateButtons()

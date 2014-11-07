@@ -185,7 +185,6 @@ TruncateStringStart = function(sString, maxLength)
 	return sString
 end
 
-
 WrapText = function(text, maxWidth)
 	local lines = {''}
     for word, space in text:gmatch('(%S+)(%s*)') do

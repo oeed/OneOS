@@ -24,12 +24,18 @@
       ["Height"]="100%,-1",
       ["Name"]="ProgramView",
       ["Type"]="ProgramView",
-      ["Active"]=true
+      ["Active"]=true,
     },
     [4]={
+      ["Name"]="CentrePoint",
+      ["Type"]="CentrePoint",
+      ["InheritView"]="centrepoint",
+      ["Visible"]=false,
+    },
+    [5]={
       ["Name"]="Overlay",
       ["Type"]="Overlay",
-      ["InheritView"]="overlay"
+      ["InheritView"]="overlay",
     },
   }
 }
