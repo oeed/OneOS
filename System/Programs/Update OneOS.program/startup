@@ -2,6 +2,10 @@ OneOS.Log.i('Starting update')
 local mainTitle = 'OneOS Updater'
 local subTitle = 'Please wait...'
 
+OneOS.CanClose = function()
+	return false
+end
+
 function Draw()
 	sleep(0)
 	term.setBackgroundColour(colours.white)

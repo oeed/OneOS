@@ -462,6 +462,21 @@ local oldFiles = {
 	'/System/Programs/About OneOS',
 	'/System/Programs/Settings',
 	'/System/Programs/Update OneOS',
+	'/System/API/Object.lua',
+	'/System/Objects/Button.lua',
+	'/System/Objects/CollectionView.lua',
+	'/System/Objects/ImageView.lua',
+	'/System/Objects/Label.lua',
+	'/System/Objects/ListView.lua',
+	'/System/Objects/Menu.lua',
+	'/System/Objects/ProgressBar.lua',
+	'/System/Objects/ScrollBar.lua',
+	'/System/Objects/ScrollView.lua',
+	'/System/Objects/Separator.lua',
+	'/System/Objects/TextBox.lua',
+	'/System/Objects/View.lua',
+	'/System/Objects/Window.lua',
+	'/System/API/Drawing.lua',
 }
 
 function RemoveOldFiles()
@@ -492,6 +507,10 @@ function RemoveOldFiles()
 		end
 	end
 	doLog = false
+	log('Clean complete!')
+	log('Rebooting now...')
+	sleep(1)
+	os.reboot()
 end
 
 function Start()
