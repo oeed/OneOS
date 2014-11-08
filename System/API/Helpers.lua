@@ -9,7 +9,7 @@ OpenFile = function(path, args)
 	if fs.exists(path) then
 		if Current.Bedrock then
 			local centrePoint = Current.Bedrock:GetObject('CentrePoint')
-			if centrePoint.Visible then
+			if centrePoint and centrePoint.Visible then
 				centrePoint:Hide()
 			end
 		end
