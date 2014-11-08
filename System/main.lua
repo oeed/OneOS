@@ -310,7 +310,7 @@ function AutoUpdateResponse(self, event, url, data)
 		else
 			Log.i('OneOS is neither up to date or behind. (.version probably edited)')
 		end
-	else
+	elseif Current.Program then
 		Current.Program:QueueEvent(event, url, data)
 	end
 end

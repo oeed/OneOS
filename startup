@@ -3,7 +3,7 @@ for k, v in pairs(_G) do
 	cleanEnvironment[k] = v
 end
 
-isDebug = true
+isDebug = false
 
 oldTerm = term
 
