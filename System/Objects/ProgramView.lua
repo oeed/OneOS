@@ -62,9 +62,9 @@ OnDraw = function(self, x, y)
 			Count = 5,
 			Function = function(i)
 				self:DrawProgram(Current.Desktop, x, y)
+				self:DrawPreview(self.CachedProgram, x + centerX - (w / 2) - 2, y + centerY - (h / 2), w, h, colour)
 				w = w - deltaW
 				h = h - deltaH
-				Drawing.DrawBlankArea(x + centerX - (w / 2), y + centerY - (h / 2), w, h, colour)
 			end
 		}
 		self:DrawAnimation()
@@ -93,7 +93,7 @@ OnDraw = function(self, x, y)
 				self:DrawProgram(Current.Desktop, x, y)
 				w = w + deltaW
 				h = h + deltaH
-				Drawing.DrawBlankArea(x + centerX - (w / 2) - 2, y + centerY - (h / 2), w, h, colour)
+				self:DrawPreview(Current.Program, x + centerX - (w / 2) - 2, y + centerY - (h / 2), w, h, colour)
 			end
 		}
 		self:DrawAnimation()
@@ -173,7 +173,28 @@ DrawProgram = function(self, program, x, y)
 	end
 end
 
+DrawPreview = function(self, program, x, y, w, h, _colour)
+	if program then
+		local preview = program:RenderPreview(w, h)
+		for _x, col in pairs(preview) do
+			for _y, colour in ipairs(col) do
+				local char = '-'
+				if colour[1] == ' ' then
+					char = ' '
+				end
+				Drawing.WriteToBuffer(x+_x, y+_y-1, char, colour[2], colour[3])
+			end
+		end
+	else
+		Drawing.DrawBlankArea(x, y, w, h, colours.red)
+	end
+end
+
 OnClick = function(self, event, side, x, y)
+	if not self.Bedrock:GetActiveObject() then
+		self.Bedrock:SetActiveObject(self)
+	end
+	
 	if Current.Program then
 		Current.Program:Click(event, side, x, y)
 	end

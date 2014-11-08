@@ -68,11 +68,23 @@
   	  }
     },
     [3]={
-      ["Y"]="100%",
-      ["X"]="100%,-10",
-      ["Type"]="Label",
-      ["Text"]="CentrePoint",
-      ["TextColour"]=128
+	  ["Width"]="100%",
+	  ["Height"]="100%,-3",
+      ["Y"]=4,
+      ["X"]=1,
+      ["Type"]="ScrollView",
+      ["BackgroundColour"]=0,
+      ["ScrollBarBackgroundColour"]=0,
+      ["ScrollBarColour"]=8,
+    },
+    [4]={
+	  ["Width"]="100%",
+	  ["Height"]="100%",
+      ["Y"]=1,
+      ["X"]=1,
+      ["Name"]="AnimateProgramPreview",
+      ["Type"]="ProgramPreview",
+      ["Minimal"]=true,
     },
   },
 }

@@ -1,4 +1,4 @@
---Bedrock Build: 267
+--Bedrock Build: 269
 --This code is squished down in to one, rather hard to read file.
 --As such it is not much good for anything other than being loaded as an API.
 --If you want to look at the code to learn from it, copy parts or just take a look,
@@ -1281,6 +1281,8 @@ Inherit = 'View'
 ChildOffset = false
 ContentWidth = 0
 ContentHeight = 0
+ScrollBarBackgroundColour = colours.lightGrey
+ScrollBarColour = colours.lightBlue
 
 CalculateContentSize = function(self)
 	local function calculateObject(obj)
@@ -1319,6 +1321,8 @@ UpdateScroll = function(self)
 				["Y"] = 1,
 				["Width"] = 1,
 				["Height"] = self.Height,
+				["BackgroundColour"] = self.ScrollBarBackgroundColour,
+				["BarColour"] = self.ScrollBarColour,
 				["Z"]=999
 			})
 
@@ -1840,6 +1844,7 @@ Title = ''
 Flashing = false
 CanClose = true
 OnCloseButton = nil
+OldActiveObject = nil
 
 OnLoad = function(self)
 	--self:GetObject('View') = self.Bedrock:ObjectFromFile({Type = 'View',Width = 10, Height = 5, BackgroundColour = colours.red}, self)
@@ -1861,6 +1866,7 @@ LoadView = function(self)
 	if self.OnViewLoad then
 		self.OnViewLoad(view)
 	end
+	self.OldActiveObject = self.Bedrock:GetActiveObject()
 	self.Bedrock:SetActiveObject(view)
 end
 
@@ -1893,6 +1899,7 @@ OnDraw = function(self, x, y)
 end
 
 Close = function(self)
+	self.Bedrock:SetActiveObject(self.OldActiveObject)
 	self.Bedrock.Window = nil
 	self.Bedrock:RemoveObject(self)
 	if self.OnClose then

@@ -93,7 +93,7 @@ function FileClick(item, event, side, x, y)
 			end
 
 			program:GetObject('OpenWithMenuItem').OnClick = function(_item)
-				OneOS.Helpers.OpenFileWith(item.Path)
+				OneOS.Helpers.OpenFileWith(item.Path, program)
 			end
 
 			program:GetObject('TransmitMenuItem').OnClick = function(_item)

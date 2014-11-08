@@ -7,6 +7,13 @@ end
 OpenFile = function(path, args)
 	args = args or {}
 	if fs.exists(path) then
+		if Current.Bedrock then
+			local centrePoint = Current.Bedrock:GetObject('CentrePoint')
+			if centrePoint.Visible then
+				centrePoint:Hide()
+			end
+		end
+
 		local extension = Helpers.Extension(path)
 		if extension == 'shortcut' then
 			h = fs.open(path, 'r')
@@ -31,7 +38,7 @@ OpenFile = function(path, args)
 			local _path = Indexer.FindFileInFolder(extension, 'Icons')
 			if _path and not _path:find('System/Images/Icons/') then
 				Helpers.OpenFile(Helpers.ParentFolder(Helpers.ParentFolder(_path)), {path})
-			elseif _path then
+			else
 				OpenFileWith(path)
 			end
 		else
@@ -327,24 +334,32 @@ OpenFileWith = function(path, bedrock)
 	local text = 'Choose the program you want to open this file with.'
 	local height = #Helpers.WrapText(text, 26)
 
+	local items = {}
+
+	for i, v in ipairs(fs.list('Programs/')) do
+		if string.sub( v, 1, 1 ) ~= '.' then
+			table.insert(items, v)
+		end
+	end
+
 	local children = {
 		{
 			["Y"]="100%,-1",
-			["X"]="100%,-4",
+			["X"]="100%,-5",
 			["Name"]="OpenButton",
 			["Type"]="Button",
 			["Text"]="Open",
 			OnClick = function()
 				local selected = bedrock.Window:GetObject('ListView').Selected
 				if selected then
-					OneOS.Run(value, selected.Path, path)
+					OpenFile('Programs/' .. selected.Text, {path})
 					bedrock.Window:Close()
 				end
 			end
 		},
 		{
 			["Y"]="100%,-1",
-			["X"]="100%,-13",
+			["X"]="100%,-14",
 			["Name"]="CancelButton",
 			["Type"]="Button",
 			["Text"]="Cancel",
@@ -353,21 +368,16 @@ OpenFileWith = function(path, bedrock)
 			end
 		},
 	    {
-			["Y"]=2,
+			["Y"]=6,
 			["X"]=2,
-			["Height"]="100%,-3",
+			["Height"]="100%,-8",
 			["Width"]="100%,-2",
 			["Name"]="ListView",
 			["Type"]="ListView",
 			["TextColour"]=128,
 			["BackgroundColour"]=0,
 			["CanSelect"]=true,
-			["Items"]={
-				{["Text"] = 'Desktop', ["Path"] = '/Desktop/'},
-				{["Text"] = 'Documents', ["Path"] = '/Desktop/Documents/'},
-				{["Text"] = 'Programs', ["Path"] = '/Programs/'},
-				{["Text"] = 'Computer', ["Path"] = '/'},
-			},
+			["Items"]=items,
 	    },
 	    {
 			["Y"]=2,
@@ -381,7 +391,7 @@ OpenFileWith = function(path, bedrock)
 	}
 
 	local view = {
-		Children = {children},
+		Children=children,
 		Width=28,
 		Height=10+height
 	}
