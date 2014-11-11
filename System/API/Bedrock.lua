@@ -1,4 +1,4 @@
---Bedrock Build: 269
+--Bedrock Build: 270
 --This code is squished down in to one, rather hard to read file.
 --As such it is not much good for anything other than being loaded as an API.
 --If you want to look at the code to learn from it, copy parts or just take a look,
@@ -709,7 +709,9 @@ OnDraw = function(self, x, y)
     elseif self.Align == 'Center' then
         _x = math.floor((self.Width - #self.Text) / 2)
     end
-	Drawing.DrawCharacters(x + _x, y, self.Text, txt, bg)
+
+
+	Drawing.DrawCharacters(x + _x, y-1+math.ceil(self.Height/2), self.Text, txt, bg)
 end
 
 OnLoad = function(self)
@@ -2762,11 +2764,11 @@ OnDraw = nil
 OnQuit = nil
 
 local eventFuncs = {
-	OnClick = {'mouse_click'},
+	OnClick = {'mouse_click', 'monitor_touch'},
 	OnKeyChar = {'key', 'char'},
 	OnDrag = {'mouse_drag'},
 	OnScroll = {'mouse_scroll'},
-	HandleClick = {'mouse_click', 'mouse_drag', 'mouse_scroll'},
+	HandleClick = {'mouse_click', 'mouse_drag', 'mouse_scroll', 'monitor_touch'},
 	HandleKeyChar = {'key', 'char'},
 	HandleTimer = {'timer'}
 }
