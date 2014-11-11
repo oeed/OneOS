@@ -1,9 +1,9 @@
+isDebug = false
+
 cleanEnvironment = {}
 for k, v in pairs(_G) do
 	cleanEnvironment[k] = v
 end
-
-isDebug = false
 
 oldTerm = term
 
@@ -294,6 +294,7 @@ function PastebinPut(file)
 end
 
 function BootMenu()
+	local Drawing = LegacyDrawing
 	Log.i('Entered Boot Menu')
 	Drawing.Clear(colours.white)
 	Drawing.DrawCharactersCenter(nil, (-Drawing.Screen.Height/2) + 2, nil, nil, 'OneOS', colours.blue, colours.white)
@@ -626,6 +627,8 @@ elseif Start() then
 		    term.setCursorPos(x, i+12)
 		    print(v)
 		end
+
+		local Drawing = LegacyDrawing
 
 		PrintCentered('Checking for file modifications...', Drawing.Screen.Height-3)
 		local modified = IsSystemModified()

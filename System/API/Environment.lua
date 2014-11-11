@@ -36,6 +36,7 @@ GetCleanEnvironment = function(self)
 	for k, v in pairs(cleanEnvironment) do
 		cleanEnv[k] = v
 	end
+	cleanEnv._G = cleanEnv
 	return cleanEnv
 end
 
