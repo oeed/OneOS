@@ -310,7 +310,7 @@ function AutoUpdateResponse(self, event, url, data)
 		else
 			Log.i('OneOS is neither up to date or behind. (.version probably edited)')
 		end
-	elseif Current.Program then
+	else
 		Current.Program:QueueEvent(event, url, data)
 	end
 end
@@ -336,6 +336,7 @@ function Initialise()
 		Log.i('GUI Loaded')
 
 		Current.ProgramView = bedrock:GetObject('ProgramView')
+		Current.LoginView = bedrock:GetObject('LoginView')
 		Current.Overlay = bedrock:GetObject('Overlay')
 		Indexer.RefreshIndex()
 
@@ -347,12 +348,17 @@ function Initialise()
 
 		Current.Desktop = Helpers.OpenFile('System/Programs/Desktop.program', {isHidden = true})
 
-		if Settings:GetValues()['StartupProgram'] then
-			Helpers.OpenFile('Programs/'..Settings:GetValues()['StartupProgram'])
-			UpdateOverlay()
+		Current.LoginView.OnUnlock = function(self, sleepMode)
+			if not sleepMode then
+				if Settings:GetValues()['StartupProgram'] then
+					Helpers.OpenFile('Programs/'..Settings:GetValues()['StartupProgram'])
+					UpdateOverlay()
+				end
+				UpdateOverlay()
+				StartDoorWireless()
+				CheckAutoUpdate()
+			end
 		end
-		UpdateOverlay()
-		StartDoorWireless()
-		CheckAutoUpdate()
+		Current.LoginView:Lock()
 	end)
 end

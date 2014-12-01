@@ -1,4 +1,4 @@
---Bedrock Build: 270
+--Bedrock Build: 271
 --This code is squished down in to one, rather hard to read file.
 --As such it is not much good for anything other than being loaded as an API.
 --If you want to look at the code to learn from it, copy parts or just take a look,
@@ -79,6 +79,35 @@ end
 
 colours.transparent = 0
 colors.transparent = 0
+
+Filters = {
+	Greyscale = {
+		[colours.white] = colours.white,
+		[colours.orange] = colours.lightGrey,
+		[colours.magenta] = colours.lightGrey,
+		[colours.lightBlue] = colours.lightGrey,
+		[colours.yellow] = colours.lightGrey,
+		[colours.lime] = colours.lightGrey,
+		[colours.pink] = colours.lightGrey,
+		[colours.grey] = colours.grey,
+		[colours.lightGrey] = colours.lightGrey,
+		[colours.cyan] = colours.grey,
+		[colours.purple] = colours.grey,
+		[colours.blue] = colours.grey,
+		[colours.brown] = colours.grey,
+		[colours.green] = colours.grey,
+		[colours.red] = colours.grey,
+		[colours.transparent] = colours.transparent,
+	}
+}
+
+function FilterColour(colour, filter)
+	if filter[colour] then
+		return filter[colour]
+	else
+		return colours.black
+	end
+end
 
 DrawCharacters = function (x, y, characters, textColour, bgColour)
 	Drawing.WriteStringToBuffer(x, y, tostring(characters), textColour, bgColour)

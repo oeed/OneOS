@@ -13,23 +13,53 @@
       ["Width"]="100%,-6",
       ["Name"]="Label",
       ["Type"]="Label",
-      ["Text"]="All done! OneOS is now all setup and ready for you to use. Click 'Restart' to get going!\n\nIf the restart button does not work then hold Ctrl + R or break and replace your computer."
+      ["Text"]="If you want a password enter it, otherwise leave the text box blank."
     },
     [3]={
-      ["Y"]="100%,-1",
-      ["X"]="100%,-9",
-      ["Name"]="RestartButton",
-      ["Type"]="Button",
-      ["Text"]="Restart",
-      ["BackgroundColour"]=256
+      ["Y"]="9",
+      ["X"]="25%",
+      ["Width"]="50%",
+      ["Name"]="PasswordTextBox",
+      ["Type"]="SecureTextBox",
+      ["Placeholder"]="Password",
+      ["BackgroundColour"]=256,
+      ["Active"]=true
     },
     [4]={
+      ["Y"]="11",
+      ["X"]="25%",
+      ["Width"]="50%",
+      ["Name"]="ConfirmPasswordTextBox",
+      ["Type"]="SecureTextBox",
+      ["Placeholder"]="Confirm Password",
+      ["BackgroundColour"]=256,
+    },
+    [5]={
+      ["Y"]="100%,-1",
+      ["X"]="100%,-7",
+      ["Name"]="PasswordNextButton",
+      ["Type"]="Button",
+      ["Text"]="Next",
+      ["BackgroundColour"]=256
+    },
+    [6]={
       ["Y"]="100%,-1",
       ["X"]="3",
       ["Name"]="BackButton",
       ["Type"]="Button",
       ["Text"]="Back",
       ["BackgroundColour"]=256
+    },
+    [7]={
+      ["Y"]=13,
+      ["X"]=3,
+      ["Width"]="100%,-6",
+      ["Name"]="NoMatchLabel",
+      ["Type"]="Label",
+      ["TextColour"]=16384,
+      ["Align"]="Center",
+      ["Text"]="Passwords do not match!",
+      ["Visible"]=false
     },
   },
   ["BackgroundColour"]=1,

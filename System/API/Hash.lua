@@ -2,8 +2,6 @@
 --  Thanks to GravityScore for this!
 --  http://www.computercraft.info/forums2/index.php?/topic/8169-sha-256-in-pure-lua/
 --
---  This is used to hash passwords sent with the secure text field. It just reduces the chance of people getting hacked.
---
 
 --  
 --  Adaptation of the Secure Hashing Algorithm (SHA-244/256)

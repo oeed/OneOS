@@ -34,6 +34,11 @@ Defaults = {
 		Type = 'Side',
 		Label = 'Monitor Side',
 		Default = nil
+	},
+	Password = {
+		Type = 'Password',
+		Label = 'Password',
+		Default = nil
 	}
 }
 --[[
@@ -76,6 +81,10 @@ function GetValues(self)
 	end
 	file.close()
 	return values
+end
+
+function CheckPassword(self, password)
+	return Hash.sha256(password) == self:GetValues()['Password']
 end
 
 DesktopColourChange = false

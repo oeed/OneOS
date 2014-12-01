@@ -1,4 +1,5 @@
 OneOS.LoadAPI('/System/API/Bedrock.lua', false)
+OneOS.LoadAPI('/System/API/Hash.lua')
 
 local program = Bedrock:Initialise()
 
@@ -6,7 +7,8 @@ Current = {
 	Page = 1,
 	ComputerName = nil,
 	DesktopColour = nil,
-	AnimationsEnabled = nil
+	AnimationsEnabled = nil,
+	Password = nil
 }
 
 function LoadCurrentView()
@@ -40,6 +42,21 @@ program:ObjectClick('NextButton', function(self, event, side, x, y)
 	LoadCurrentView()
 end)
 
+program:ObjectClick('PasswordNextButton', function(self, event, side, x, y)
+	if program:GetObject('PasswordTextBox').Text == '' then
+		Current.Password = nil
+		program:GetObject('NoMatchLabel').Visible = false
+	elseif program:GetObject('PasswordTextBox').Text == program:GetObject('ConfirmPasswordTextBox').Text then
+		Current.Password = Hash.sha256(program:GetObject('PasswordTextBox').Text)
+		program:GetObject('NoMatchLabel').Visible = false
+	else
+		program:GetObject('NoMatchLabel').Visible = true
+		return
+	end
+	Current.Page = Current.Page + 1
+	LoadCurrentView()
+end)
+
 program:ObjectClick('BackButton', function(self, event, side, x, y)
 	Current.Page = Current.Page - 1
 	LoadCurrentView()
@@ -67,7 +84,8 @@ program:ObjectClick('RestartButton', function(self, event, side, x, y)
 	local settings = {
 		ComputerName = Current.ComputerName,
 		DesktopColour = Current.DesktopColour,
-		UseAnimations = Current.AnimationsEnabled
+		UseAnimations = Current.AnimationsEnabled,
+		Password = Current.Password
 	}
 	os.setComputerLabel(settings.ComputerName)
 	h.write(textutils.serialize(settings))

@@ -86,6 +86,8 @@ os.loadAPI('hash')
 os.loadAPI('lQuery')
 
 if OneOS then
+	OneOS.LoadAPI('/System/API/Hash.lua')
+	hash = Hash
 	OneOS.LoadAPI('/System/API/Wireless.lua')
 	OneOS.LoadAPI('/System/API/Peripheral.lua')
 else

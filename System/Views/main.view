@@ -37,5 +37,15 @@
       ["Type"]="Overlay",
       ["InheritView"]="overlay",
     },
+    [6]={
+      ["Name"]="LoginView",
+      ["Type"]="LoginView",
+      ["InheritView"]="password",
+      ["X"]=1,
+      ["Y"]=1,
+      ["Width"]="100%",
+      ["Height"]="100%",
+      ["Visible"]=false,
+    },
   }
 }

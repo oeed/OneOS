@@ -1,0 +1,38 @@
+{
+  ["Children"]={
+    [1]={
+      ["Y"]=1,
+      ["X"]=1,
+      ["Name"]="Toolbar",
+      ["Type"]="View",
+      ["InheritView"]="toolbar"
+    },
+    [2]={
+      ["Y"]=5,
+      ["X"]=3,
+      ["Width"]="100%,-6",
+      ["Name"]="Label",
+      ["Type"]="Label",
+      ["Text"]="All done! OneOS is now all setup and ready for you to use. Click 'Restart' to get going!\n\nIf the restart button does not work then hold Ctrl + R or break and replace your computer."
+    },
+    [3]={
+      ["Y"]="100%,-1",
+      ["X"]="100%,-9",
+      ["Name"]="RestartButton",
+      ["Type"]="Button",
+      ["Text"]="Restart",
+      ["BackgroundColour"]=256
+    },
+    [4]={
+      ["Y"]="100%,-1",
+      ["X"]="3",
+      ["Name"]="BackButton",
+      ["Type"]="Button",
+      ["Text"]="Back",
+      ["BackgroundColour"]=256
+    },
+  },
+  ["BackgroundColour"]=1,
+  ["ToolBarColour"] = 128,
+  ["ToolBarTextColour"] = 1
+}

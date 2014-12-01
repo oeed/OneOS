@@ -1,8 +1,20 @@
 OneOS.LoadAPI('/System/API/Bedrock.lua', false)
+OneOS.LoadAPI('/System/API/Hash.lua')
 
 local program = Bedrock:Initialise()
 
 --TODO: monitor side setting
+
+function changePassword(callback)
+	program:DisplayTextBoxWindow('Enter Password', 'Please enter your new password.', function(success, password)
+		if success then
+			OneOS.Settings:SetValue('Password', Hash.sha256(password))
+		end
+		if callback then
+			callback(success)
+		end
+	end)
+end
 
 program:Run(function()
 	program:LoadView('main')
@@ -43,6 +55,50 @@ program:Run(function()
 						OneOS.Settings:SetValue(k, self.Toggle)
 					end
 				})
+			elseif v.Type == 'Password' then
+				settings[k].Controls = {
+
+					program:AddObject({
+						Type = 'Button',
+						X = controlX,
+						Y = startY,
+						Width = ((value ~= nil) and 5 or 4),
+						BackgroundColour = colours.red,
+						ActiveBackgroundColour = colours.green,
+						TextColour = colours.white,
+						Text = ((value ~= nil) and 'Yes' or 'No'),
+						Toggle = (value ~= nil),
+						OnClick = function(self)
+							if self.Toggle then
+								self.Text = 'Yes'
+								self.Width = 5
+								changePassword(function(success)
+									if not success then
+										self.Toggle = false
+										self:OnClick()
+									end
+								end)
+							else
+								self.Text = 'No'
+								self.Width = 4
+								OneOS.Settings:SetValue('Password', nil)
+							end
+							settings[k].Controls[2].Visible = self.Toggle
+						end
+					}),
+
+					program:AddObject({
+						Type = 'Button',
+						X = controlX +  6,
+						Y = startY,
+						Text = 'Change',
+						Visible = (value ~= nil),
+						OnClick = function(self)
+							changePassword()
+						end
+					}),
+
+				}
 			elseif v.Type == 'Colour' then
 				local x = controlX
 				_colours = {

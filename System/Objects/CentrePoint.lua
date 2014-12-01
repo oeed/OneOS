@@ -160,7 +160,8 @@ UpdatePrograms = function(self)
 				Type = 'ProgramPreview',
 				Program = program,
 				OnClick = function(prv, event, side, x, y)
-					if not prv.Program.Hidden and ((x == 1 and y == 1) or side == 3) and prv.Program:Close() then
+					if not prv.Program.Hidden and ((x == 1 and y == 1) or side == 3) then
+						prv.Program:Close()
 						prv.Bedrock:GetObject('CentrePoint'):UpdatePrograms()
 					else
 						oldProgram = prv.Program
