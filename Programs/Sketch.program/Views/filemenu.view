@@ -1,0 +1,45 @@
+{
+  ["Type"]="Menu",
+  ["Owner"]="FileMenuButton",
+  ["HideTop"]=true,
+  ["Children"]={
+    [1]={
+      ["Name"]="NewMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="New...",
+      ["Shortcut"]="#N"
+    },
+    [2]={
+      ["Name"]="OpenMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Open...",
+      ["Shortcut"]="#O"
+    },
+    [3]={
+      ["Name"]="Separator",
+      ["Type"]="Separator"
+    },
+    [4]={
+      ["Name"]="SaveMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Save",
+      ["Shortcut"]="#S"
+    },
+    [5]={
+      ["Name"]="SaveAsMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Save As...",
+      ["Shortcut"]="^#S"
+    },
+    [6]={
+      ["Name"]="Separator",
+      ["Type"]="Separator"
+    },
+    [7]={
+      ["Name"]="QuitMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Quit",
+      ["Shortcut"]="#Q"
+    },
+  },
+}

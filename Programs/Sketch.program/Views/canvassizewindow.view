@@ -1,0 +1,173 @@
+{
+	["Width"]=28,
+	["Height"]=10,
+	["BackgroundColour"]=1,
+	["Children"]={
+		[1]={
+			["Y"]=2,
+			["X"]=6,
+			["Align"]="Center",
+			["Type"]="Label",
+			["TextColour"]=256,
+			["Text"]="New Size"
+		},
+		[2]={
+			["Y"]=4,
+			["X"]=3,
+			["Type"]="Label",
+			["TextColour"]=32768,
+			["Text"]="Width"
+		},
+		[3]={
+			["Y"]=4,
+			["X"]=10,
+			["Name"]="WidthNumberBox",
+			["AutoWidth"]=false,
+			["Type"]="NumberBox",
+			["Value"]=1,
+		},
+		[4]={
+			["Y"]=6,
+			["X"]=3,
+			["Type"]="Label",
+			["TextColour"]=32768,
+			["Text"]="Height"
+		},
+		[5]={
+			["Y"]=6,
+			["X"]=10,
+			["Name"]="HeightNumberBox",
+			["AutoWidth"]=false,
+			["Type"]="NumberBox",
+			["Value"]=1,
+		},
+
+		[6]={
+			["Y"]=2,
+			["X"]=20,
+			["Align"]="Center",
+			["Type"]="Label",
+			["TextColour"]=256,
+			["Text"]="Anchor",
+		},
+
+
+		[7]={
+			["Y"]=4,
+			["X"]=21,
+			["Width"]=1,
+			["AutoWidth"]=false,
+			["Type"]="Button",
+			["Name"]="Anchor1Button",
+			["ActiveBackgroundColour"]=256,
+			["ActiveTextColour"]=32768,
+			["Text"]=" "
+		},
+		[8]={
+			["Y"]=4,
+			["X"]=22,
+			["Width"]=1,
+			["AutoWidth"]=false,
+			["Type"]="Button",
+			["Name"]="Anchor2Button",
+			["ActiveBackgroundColour"]=256,
+			["ActiveTextColour"]=32768,
+			["Text"]=" "
+		},
+		[9]={
+			["Y"]=4,
+			["X"]=23,
+			["Width"]=1,
+			["AutoWidth"]=false,
+			["Type"]="Button",
+			["Name"]="Anchor3Button",
+			["ActiveBackgroundColour"]=256,
+			["ActiveTextColour"]=32768,
+			["Text"]=" "
+		},
+		[10]={
+			["Y"]=5,
+			["X"]=21,
+			["Width"]=1,
+			["AutoWidth"]=false,
+			["Type"]="Button",
+			["Name"]="Anchor4Button",
+			["ActiveBackgroundColour"]=256,
+			["ActiveTextColour"]=32768,
+			["Text"]=" "
+		},
+		[11]={
+			["Y"]=5,
+			["X"]=22,
+			["Width"]=1,
+			["AutoWidth"]=false,
+			["Type"]="Button",
+			["Name"]="Anchor5Button",
+			["ActiveBackgroundColour"]=256,
+			["ActiveTextColour"]=32768,
+			["Text"]=" "
+		},
+		[12]={
+			["Y"]=5,
+			["X"]=23,
+			["Width"]=1,
+			["AutoWidth"]=false,
+			["Type"]="Button",
+			["Name"]="Anchor6Button",
+			["ActiveBackgroundColour"]=256,
+			["ActiveTextColour"]=32768,
+			["Text"]=" "
+		},
+		[13]={
+			["Y"]=6,
+			["X"]=21,
+			["Width"]=1,
+			["AutoWidth"]=false,
+			["Type"]="Button",
+			["Name"]="Anchor7Button",
+			["ActiveBackgroundColour"]=256,
+			["ActiveTextColour"]=32768,
+			["Text"]=" "
+		},
+		[14]={
+			["Y"]=6,
+			["X"]=22,
+			["Width"]=1,
+			["AutoWidth"]=false,
+			["Type"]="Button",
+			["Name"]="Anchor8Button",
+			["ActiveBackgroundColour"]=256,
+			["ActiveTextColour"]=32768,
+			["Text"]=" "
+		},
+		[15]={
+			["Y"]=6,
+			["X"]=23,
+			["Width"]=1,
+			["AutoWidth"]=false,
+			["Type"]="Button",
+			["Name"]="Anchor9Button",
+			["ActiveBackgroundColour"]=256,
+			["ActiveTextColour"]=32768,
+			["Text"]=" "
+		},
+
+
+
+
+		[16]={
+			["Y"]="100%,-1",
+			["X"]="100%,-13",
+			["Type"]="Button",
+			["Name"]="CancelButton",
+			["Text"]="Cancel"
+		},
+		[17]={
+			["Y"]="100%,-1",
+			["X"]="100%,-4",
+			["Type"]="Button",
+			["Name"]="OkButton",
+			["Text"]="Ok"
+		},
+	},
+}

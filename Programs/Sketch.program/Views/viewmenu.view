@@ -1,0 +1,35 @@
+{
+  ["Type"]="Menu",
+  ["Owner"]="ViewMenuButton",
+  ["HideTop"]=true,
+  ["Children"]={
+    [1]={
+      ["Name"]="ZoomInMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Zoom In",
+      ["Shortcut"]="#="
+    },
+    [2]={
+      ["Name"]="ZoomOutMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Zoom Out",
+      ["Shortcut"]="#-"
+    },
+    [3]={
+      ["Name"]="100%ZoomMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="100% Zoom",
+      ["Shortcut"]="#1"
+    },
+    [4]={
+      ["Name"]="Separator",
+      ["Type"]="Separator"
+    },
+    [5]={
+      ["Name"]="FilterMaskMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Show Filter Masks",
+      ["Shortcut"]="#M"
+    },
+  },
+}

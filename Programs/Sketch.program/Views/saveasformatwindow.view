@@ -1,0 +1,123 @@
+{
+	["Width"]=30,
+	["Height"]=15,
+	["BackgroundColour"]=1,
+	["Children"]={
+		[1]={
+			["Y"]=2,
+			["X"]=1,
+			["Width"]="100%",
+			["Align"]="Center",
+			["Type"]="Label",
+			["TextColour"]=128,
+			["Text"]="Choose Image Format"
+		},
+		[2]={
+			["Y"]=4,
+			["X"]=2,
+			["Width"]=1,
+			["Name"]="FormatButton",
+			["Format"]="skch",
+			["AutoWidth"]=false,
+			["Type"]="Button",
+			["Toggle"]=true,
+			["ActiveBackgroundColour"]=2048,
+			["ActiveTextColour"]=1,
+			["TextColour"]=256,
+			["Text"]="x",
+		},
+		[3]={
+			["Y"]=4,
+			["X"]=4,
+			["Type"]="Label",
+			["TextColour"]=128,
+			["Text"]="Sketch (skch)"
+		},
+		[4]={
+			["Y"]=5,
+			["X"]=4,
+			["Width"]="100%,-4",
+			["Type"]="Label",
+			["TextColour"]=256,
+			["Text"]="Supports layers, filters, colour and text."
+		},
+
+
+		[5]={
+			["Y"]=8,
+			["X"]=2,
+			["Width"]=1,
+			["Name"]="FormatButton",
+			["Format"]="nft",
+			["AutoWidth"]=false,
+			["Type"]="Button",
+			["Toggle"]=false,
+			["ActiveBackgroundColour"]=2048,
+			["ActiveTextColour"]=1,
+			["TextColour"]=256,
+			["Text"]="x",
+		},
+		[6]={
+			["Y"]=8,
+			["X"]=4,
+			["Type"]="Label",
+			["TextColour"]=128,
+			["Text"]="NitroFingers Text (nft)"
+		},
+		[7]={
+			["Y"]=9,
+			["X"]=4,
+			["Width"]="100%,-4",
+			["Type"]="Label",
+			["TextColour"]=256,
+			["Text"]="Supports colour and text."
+		},
+
+
+		[8]={
+			["Y"]=11,
+			["X"]=2,
+			["Width"]=1,
+			["Name"]="FormatButton",
+			["Format"]="nfp",
+			["AutoWidth"]=false,
+			["Type"]="Button",
+			["Toggle"]=false,
+			["ActiveBackgroundColour"]=2048,
+			["ActiveTextColour"]=1,
+			["TextColour"]=256,
+			["Text"]="x",
+		},
+		[9]={
+			["Y"]=11,
+			["X"]=4,
+			["Type"]="Label",
+			["TextColour"]=128,
+			["Text"]="NitroFingers Paint (nfp)"
+		},
+		[10]={
+			["Y"]=12,
+			["X"]=4,
+			["Width"]="100%,-4",
+			["Type"]="Label",
+			["TextColour"]=256,
+			["Text"]="Supports colour."
+		},
+
+
+		[11]={
+			["Y"]="100%,-1",
+			["X"]="100%,-16",
+			["Type"]="Button",
+			["Name"]="CancelButton",
+			["Text"]="Cancel"
+		},
+		[12]={
+			["Y"]="100%,-1",
+			["X"]="100%,-6",
+			["Type"]="Button",
+			["Name"]="NextButton",
+			["Text"]="Next"
+		},
+	},
+}

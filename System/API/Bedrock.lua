@@ -1,4 +1,4 @@
---Bedrock Build: 271
+--Bedrock Build: 447
 --This code is squished down in to one, rather hard to read file.
 --As such it is not much good for anything other than being loaded as an API.
 --If you want to look at the code to learn from it, copy parts or just take a look,
@@ -81,6 +81,26 @@ colours.transparent = 0
 colors.transparent = 0
 
 Filters = {
+	None = {
+		[colours.white] = colours.white,
+		[colours.orange] = colours.orange,
+		[colours.magenta] = colours.magenta,
+		[colours.lightBlue] = colours.lightBlue,
+		[colours.yellow] = colours.yellow,
+		[colours.lime] = colours.lime,
+		[colours.pink] = colours.pink,
+		[colours.grey] = colours.grey,
+		[colours.lightGrey] = colours.lightGrey,
+		[colours.cyan] = colours.cyan,
+		[colours.purple] = colours.purple,
+		[colours.blue] = colours.blue,
+		[colours.brown] = colours.brown,
+		[colours.green] = colours.green,
+		[colours.red] = colours.red,
+		[colours.black] = colours.black,
+		[colours.transparent] = colours.transparent,
+	},
+
 	Greyscale = {
 		[colours.white] = colours.white,
 		[colours.orange] = colours.lightGrey,
@@ -97,8 +117,89 @@ Filters = {
 		[colours.brown] = colours.grey,
 		[colours.green] = colours.grey,
 		[colours.red] = colours.grey,
+		[colours.black] = colours.black,
 		[colours.transparent] = colours.transparent,
-	}
+	},
+
+	BlackWhite = {
+		[colours.white] = colours.white,
+		[colours.orange] = colours.white,
+		[colours.magenta] = colours.white,
+		[colours.lightBlue] = colours.white,
+		[colours.yellow] = colours.white,
+		[colours.lime] = colours.white,
+		[colours.pink] = colours.white,
+		[colours.grey] = colours.black,
+		[colours.lightGrey] = colours.white,
+		[colours.cyan] = colours.black,
+		[colours.purple] = colours.black,
+		[colours.blue] = colours.black,
+		[colours.brown] = colours.black,
+		[colours.green] = colours.black,
+		[colours.red] = colours.black,
+		[colours.black] = colours.black,
+		[colours.transparent] = colours.transparent,
+	},
+
+	Darker = {
+		[colours.white] = colours.lightGrey,
+		[colours.orange] = colours.red,
+		[colours.magenta] = colours.purple,
+		[colours.lightBlue] = colours.cyan,
+		[colours.yellow] = colours.orange,
+		[colours.lime] = colours.green,
+		[colours.pink] = colours.magenta,
+		[colours.grey] = colours.black,
+		[colours.lightGrey] = colours.grey,
+		[colours.cyan] = colours.blue,
+		[colours.purple] = colours.grey,
+		[colours.blue] = colours.grey,
+		[colours.brown] = colours.grey,
+		[colours.green] = colours.grey,
+		[colours.red] = colours.brown,
+		[colours.black] = colours.black,
+		[colours.transparent] = colours.transparent,
+	},
+
+	Lighter = {
+		[colours.white] = colours.white,
+		[colours.orange] = colours.yellow,
+		[colours.magenta] = colours.pink,
+		[colours.lightBlue] = colours.white,
+		[colours.yellow] = colours.white,
+		[colours.lime] = colours.white,
+		[colours.pink] = colours.white,
+		[colours.grey] = colours.lightGrey,
+		[colours.lightGrey] = colours.white,
+		[colours.cyan] = colours.lightBlue,
+		[colours.purple] = colours.magenta,
+		[colours.blue] = colours.lightBlue,
+		[colours.brown] = colours.red,
+		[colours.green] = colours.lime,
+		[colours.red] = colours.orange,
+		[colours.black] = colours.grey,
+		[colours.transparent] = colours.transparent,
+	},
+
+	Invert = {
+		[colours.white] = colours.black,
+		[colours.orange] = colours.blue,
+		[colours.magenta] = colours.green,
+		[colours.lightBlue] = colours.brown,
+		[colours.yellow] = colours.blue,
+		[colours.lime] = colours.purple,
+		[colours.pink] = colours.green,
+		[colours.grey] = colours.lightGrey,
+		[colours.lightGrey] = colours.grey,
+		[colours.cyan] = colours.red,
+		[colours.purple] = colours.green,
+		[colours.blue] = colours.yellow,
+		[colours.brown] = colours.lightBlue,
+		[colours.green] = colours.purple,
+		[colours.red] = colours.cyan,
+		[colours.black] = colours.white,
+		[colours.transparent] = colours.transparent,
+	},
 }
 
 function FilterColour(colour, filter)
@@ -576,6 +677,11 @@ Draw = function(self)
 		end
 	end
 
+
+	if self.OnPostChildrenDraw then
+		self:OnPostChildrenDraw(pos.X, pos.Y)
+	end
+
 	if self.ClipDrawing then
 		Drawing.RemoveConstraint()
 	end	
@@ -631,7 +737,7 @@ Initialise = function(self, values)
 				k = k:gsub('Color', 'Colour')
 			end
 
-			if k:find('Colour') and type(_new[k]) ~= 'table' then
+			if k:find('Colour') and type(_new[k]) ~= 'table' and type(_new[k]) ~= 'function' then
 				if _new[k] then
 					return ParseColour(_new[k])
 				end
@@ -706,7 +812,7 @@ DisabledTextColour = colours.lightGrey
 Text = ""
 Toggle = nil
 Momentary = true
-AutoWidthAutoWidth = true
+AutoWidth = true
 Align = 'Center'
 Enabled = true
 
@@ -1099,6 +1205,7 @@ Inherit = 'View'
 TextColour = colours.black
 BackgroundColour = colours.white
 HideTop = false
+Prepared = false
 
 OnDraw = function(self, x, y)
 	Drawing.IgnoreConstraint = true
@@ -1127,27 +1234,48 @@ end
 
 OnUpdate = function(self, value)
 	if value == 'Children' then
-		self.Width = self.Bedrock.Helpers.LongestString(self.Children, 'Text') + 2
 		self.Height = #self.Children + 1 + (self.HideTop and 0 or 1)
 		if not self.BaseY then
 			self.BaseY = self.Y
 		end
-
-		for i, v in ipairs(self.Children) do
-			if v.TextColour then
-				v.TextColour = self.TextColour
+		if #self.Children > 0 and self.Children[1].Type == 'Button' then
+			self.Width = self.Bedrock.Helpers.LongestString(self.Children, 'Text') + 2
+			for i, v in ipairs(self.Children) do
+				if v.TextColour then
+					v.TextColour = self.TextColour
+				end
+				if v.BackgroundColour then
+					v.BackgroundColour = colours.transparent
+				end
+				if v.Colour then
+					v.Colour = colours.lightGrey
+				end
+				v.Align = 'Left'
+				v.X = 1
+				v.Y = i + (self.HideTop and 0 or 1)
+				v.Width = self.Width
+				v.Height = 1
 			end
-			if v.BackgroundColour then
-				v.BackgroundColour = colours.transparent
+		elseif #self.Children > 0 and self.Children[1].Type == 'MenuItem' then
+			local width = 1
+			for i, v in ipairs(self.Children) do
+				if v.Width > width then
+					width = v.Width
+				end
 			end
-			if v.Colour then
-				v.Colour = colours.lightGrey
+			self.Width = width
+			for i, v in ipairs(self.Children) do
+				if v.TextColour then
+					v.TextColour = self.TextColour
+				end
+				if v.Colour then
+					v.Colour = colours.lightGrey
+				end
+				v.X = 1
+				v.Y = i + (self.HideTop and 0 or 1)
+				v.Width = width
+				v.Height = 1
 			end
-			v.Align = 'Left'
-			v.X = 1
-			v.Y = i + (self.HideTop and 0 or 1)
-			v.Width = self.Width
-			v.Height = 1
 		end
 
 		self.Y = self.BaseY
@@ -1164,7 +1292,12 @@ end
 
 Close = function(self, isBedrockCall)
 	self.Bedrock.Menu = nil
-	self.Parent:RemoveObject(self)
+	if not self.Prepared then
+		self.Parent:RemoveObject(self)
+	else
+		self.Visible = false
+	end
+
 	if self.Owner and self.Owner.Toggle then
 		self.Owner.Toggle = false
 	end
@@ -1174,6 +1307,97 @@ end
 
 OnChildClick = function(self, child, event, side, x, y)
 	self:Close()
+end
+]],
+["MenuItem"] = [[
+BackgroundColour = colours.white
+TextColour = colours.black
+DisabledTextColour = colours.lightGrey
+ShortcutTextColour = colours.grey
+Text = ""
+Enabled = true
+Shortcut = nil
+ShortcutPadding = 2
+ShortcutName = nil
+
+OnUpdate = function(self, value)
+	if value == 'Text' then
+		if self.Shortcut then
+			self.Width = #self.Text + 2 + self.ShortcutPadding + #self.Shortcut
+		else
+			self.Width = #self.Text + 2
+		end
+	elseif value == 'OnClick' then
+		self:RegisterShortcut()
+	end
+end
+
+OnDraw = function(self, x, y)
+	Drawing.DrawBlankArea(x, y, self.Width, self.Height, self.BackgroundColour)
+
+	local txt = self.TextColour
+	if not self.Enabled then
+		txt = self.DisabledTextColour
+	end
+	Drawing.DrawCharacters(x + 1, y, self.Text, txt, colours.transparent)
+
+	if self.Shortcut then
+		local shrt = self.ShortcutTextColour
+		if not self.Enabled then
+			shrt = self.DisabledTextColour
+		end
+		Drawing.DrawCharacters(x + self.Width - #self.Shortcut - 1, y, self.Shortcut, shrt, colours.transparent)
+	end
+end
+
+ParseShortcut = function(self)
+	local special = {
+		['^'] = keys.leftShift,
+		['<'] = keys.delete,
+		['>'] = keys.delete,
+		['#'] = keys.leftCtrl,
+		['~'] = keys.leftAlt,
+	}
+
+	local keys = {}
+	for i = 1, #self.Shortcut do
+	    local c = self.Shortcut:sub(i,i)
+    	table.insert(keys, special[c] or c:lower())
+	end
+	return keys
+end
+
+RegisterShortcut = function(self)
+	if self.Shortcut then
+		self.Shortcut = self.Shortcut:upper()
+		self.ShortcutName = self.Bedrock:RegisterKeyboardShortcut(self:ParseShortcut(), function()
+			if self.OnClick and self.Enabled then
+				if self.Parent.Owner then
+					self.Parent:Close()
+					self.Parent.Owner.Toggle = true
+					self.Bedrock:StartTimer(function()
+						self.Parent.Owner.Toggle = false
+					end, 0.3)
+				end
+				return self:OnClick('keyboard_shortcut', 1, 1, 1)
+			else
+				return false
+			end
+		end)
+	end
+end
+
+OnRemove = function(self)
+	if self.ShortcutName then
+		self.Bedrock:UnregisterKeyboardShortcut(self.ShortcutName)
+	end
+end
+
+OnLoad = function(self)
+	if self.OnClick ~= nil then
+		self:RegisterShortcut()
+	end
+	-- self:OnUpdate('Text')
 end
 ]],
 ["ProgressBar"] = [[
@@ -1364,7 +1588,10 @@ UpdateScroll = function(self)
 				end
 			end
 		end
-		self:GetObject('ScrollViewScrollBar').MaxScroll = self.ContentHeight - self.Height
+
+		if self:GetObject('ScrollViewScrollBar') then
+			self:GetObject('ScrollViewScrollBar').MaxScroll = self.ContentHeight - self.Height
+		end
 	else
 		self:RemoveObject('ScrollViewScrollBar')
 	end
@@ -1380,6 +1607,7 @@ OnLoad = function(self)
 	if not self.ChildOffset or not self.ChildOffset.X or not self.ChildOffset.Y then
 		self.ChildOffset = {X = 0, Y = 0}
 	end
+	self:UpdateScroll()
 end
 ]],
 ["SecureTextBox"] = [[
@@ -1877,10 +2105,6 @@ CanClose = true
 OnCloseButton = nil
 OldActiveObject = nil
 
-OnLoad = function(self)
-	--self:GetObject('View') = self.Bedrock:ObjectFromFile({Type = 'View',Width = 10, Height = 5, BackgroundColour = colours.red}, self)
-end
-
 LoadView = function(self)
 	local view = self:GetObject('View')
 	if view.ToolBarColour then
@@ -1915,7 +2139,7 @@ Flash = function(self)
 end
 
 OnDraw = function(self, x, y)
-	local toolBarColour = (self.Flashing and colours.white or self.ToolBarColour)
+	local toolBarColour = (self.Flashing and colours.grey or self.ToolBarColour)
 	local toolBarTextColour = (self.Flashing and colours.black or self.ToolBarTextColour)
 	if toolBarColour then
 		Drawing.DrawBlankArea(x, y, self.Width, 1, toolBarColour)
@@ -1985,8 +2209,6 @@ if err then
 	os.pullEvent("key")
 end
 
-
-
 function LoadAPIs(self)
 	local function loadAPI(name, content)
 		local env = setmetatable({}, { __index = getfenv() })
@@ -2012,6 +2234,11 @@ function LoadAPIs(self)
 				if objects[env[name].Inherit] then
 					loadObject(env[name].Inherit, objects[env[name].Inherit])
 				elseif fs.exists(self.ProgramPath..'/Objects/'..env[name].Inherit..'.lua') then
+					local h = fs.open(self.ProgramPath..'/Objects/'..env[name].Inherit..'.lua', 'r')
+					loadObject(env[name].Inherit, h.readAll())
+					h.close()
+					loadObject(name, content)
+					return
 				end
 			end
 			env[name].__index = getfenv()[env[name].Inherit]
@@ -2039,6 +2266,18 @@ function LoadAPIs(self)
 				local name = string.match(v, '(%a+)%.?.-')
 				local h = fs.open(privateObjPath..v, 'r')
 				loadObject(name, h.readAll())
+				h.close()
+			end
+		end
+	end
+	
+	local privateAPIPath = self.ProgramPath..'/APIs/'
+	if fs.exists(privateAPIPath) and fs.isDir(privateAPIPath) then
+		for i, v in ipairs(fs.list(privateAPIPath)) do
+			if v ~= '.DS_Store' then
+				local name = string.match(v, '(%a+)%.?.-')
+				local h = fs.open(privateAPIPath..v, 'r')
+				loadAPI(name, h.readAll())
 				h.close()
 			end
 		end
@@ -2076,6 +2315,12 @@ ObjectUpdateHandlers = {
 Timers = {
 	
 }
+
+ModifierKeys = {}
+KeyboardShortcuts = {}
+
+keys.leftCommand = 219
+keys.rightCommand = 220
 
 function Initialise(self, programPath)
 	self.ProgramPath = programPath or self.ProgramPath
@@ -2117,15 +2362,15 @@ function Initialise(self, programPath)
 end
 
 function HandleClick(self, event, side, x, y)
-	if self.Window then
+	if self.Menu then
+		if not self.View:DoClick(self.Menu, event, side, x, y) then
+			self.Menu:Close()
+		end
+	elseif self.Window then
 		if not self.View:CheckClick(self.Window, x, y) then
 			self.Window:Flash()
 		else
 			self.View:DoClick(self.Window, event, side, x, y)
-		end
-	elseif self.Menu then
-		if not self.View:DoClick(self.Menu, event, side, x, y) then
-			self.Menu:Close()
 		end
 	elseif self.View then
 		if self.View:Click(event, side, x, y) ~= false then
@@ -2133,7 +2378,66 @@ function HandleClick(self, event, side, x, y)
 	end
 end
 
+function UnregisterKeyboardShortcut(self, name)
+	if name then
+		self.KeyboardShortcuts[name] = nil
+	end
+end
+
+function RegisterKeyboardShortcut(self, keys, func, name)
+	name = name or tostring(math.random(1, 10000))
+	if type(keys[1]) == 'table' then
+		for i, v in ipairs(keys) do
+			self.KeyboardShortcuts[name] = {Keys = v, Function = func}
+		end
+	else
+		self.KeyboardShortcuts[name] = {Keys = keys, Function = func}
+	end
+	return name
+end
+
+function TryKeyboardShortcuts(self, keychar)
+	if keychar == keys.backspace then
+		keychar = keys.delete
+	end
+
+	local len = 1 -- + keychar
+	for k, v in pairs(self.ModifierKeys) do
+		len = len + 1
+	end
+
+	for _, shortcut in pairs(self.KeyboardShortcuts) do
+		local match = true
+		for i2, key in ipairs(shortcut.Keys) do
+			if self.ModifierKeys[key] == nil and key ~= keychar then
+				match = false
+			end
+		end
+
+		if match and #shortcut.Keys == len then
+			return shortcut.Function() ~= false
+		end
+	end
+end
+
 function HandleKeyChar(self, event, keychar)
+	if keychar == keys.leftCtrl or keychar == keys.leftShift or keychar == keys.leftAlt or keychar == keys.leftCommand or keychar == keys.rightCommand or keychar == keys.rightCtrl or keychar == keys.rightShift or keychar == keys.rightAlt then
+		if keychar == keys.leftCommand or keychar == keys.rightCommand or keychar == keys.rightCtrl then
+			keychar = keys.leftCtrl
+		elseif keychar == keys.rightAlt then
+			keychar = keys.leftAlt
+		elseif keychar == keys.rightShift then
+			keychar = keys.leftShift
+		end
+		self.ModifierKeys[keychar] = self:StartTimer(function(_, timer)
+			if timer == self.ModifierKeys[keychar] then
+				self.ModifierKeys[keychar] = nil
+			end
+		end, 1)
+	elseif self:TryKeyboardShortcuts(keychar) then
+		return
+	end
+
 	if self:GetActiveObject() then
 		local activeObject = self:GetActiveObject()
 		if activeObject.OnKeyChar then
@@ -2142,6 +2446,15 @@ function HandleKeyChar(self, event, keychar)
 			end
 		end
 	end
+end
+
+PreparedMenus = {}
+
+function PrepareMenu(self, name)
+	local menu = self:AddObject(name, {Type = 'Menu', X = 1, Y = 1, Prepared = true})
+	menu.Visible = false
+	self.PreparedMenus[name] = menu
+	return menu
 end
 
 function ToggleMenu(self, name, owner, x, y)
@@ -2162,7 +2475,17 @@ function SetMenu(self, menu, owner, x, y)
 	end	
 	if menu then
 		local pos = owner:GetPosition()
-		self.Menu = self:AddObject(menu, {Type = 'Menu', Owner = owner, X = pos.X + x - 1, Y = pos.Y + y})
+		if self.PreparedMenus[menu] then
+			self.Menu = self.PreparedMenus[menu]
+			self.Menu.Visible = true
+			self.Menu.Owner = owner
+			self.Menu.X = pos.X + x - 1
+			self.Menu.Y = pos.Y + y
+			self.Menu.Z = self.View.Children[#self.View.Children].Z + 1
+			self:ReorderObjects()
+		else
+			self.Menu = self:AddObject(menu, {Type = 'Menu', Owner = owner, X = pos.X + x - 1, Y = pos.Y + y, Z = self.View.Children[#self.View.Children].Z + 1})
+		end
 	end
 end
 
@@ -2273,27 +2596,27 @@ function InheritFile(self, file, name)
 end
 
 function ParseStringSize(self, parent, k, v)
-		local parentSize = parent.Width
-		if k == 'Height' or k == 'Y' then
-			parentSize = parent.Height
+	local parentSize = parent.Width
+	if k == 'Height' or k == 'Y' then
+		parentSize = parent.Height
+	end
+	local parts = {v}
+	if type(v) == 'string' and string.find(v, ',') then
+		parts = {}
+		for word in string.gmatch(v, '([^,]+)') do
+		    table.insert(parts, word)
 		end
-		local parts = {v}
-		if type(v) == 'string' and string.find(v, ',') then
-			parts = {}
-			for word in string.gmatch(v, '([^,]+)') do
-			    table.insert(parts, word)
-			end
-		end
+	end
 
-		v = 0
-		for i2, part in ipairs(parts) do
-			if type(part) == 'string' and part:sub(#part) == '%' then
-				v = v + math.ceil(parentSize * (tonumber(part:sub(1, #part-1)) / 100))
-			else
-				v = v + tonumber(part)
-			end
+	v = 0
+	for i2, part in ipairs(parts) do
+		if type(part) == 'string' and part:sub(#part) == '%' then
+			v = v + math.ceil(parentSize * (tonumber(part:sub(1, #part-1)) / 100))
+		else
+			v = v + tonumber(part)
 		end
-		return v
+	end
+	return v
 end
 
 function ObjectFromFile(self, file, view)
@@ -2488,12 +2811,6 @@ end
 
 function DisplayTextBoxWindow(self, title, text, callback, textboxText, cursorAtEnd)
 	textboxText = textboxText or ''
-	local func = function(btn)
-		self.Window:Close()
-		if callback then
-			callback(btn.Text)
-		end
-	end
 	local children = {
 		{
 			["Y"]="100%,-1",
@@ -2541,7 +2858,7 @@ function DisplayTextBoxWindow(self, title, text, callback, textboxText, cursorAt
 			["Name"]="TextBox",
 			["Type"]="TextBox",
 			["Text"]=textboxText,
-			["CursorPos"]=(cursorAtEnd and 0 or nil)
+			["CursorPos"]=(cursorAtEnd or 0)
 		})
 	local view = {
 		Children = children,
@@ -2549,7 +2866,7 @@ function DisplayTextBoxWindow(self, title, text, callback, textboxText, cursorAt
 		Height=5+height+(canClose and 0 or 1),
 	}
 	self:DisplayWindow(view, title)
-	self.Window:GetObject('TextBox').OnUpdate = function(txtbox, keychar)
+	self.Window:GetObject('TextBox').OnChange = function(txtbox, event, keychar)
 		if keychar == keys.enter then
 			self.Window:Close()
 			callback(true, txtbox.Text)
@@ -2574,14 +2891,19 @@ function DisplayOpenFileWindow(self, title, callback)
 	local separator = '                               !'
 
 	local function addFolder(path, level)
-		for i, v in ipairs(fs.list(path)) do
+		for i, v in ipairs(_fs.list(path)) do
 			local fPath = path .. '/' .. v
-			if fPath ~= '/rom' and fs.isDir(fPath) then
+			if fPath ~= '/rom' and _fs.isDir(fPath) then
 				table.insert(sidebarItems, level .. v..separator..fPath)
 				addFolder(fPath, level .. '  ')
 			end
 		end
 	end
+	
+	if OneOS then
+		_fs = OneOS.FS
+	end
+
 	addFolder('','')
 
 	local currentFolder = ''
@@ -2665,7 +2987,7 @@ function DisplayOpenFileWindow(self, title, callback)
 			["Type"]="Label",
 			["Name"]="PathLabel",
 			["TextColour"]=colours.lightGrey,
-			["Text"]='/hello/there'
+			["Text"]='/'
 		},
 		{
 			["Y"]=2,
@@ -2690,7 +3012,10 @@ function DisplayOpenFileWindow(self, title, callback)
 	local view = {
 		Children = children,
 		Width=40,
-		Height= Drawing.Screen.Height - 4
+		Height= Drawing.Screen.Height - 4,
+		OnCloseButton=function()
+			callback(false)
+		end
 	}
 	self:DisplayWindow(view, title)
 
@@ -2700,8 +3025,8 @@ function DisplayOpenFileWindow(self, title, callback)
 		currentFolder = path
 
 		local filesListItems = {}
-		for i, v in ipairs(fs.list(path)) do
-			if not fs.isDir(currentFolder .. v) then
+		for i, v in ipairs(_fs.list(path)) do
+			if not _fs.isDir(currentFolder .. v) then
 				table.insert(filesListItems, v)
 			end
 		end
@@ -2711,7 +3036,183 @@ function DisplayOpenFileWindow(self, title, callback)
 
 	end
 
-	goToFolder('')
+	if startPath then
+		goToFolder(startPath)
+	elseif OneOS then
+		goToFolder('/Desktop/Documents/')
+	else
+		goToFolder('')
+	end
+
+	self.Window.OnCloseButton = function()callback(false)end
+end
+
+function DisplaySaveFileWindow(self, title, callback, extension, startPath)
+	local _fs = fs
+	if extension and extension:sub(1,1) ~= '.' then
+		extension = '.' .. extension
+	end
+	extension = extension or ''
+
+	title = title or 'Save File'
+	local func = function(btn)
+		self.Window:Close()
+		if callback then
+			callback(btn.Text)
+		end
+	end
+
+	local sidebarItems = {}
+
+	--this is a really, really super bad way of doing it
+	local separator = '                                                       !'
+
+	local function addFolder(path, level)
+		for i, v in ipairs(_fs.list(path)) do
+			local fPath = path .. '/' .. v
+			if fPath ~= '/rom' and _fs.isDir(fPath) then
+				table.insert(sidebarItems, level .. v..separator..fPath)
+				addFolder(fPath, level .. '  ')
+			end
+		end
+	end
+	
+	if OneOS then
+		_fs = OneOS.FS
+	end
+	addFolder('','')
+
+	local currentFolder = ''
+	local selectedPath = nil
+
+	local goToFolder = nil
+
+	local function updatePath()
+		local text = self:GetObject('FileNameTextBox').Text
+		if #text == 0 then
+			self.Window:GetObject('OkButton').Enabled = false
+			selectedPath = Helpers.TidyPath(currentFolder)
+		else
+			self.Window:GetObject('OkButton').Enabled = true
+			selectedPath = Helpers.TidyPath(currentFolder .. '/' .. text .. extension)
+		end
+		self:GetObject('PathLabel').Text = selectedPath
+	end
+
+	local children = {
+		{
+			["Y"]="100%,-2",
+			["X"]=1,
+			["Height"]=3,
+			["Width"]="100%",
+			["BackgroundColour"]=colours.lightGrey,
+			["Type"]="View"
+		},
+		{
+			["Y"]="100%,-1",
+			["X"]="100%,-4",
+			["Name"]="OkButton",
+			["Type"]="Button",
+			["Text"]="Ok",
+			["BackgroundColour"]=colours.white,
+			["Enabled"]=false,
+			OnClick = function()
+				if selectedPath then
+					local text = self:GetObject('FileNameTextBox').Text
+					self.Window:Close()
+					callback(true, selectedPath, text)
+				end
+			end
+		},
+		{
+			["Y"]="100%,-1",
+			["X"]="100%,-13",
+			["Name"]="CancelButton",
+			["Type"]="Button",
+			["Text"]="Cancel",
+			["BackgroundColour"]=colours.white,
+			OnClick = function()
+				self.Window:Close()
+				callback(false)
+			end
+		},
+		{
+			["Y"]="100%,-2",
+			["X"]=3,
+			["Width"]="100%,-4",
+			["Name"]="PathLabel",
+			["Type"]="Label",
+			["Text"]="/",
+			["TextColour"]=colours.grey
+		},
+		{
+			["Y"]="100%,-1",
+			["X"]=3,
+			["Width"]="100%,-17",
+			["Name"]="FileNameTextBox",
+			["Type"]="TextBox",
+			["Placeholder"]="File Name",
+			["Active"]=true,
+			["BackgroundColour"]=colours.white,
+			OnChange = function(_self, event, keychar)
+				if keychar == keys.enter then
+					self:GetObject('OkButton'):OnClick()
+				else
+					updatePath()
+				end
+			end
+		},
+		{
+			["Y"]=1,
+			["X"]=2,
+			["Height"]="100%,-3",
+			["Width"]="100%,-1",
+			["Name"]="SidebarListView",
+			["Type"]="ListView",
+			["CanSelect"]=true,
+			["Items"]={
+				["Computer"] = sidebarItems
+			},
+			OnSelect = function(listView, text)
+				local _,s = text:find(separator)
+				if s then
+					local path = text:sub(s + 1)
+					goToFolder(path)
+				end
+			end,
+			OnClick = function(listView, event, side, x, y)
+				if y == 1 then
+					goToFolder('/')
+				end
+			end
+		},
+	}
+	local view = {
+		Children = children,
+		Width=35,
+		Height= Drawing.Screen.Height - 4,
+		OnCloseButton=function()
+			callback(false)
+		end
+	}
+	self:DisplayWindow(view, title)
+
+	self:SetActiveObject(self.Window:GetObject('FileNameTextBox'))
+
+	goToFolder = function(path)
+		path = Helpers.TidyPath(path)
+		currentFolder = path
+		selectedPath = nil
+		updatePath()
+	end
+
+	if startPath then
+		goToFolder(startPath)
+	elseif OneOS then
+		goToFolder('/Desktop/Documents/')
+	else
+		goToFolder('')
+	end
 
 	self.Window.OnCloseButton = function()callback(false)end
 end
@@ -2758,7 +3259,7 @@ function HandleTimer(self, event, timer)
 			new = self:StartRepeatingTimer(oldTimer[1], oldTimer[3])
 		end
 		if oldTimer and oldTimer[1] then
-			oldTimer[1](new)
+			oldTimer[1](new, timer)
 		end
 	elseif self.OnTimer then
 		self.OnTimer(self, event, timer)
@@ -2852,6 +3353,11 @@ function Quit(self)
 end
 
 function Run(self, ready)
+	if not  term.isColour or not term.isColour() then
+		print('This program requires an advanced (golden) comptuer to run, sorry.')
+		error('', 0)
+	end
+
 	for name, events in pairs(eventFuncs) do
 		if self[name] then
 			for i, event in ipairs(events) do

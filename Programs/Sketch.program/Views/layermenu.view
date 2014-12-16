@@ -1,0 +1,34 @@
+{
+  ["Type"]="Menu",
+  ["Children"]={
+    [1]={
+      ["Name"]="NewLayerMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="New Layer..."
+    },
+    [2]={
+      ["Name"]="Separator",
+      ["Type"]="Separator"
+    },
+    [3]={
+      ["Name"]="RenameLayerMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Rename Layer..."
+    },
+    [4]={
+      ["Name"]="DeleteLayerMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Delete Layer"
+    },
+    [5]={
+      ["Name"]="DuplicateLayerMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Duplicate Layer"
+    },
+    [6]={
+      ["Name"]="MergeDownLayerMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Merge Down"
+    },
+  },
+}

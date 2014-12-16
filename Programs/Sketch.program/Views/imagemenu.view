@@ -1,0 +1,55 @@
+{
+  ["Type"]="Menu",
+  ["Owner"]="ImageMenuButton",
+  ["HideTop"]=true,
+  ["Children"]={
+    [1]={
+      ["Name"]="ResizeMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Resize Image...",
+      ["Shortcut"]="~#I"
+    },
+    [2]={
+      ["Name"]="CanvasSizeMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Canvas Size...",
+      ["Shortcut"]="~#C"
+    },
+    [3]={
+      ["Name"]="CropMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Crop",
+      ["Shortcut"]="~#X"
+    },
+    [4]={
+      ["Name"]="Separator",
+      ["Type"]="Separator"
+    },
+    [5]={
+      ["Name"]="NewLayerImageMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="New Layer",
+      ["Shortcut"]="#L"
+    },
+    [6]={
+      ["Name"]="Separator",
+      ["Type"]="Separator"
+    },
+    [7]={
+      ["Name"]="EraseMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Erase Selection",
+      ["Shortcut"]="<"
+    },
+    [8]={
+      ["Name"]="Separator",
+      ["Type"]="Separator"
+    },
+    [9]={
+      ["Name"]="FlattenMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Flatten Image",
+      ["Shortcut"]="#F"
+    }
+  },
+}

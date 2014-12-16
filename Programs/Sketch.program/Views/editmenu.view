@@ -1,0 +1,41 @@
+{
+  ["Type"]="Menu",
+  ["Owner"]="EditMenuButton",
+  ["HideTop"]=true,
+  ["Children"]={
+    [1]={
+      ["Name"]="UndoMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Undo",
+      ["Shortcut"]="#Z"
+    },
+    [2]={
+      ["Name"]="RedoMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Redo",
+      ["Shortcut"]="#Y"
+    },
+    [3]={
+      ["Name"]="Separator",
+      ["Type"]="Separator"
+    },
+    [4]={
+      ["Name"]="CutMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Cut ",
+      ["Shortcut"]="#X"
+    },
+    [5]={
+      ["Name"]="CopyMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Copy",
+      ["Shortcut"]="#C"
+    },
+    [6]={
+      ["Name"]="PasteMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Paste",
+      ["Shortcut"]="#V"
+    }
+  },
+}

@@ -1,0 +1,39 @@
+{
+  ["Type"]="Menu",
+  ["HideTop"]=true,
+  ["Children"]={
+    [1]={
+      ["Name"]="CustomMenuItem",
+      ["Type"]="MenuItem",
+      ["Text"]="Custom",
+    },
+    [2]={
+      ["Type"]="MenuItem",
+      ["Name"]="PresetMenuItem",
+      ["Text"]="OneOS Icon",
+      ["SizeWidth"]=4,
+      ["SizeHeight"]=3,
+    },
+    [3]={
+      ["Type"]="MenuItem",
+      ["Name"]="PresetMenuItem",
+      ["Text"]="Computer Screen",
+      ["SizeWidth"]=51,
+      ["SizeHeight"]=19,
+    },
+    [4]={
+      ["Type"]="MenuItem",
+      ["Name"]="PresetMenuItem",
+      ["Text"]="Pocket Computer Screen",
+      ["SizeWidth"]=26,
+      ["SizeHeight"]=19,
+    },
+    [5]={
+      ["Type"]="MenuItem",
+      ["Name"]="PresetMenuItem",
+      ["Text"]="Turtle Screen",
+      ["SizeWidth"]=39,
+      ["SizeHeight"]=13,
+    },
+  },
+}

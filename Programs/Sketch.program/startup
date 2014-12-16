@@ -1,3276 +1,735 @@
+local bedrockPath='/' if OneOS then OneOS.LoadAPI('/System/API/Bedrock.lua', false)elseif fs.exists(bedrockPath..'/Bedrock')then os.loadAPI(bedrockPath..'/Bedrock')else if http then print('Downloading Bedrock...')local h=http.get('http://pastebin.com/raw.php?i=0MgKNqpN')if h then local f=fs.open(bedrockPath..'/Bedrock','w')f.write(h.readAll())f.close()h.close()os.loadAPI(bedrockPath..'/Bedrock')else error('Failed to download Bedrock. Is your internet working?') end else error('This program needs to download Bedrock to work. Please enable HTTP.') end end if Bedrock then Bedrock.BasePath = bedrockPath Bedrock.ProgramPath = shell.getRunningProgram() end
+
+local program = Bedrock:Initialise()
+
+function ViewClick(self, event, side, x, y)
+	if program.DragWindow and event == 'mouse_drag' then
+		program.DragWindow.X = x - program.DragWindow.DragX
+		program.DragWindow.Y = y
+		program.DragWindow:OnWindowDrag(x, y)
+		program.WindowDragTimer = program:StartTimer(function(_,timer)
+			if timer and timer == program.WindowDragTimer then
+				program.WindowDragTimer = nil
+				program.DragWindow = nil
+			end
+		end, 0.8)
+	elseif self.Visible and not self.IgnoreClick then
+		for i = #self.Children, 1, -1 do --children are ordered from smallest Z to highest, so this is done in reverse
+			local child = self.Children[i]
+			if self:DoClick(child, event, side, x, y) then
+				if self.OnChildClick then
+					self:OnChildClick(child, event, side, x, y)
+				end
+				return true
+			end
+		end
+		if event == 'mouse_click' and self.OnClick and self:OnClick(event, side, x, y) ~= false then
+			return true
+		elseif event == 'mouse_drag' and self.OnDrag and self:OnDrag(event, side, x, y) ~= false then
+			return true
+		elseif event == 'mouse_scroll' and self.OnScroll and self:OnScroll(event, side, x, y) ~= false then
+			return true
+		else
+			return false
+		end
+	else
+		return false
+	end
+end
+
+function OpenDocument(path)
+	CloseDocument(function(success)
+		if success then
+			program:RemoveObject('Artboard')
+			local image = ImageIO.LoadDocument(path, program)
+			if image then
+				program:AddObject({
+					Type = 'Artboard',
+					X = program.Helpers.Round((Drawing.Screen.Width - image.Width - 3) / 2),
+					Y = program.Helpers.Round((Drawing.Screen.Height - image.Height) / 2),
+					Width = image.Width,
+					Height = image.Height,
+					ImageName = image.ImageName,
+					ImagePath = image.ImagePath,
+					ImageFormat = image.ImageFormat,
+					Layers = image.Layers,
+				})
+			end
+		end
+	end)
+end
+
+function SaveWithFormat(path, format)
+	local err
+	local content
+
+	local artboard = program:GetObject('Artboard')
+	if artboard then
+		format = format:gsub('%.', '')
+		if format == 'skch' then
+			content = textutils.serialize(ImageIO.SaveSKCH(artboard.Layers))
+		elseif format == 'nft' then
+			content = ''
+			local lines = ImageIO.SaveNFT(artboard:GetFlattenedPixels())
+			for i, v in ipairs(lines) do
+				content = content .. v .. '\n'
+			end
+		elseif format == 'nfp' then
+			content = ''
+			local lines = ImageIO.SaveNFP(artboard:GetFlattenedPixels())
+			for i, v in ipairs(lines) do
+				content = content .. v .. '\n'
+			end
+		else
+			err = 'Unknown format "'..format..'"'
+		end
+		if not err and content then
+			local _fs = fs
+			if OneOS then
+				_fs = OneOS.FS
+			end
+			local h = _fs.open(path, 'w')
+			if h then
+				h.write(content)
+				h.close()
+			else
+				err = 'Could not open file.'
+			end
+		else
+			err = 'Content conversion failed.'
+		end
+	else
+		err = 'No artboard.'
+	end
+
+	if err then
+		program:DisplayAlertWindow('Save Failed', "Document write failed: "..err, {'Ok'}, function(button)
+		end)
+	end
+end
+
+function SaveDocument(callback)
+	callback = callback or function()end
+	local artboard = program:GetObject('Artboard')
+	if artboard then
+		if artboard.ImagePath then
+			SaveWithFormat(artboard.ImagePath, artboard.ImageFormat:lower())
+			artboard:SetSavedState()
+			callback(true)
+		else
+			program:DisplaySaveFileWindow('Save Image', function(success, path, filename)
+				if success then
+					SaveWithFormat(path, artboard.ImageFormat:lower())
+					artboard:SetSavedState()
+					artboard.ImagePath = path
+					callback(true)
+				else
+					callback(false)
+				end
+			end, artboard.ImageFormat:lower())
+		end
+	else
+		callback(false)
+	end
+end
+
+local artboardOnlyMenuItems = {
+	'Tool',
+	'Save',
+	'SaveAs',
+	'Undo',
+	'Redo',
+	'Cut',
+	'Copy',
+	'Paste',
+	'Resize',
+	'CanvasSize',
+	'Crop',
+	'Erase',
+	'Flatten',
+	'ZoomIn',
+	'ZoomOut',
+	'100%Zoom',
+	'FitZoom',
+	'FilterMask',
+	'NewLayerImage'
+}
+
+function program.OnArtboardOpen(artboard)
+	for i, v in ipairs(artboardOnlyMenuItems) do
+		for i2, v2 in ipairs(program:GetObjects(v..'MenuItem')) do
+			v2.Enabled = true
+		end
+	end
+	program:GetObject('Sidebar'):UpdateButtons(true)
+end
+
+function program.OnArtboardClose(artboard)
+	for i, v in ipairs(artboardOnlyMenuItems) do
+		for i2, v2 in ipairs(program:GetObjects(v..'MenuItem')) do
+			v2.Enabled = false
+		end
+	end
+	program:GetObject('Sidebar'):UpdateButtons(false)
+	program:GetObject('CurrentToolLabel').Text = ''
+	program:GetObject('PrimaryColourView').BackgroundColour = colours.transparent
+	program:GetObject('SecondaryColourView').BackgroundColour = colours.transparent
+end
+
+function NewDocument()
+	CloseDocument(function(success)
+		if success then
+			program:DisplayWindow('newdocumentwindow', 'New Document')
+
+			local colourView = program.Window:GetObject('CurrentColourButton')
+			program.Window:GetObject('NoneColourButton').OnClick = function()
+				colourView.BackgroundColour = colours.transparent
+			end
+
+			for i, v in ipairs(program.Window:GetObjects('BackgroundColourButton')) do
+				v.OnClick = function(self)
+					colourView.BackgroundColour = self.BackgroundColour
+				end
+			end
+
+			local presetChanging = false
+			program:GetObject('WidthNumberBox').OnChange = function()
+				if not presetChanging then
+					program:GetObject('PresetButton').Text = 'Custom      V'
+				end
+			end
+			program:GetObject('HeightNumberBox').OnChange = function()
+				if not presetChanging then
+					program:GetObject('PresetButton').Text = 'Custom      V'
+				end
+			end
+
+			program:GetObject('PresetButton').OnClick = function(self)
+				if self:ToggleMenu('sizepresetmenu', 1, 1) then
+					program:GetObject('CustomMenuItem').OnClick = function()
+						self.Text = 'Custom      V'
+					end
+
+					for i, v in ipairs(program:GetObjects('PresetMenuItem')) do
+						v.OnClick = function(_self)
+							local text = program.Helpers.TruncateString(_self.Text, 12)
+							for i = 1, 12 - #text do
+								text = text .. ' '
+							end
+							text = text .. 'V'
+							self.Text = text
+							presetChanging = true
+							program:GetObject('WidthNumberBox').Value = _self.SizeWidth
+							program:GetObject('HeightNumberBox').Value = _self.SizeHeight
+							presetChanging = false
+						end
+					end
+				end
+			end
+
+			program:GetObject('CancelButton').OnClick = function()
+				program.Window:Close()
+			end
+
+			program:GetObject('OkButton').OnClick = function()
+				local width = program:GetObject('WidthNumberBox').Value
+				local height = program:GetObject('HeightNumberBox').Value
+				local background = colourView.BackgroundColour
+				program.Window:Close()
+
+				local pixels = {}
+
+				for x = 1, width do
+					pixels[x] = {}
+					for y = 1, height do
+						pixels[x][y] = {
+							BackgroundColour = background,
+							TextColour = colours.black,
+							Character = ' '
+						}
+					end
+				end
+
+				program:AddObject({
+					Type = 'Artboard',
+					X = program.Helpers.Round((Drawing.Screen.Width - width - 3) / 2),
+					Y = program.Helpers.Round((Drawing.Screen.Height - height) / 2),
+					Width = width,
+					Height = height,
+					ImageFormat = 'skch',
+					Layers = {
+						{
+							Name = 'Background',
+							Pixels = pixels,
+							BackgroundColour = background,
+							Visible = true,
+							Index = 1,
+							LayerType = 'Normal'
+						}
+					},
+				})
+			end
+		end
+	end)
+end
+
+function SaveDocumentAs()
+	local artboard = program:GetObject('Artboard')
+	if artboard then
+		program:DisplayWindow('saveasformatwindow', 'Save As')
+
+		local formatButtons = program:GetObjects('FormatButton')
+		local format = 'skch'
+
+		for i, v in ipairs(formatButtons) do
+			v.OnClick = function(self)
+				self.Toggle = true
+				format = self.Format
+				for i2, v2 in ipairs(formatButtons) do
+					if v2 ~= self then
+						v2.Toggle = false
+					end
+				end
+			end
+		end
+
+		program:GetObject('CancelButton').OnClick = function()
+			program.Window:Close()
+		end
+
+		program:GetObject('NextButton').OnClick = function()
+			program.Window:Close()
+			program:DisplaySaveFileWindow('Save Image As', function(success, path, filename)
+				if success then
+					SaveWithFormat(path, format)
+				end
+			end, format)
+		end
+	end
+end
+
+function CloseDocument(callback)
+	local artboard = program:GetObject('Artboard')
+	if artboard and artboard:Modified() then
+		program:DisplayAlertWindow('Unsaved Changes!', "Save changes to your document?", {'Save', 'Cancel', "Don't Save"}, function(button)
+			if button == 'Cancel' then
+				callback(false)
+			elseif button == "Don't Save" then
+				callback(true)
+				program:RemoveObject(artboard)
+			else
+				SaveDocument(function(success)
+					if success then
+						program:RemoveObject(artboard)
+					end
+					callback(success)
+				end)
+			end
+		end)
+		return false
+	else
+		program:RemoveObject('Artboard')
+		callback(true)
+		return true
+	end
+end
+
 if OneOS then
-OneOS.ToolBarColour=colours.grey
-OneOS.ToolBarTextColour=colours.white
-end
-colours.transparent=-1
-colors.transparent=-1
-local e,e=term.getSize()
-local e=function(t,e)
-local e=10^(e or 0)
-return math.floor(t*e+.5)/e
-end
-Clipboard=OneOS.Clipboard
-OneOS.LoadAPI('System/API/LegacyDrawing.lua')
-local Drawing = LegacyDrawing
-UIColours={
-Toolbar=colours.grey,
-ToolbarText=colours.lightGrey,
-ToolbarSelected=colours.lightBlue,
-ControlText=colours.white,
-ToolbarItemTitle=colours.black,
-Background=colours.lightGrey,
-MenuBackground=colours.white,
-MenuText=colours.black,
-MenuSeparatorText=colours.grey,
-MenuDisabledText=colours.lightGrey,
-Shadow=colours.grey,
-TransparentBackgroundOne=colours.white,
-TransparentBackgroundTwo=colours.lightGrey,
-MenuBarActive=colours.white
-}
-Current={
-Artboard=nil,
-Layer=nil,
-Tool=nil,
-ToolSize=1,
-Toolbar=nil,
-Colour=colours.lightBlue,
-Menu=nil,
-MenuBar=nil,
-Window=nil,
-Input=nil,
-CursorPos={1,1},
-CursorColour=colours.black,
-InterfaceVisible=true,
-Selection={},
-SelectionDrawTimer=nil,
-HandDragStart={},
-Modified=false,
-}
-local t=false
-function PrintCentered(e,t)
-local a,o=term.getSize()
-x=math.ceil(math.ceil((a/2)-(#e/2)),0)+1
-term.setCursorPos(x,t)
-print(e)
-end
-function DoVanillaClose()
-term.setBackgroundColour(colours.black)
-term.setTextColour(colours.white)
-term.clear()
-term.setCursorPos(1,1)
-PrintCentered("Thanks for using Sketch!",(Drawing.Screen.Height/2)-1)
-term.setTextColour(colours.lightGrey)
-PrintCentered("Photoshop Inspired Image Editor for ComputerCraft",(Drawing.Screen.Height/2))
-term.setTextColour(colours.white)
-PrintCentered("(c) oeed 2013 - 2014",(Drawing.Screen.Height/2)+3)
-term.setCursorPos(1,Drawing.Screen.Height)
-error('',0)
-end
-function Close()
-if t or not Current.Artboard or not Current.Modified then
-if not OneOS then
-DoVanillaClose()
-end
-return true
-else
-local e=ButtonDialougeWindow:Initialise('Quit Sketch?','You have unsaved changes, do you want to quit anyway?','Quit','Cancel',function(e,t)
-if t then
-if OneOS then
-OneOS.Close(true)
-else
-DoVanillaClose()
-end
-end
-e:Close()
-Draw()
-end):Show()
-os.queueEvent('mouse_click',1,e.X,e.Y)
-return false
-end
-end
-if OneOS then
-OneOS.CanClose=function()
-return Close()
-end
-end
-Lists={
-Artboards={},
-Interface={
-Toolbars={}
-}
-}
-Events={
-}
-function SetColour(e)
-Current.Colour=e
-Draw()
-end
-function SetTool(e)
-if e and e.Select and e:Select()then
-Current.Input=nil
-Current.Tool=e
-return true
-end
-return false
-end
-function GetAbsolutePosition(e)
-local e=e
-local a=0
-local o=1
-local t=1
-while true do
-o=o+e.X-1
-t=t+e.Y-1
-if not e.Parent then
-return{X=o,Y=t}
-end
-e=e.Parent
-if a>32 then
-return{X=1,Y=1}
-end
-a=a+1
-end
-end
-Pixel={
-TextColour=colours.black,
-BackgroundColour=colours.white,
-Character=" ",
-Layer=nil,
-Draw=function(e,a,t)
-if e.BackgroundColour~=colours.transparent or e.Character~=' 'then
-Drawing.WriteToBuffer(e.Layer.Artboard.X+a-1,e.Layer.Artboard.Y+t-1,e.Character,e.TextColour,e.BackgroundColour)
-end
-end,
-Initialise=function(t,n,i,o,a)
-local e={}
-setmetatable(e,{__index=t})
-e.TextColour=n or t.TextColour
-e.BackgroundColour=i or t.BackgroundColour
-e.Character=o or t.Character
-e.Layer=a
-return e
-end,
-Set=function(e,t,a,o)
-e.TextColour=t or e.TextColour
-e.BackgroundColour=a or e.BackgroundColour
-e.Character=o or e.Character
-end
-}
-Layer={
-Name="",
-Pixels={
-},
-Artboard=nil,
-BackgroundColour=colours.white,
-Visible=true,
-Index=1,
-Draw=function(e)
-if e.Visible then
-for a=1,e.Artboard.Width do
-for t=1,e.Artboard.Height do
-e.Pixels[a][t]:Draw(a,t)
-end
-end
-end
-end,
-Remove=function(e)
-for t,e in ipairs(e.Artboard.Layers)do
-if e==Current.Layer then
-Current.Artboard.Layers[t]=nil
-Current.Layer=Current.Artboard.Layers[1]
-ModuleNamed('Layers'):Update()
-end
-end
-end,
-Initialise=function(o,i,n,t,s,a)
-local e={}
-setmetatable(e,{__index=o})
-e.Name=i
-e.Pixels={}
-e.BackgroundColour=n
-e.Artboard=t
-e.Index=s or#t.Layers+1
-if not a then
-e:MakeAllBlankPixels()
-else
-e:MakeAllBlankPixels()
-for a,t in ipairs(a)do
-for o,t in ipairs(t)do
-e:SetPixel(a,o,t.TextColour,t.BackgroundColour,t.Character)
-end
-end
-end
-return e
-end,
-SetPixel=function(a,e,t,n,o,i)
-n=n or Current.Colour
-o=o or Current.Colour
-i=i or" "
-if e<1 or t<1 or e>a.Artboard.Width or t>a.Artboard.Height then
-return
-end
-if a.Pixels[e][t]then
-a.Pixels[e][t]:Set(n,o,i)
-a.Pixels[e][t]:Draw(e,t)
-end
-end,
-MakePixel=function(e,a,o,t)
-t=t or e.BackgroundColour
-e.Pixels[a][o]=Pixel:Initialise(nil,t,nil,e)
-end,
-MakeColumn=function(e,t)
-e.Pixels[t]={}
-end,
-MakeAllBlankPixels=function(e)
-for t=1,e.Artboard.Width do
-if not e.Pixels[t]then
-e:MakeColumn(t)
-end
-for a=1,e.Artboard.Height do
-if not e.Pixels[t][a]then
-e:MakePixel(t,a)
-end
-end
-end
-end,
-PixelsInSelection=function(i,s)
-local t={}
-if Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then
-local e=Current.Selection[1]
-local a=Current.Selection[2]
-local o=a-e
-local a=e.x
-local n=e.y
-for e=1,o.x+1 do
-for o=1,o.y+1 do
-if not t[e]then
-t[e]={}
-end
-if not i.Pixels[a+e-1]or not i.Pixels[a+e-1][n+o-1]then
-break
-end
-local i=i.Pixels[a+e-1][n+o-1]
-t[e][o]=Pixel:Initialise(i.TextColour,i.BackgroundColour,i.Character,Current.Layer)
-if s then
-Current.Layer:SetPixel(a+e-1,n+o-1,nil,Current.Layer.BackgroundColour,nil)
-end
-end
-end
-end
-return t
-end,
-EraseSelection=function(e)
-if Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then
-local e=Current.Selection[1]
-local t=Current.Selection[2]
-local t=t-e
-local o=e.x
-local i=e.y
-for a=1,t.x+1 do
-for e=1,t.y+1 do
-Current.Layer:SetPixel(o+a-1,i+e-1,nil,Current.Layer.BackgroundColour,nil)
-end
-end
-end
-end,
-InsertPixels=function(t,e)
-local o=Current.Selection[1].x
-local t=Current.Selection[1].y
-for a,e in ipairs(e)do
-for i,e in ipairs(e)do
-Current.Layer:SetPixel(o+a-1,t+i-1,e.TextColour,e.BackgroundColour,e.Character)
-end
-end
-end
-}
-Artboard={
-X=0,
-Y=0,
-Name="",
-Path="",
-Width=1,
-Height=1,
-Layers={},
-Format=nil,
-SelectionIsBlack=true,
-Draw=function(e)
-Drawing.DrawBlankArea(e.X+1,e.Y+1,e.Width,e.Height,UIColours.Shadow)
-local t
-for a=1,e.Width do
-t=a%2
-if t==1 then
-t=true
-else
-t=false
-end
-for o=1,e.Height do
-if t then
-Drawing.WriteToBuffer(e.X+a-1,e.Y+o-1,":",UIColours.TransparentBackgroundTwo,UIColours.TransparentBackgroundOne)
-else
-Drawing.WriteToBuffer(e.X+a-1,e.Y+o-1,":",UIColours.TransparentBackgroundOne,UIColours.TransparentBackgroundTwo)
-end
-t=not t
-end
-end
-for t,e in ipairs(e.Layers)do
-e:Draw()
-end
-if Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then
-local t=Current.Selection[1]
-local a=Current.Selection[2]
-local a=a-t
-local i=e.SelectionIsBlack
-local function o()
-local e=colours.white
-if i then
-e=colours.black
-end
-i=not i
-return e
-end
-function horizontal(i)
-Drawing.WriteToBuffer(e.X-1+t.x,e.Y-1+i,'+',o(),colours.transparent)
-if a.x>0 then
-for a=1,a.x-1 do
-Drawing.WriteToBuffer(e.X-1+t.x+a,e.Y-1+i,'-',o(),colours.transparent)
-end
-else
-for a=1,(-1*a.x)-1 do
-Drawing.WriteToBuffer(e.X-1+t.x-a,e.Y-1+i,'-',o(),colours.transparent)
-end
-end
-Drawing.WriteToBuffer(e.X-1+t.x+a.x,e.Y-1+i,'+',o(),colours.transparent)
-end
-function vertical(i)
-if a.y<0 then
-for a=1,(-1*a.y)-1 do
-Drawing.WriteToBuffer(e.X-1+i,e.Y-1+t.y-a,'|',o(),colours.transparent)
-end
-else
-for a=1,a.y-1 do
-Drawing.WriteToBuffer(e.X-1+i,e.Y-1+t.y+a,'|',o(),colours.transparent)
-end
-end
-end
-horizontal(t.y)
-vertical(t.x)
-horizontal(t.y+a.y)
-vertical(t.x+a.x)
-end
-end,
-Initialise=function(r,n,i,a,o,s,h,t)
-local e={}
-setmetatable(e,{__index=r})
-e.Y=3
-e.X=2
-e.Name=n
-e.Path=i
-e.Width=a
-e.Height=o
-e.Format=s
-e.Layers={}
-if not t then
-e:MakeLayer('Background',h)
-else
-for a,t in ipairs(t)do
-e:MakeLayer(t.Name,t.BackgroundColour,t.Index,t.Pixels)
-e.Layers[a].Visible=t.Visible
-end
-Current.Layer=e.Layers[#e.Layers]
-end
-return e
-end,
-Resize=function(t,i,n,a,o)
-t.Height=t.Height+i+n
-t.Width=t.Width+a+o
-for s,e in ipairs(t.Layers)do
-if a<0 then
-for t=1,-a do
-table.remove(e.Pixels,1)
-end
-end
-if o<0 then
-for t=1,-o do
-table.remove(e.Pixels,#e.Pixels)
-end
-end
-for a=1,a do
-table.insert(e.Pixels,1,{})
-for t=1,t.Height do
-e:MakePixel(1,t)
-end
-end
-for a=1,o do
-table.insert(e.Pixels,{})
-for t=1,t.Height do
-e:MakePixel(#e.Pixels,t)
-end
-end
-for a=1,i do
-for t=1,t.Width do
-table.insert(e.Pixels[t],1,{})
-e:MakePixel(t,1)
-end
-end
-for a=1,n do
-for t=1,t.Width do
-table.insert(e.Pixels[t],{})
-e:MakePixel(t,#e.Pixels[t])
-end
-end
-if i<0 then
-for a=1,-i do
-for t=1,t.Width do
-table.remove(e.Pixels[t],1)
-end
-end
-end
-if n<0 then
-for a=1,-n do
-for t=1,t.Width do
-table.remove(e.Pixels[t],#e.Pixels[t])
-end
-end
-end
-end
-end,
-MakeLayer=function(a,e,t,i,o)
-t=t or colours.white
-e=e or"Layer"
-local e=Layer:Initialise(e,t,a,i,o)
-table.insert(a.Layers,e)
-Current.Layer=e
-ModuleNamed('Layers'):Update()
-return e
-end,
-New=function(o,a,e,t,i,s,n,h)
-local e=o:Initialise(a,e,t,i,s,n,h)
-table.insert(Lists.Artboards,e)
-Current.Artboard=e
-return e
-end,
-Save=function(e,t)
-Current.Artboard=e
-t=t or e.Path
-local a=io.open
-if OneOS then
-a=OneOS.IO.open
-end
-local a=a(t,"w",true)
-if e.Format=='.skch'then
-a:write(textutils.serialize(SaveSKCH()))
-else
-local t={}
-if e.Format=='.nfp'then
-t=SaveNFP()
-elseif e.Format=='.nft'then
-t=SaveNFT()
-end
-for t,e in ipairs(t)do
-a:write(e.."\n")
-end
-end
-a:close()
-Current.Modified=false
-end,
-Click=function(i,e,t,o,a)
-if Current.Tool and Current.Layer and Current.Layer.Visible then
-Current.Tool:Use(t,o,e,a)
-Current.Modified=true
-return true
-end
-end
-}
-Toolbar={
-X=0,
-Y=0,
-Width=0,
-ExpandedWidth=14,
-ClosedWidth=2,
-Height=0,
-Expanded=true,
-ToolbarItems={},
-AbsolutePosition=function(e)
-return{X=e.X,Y=e.Y}
-end,
-Draw=function(e)
-e:CalculateToolbarItemPositions()
-Drawing.DrawBlankArea(e.X,e.Y,e.Width,e.Height,UIColours.Toolbar)
-for t,e in ipairs(e.ToolbarItems)do
-e:Draw()
-end
-end,
-Initialise=function(o,t,a)
-local e={}
-setmetatable(e,{__index=o})
-e.Expanded=a
-if a then
-e.Width=e.ExpandedWidth
-else
-e.Width=e.ClosedWidth
-end
-if t=='right'then
-e.X=Drawing.Screen.Width-e.Width+1
-end
-if t=='right'or t=='left'then
-e.Height=Drawing.Screen.Width
-end
-e.Y=1
-return e
-end,
-AddToolbarItem=function(e,t)
-table.insert(e.ToolbarItems,t)
-e:CalculateToolbarItemPositions()
-end,
-CalculateToolbarItemPositions=function(t)
-local e=1
-for a,t in ipairs(t.ToolbarItems)do
-t.Y=e
-e=e+t.Height
-end
-end,
-Update=function(e)
-for t,e in ipairs(e.ToolbarItems)do
-if e.Module.Update then
-e.Module:Update(e)
-end
-end
-end,
-New=function(t,e,a)
-local e=t:Initialise(e,a)
-table.insert(Lists.Interface.Toolbars,e)
-return e
-end,
-Click=function(e,e,e,e)
-return false
-end
-}
-ToolbarItem={
-X=0,
-Y=0,
-Width=0,
-Height=0,
-ExpandedHeight=5,
-Expanded=true,
-Toolbar=nil,
-Title="",
-MenuIcon="=",
-ExpandedIcon="+",
-ContractIcon="-",
-ContentView=nil,
-Module=nil,
-MenuItems=nil,
-Draw=function(e)
-Drawing.DrawBlankArea(e.X,e.Y,e.Width,1,UIColours.ToolbarItemTitle)
-Drawing.DrawCharacters(e.X+1,e.Y,e.Title,UIColours.ToolbarText,UIColours.ToolbarItemTitle)
-Drawing.DrawCharacters(e.X+e.Width-1,e.Y,e.MenuIcon,UIColours.ToolbarText,UIColours.ToolbarItemTitle)
-local t=e.ContractIcon
-if not e.Expanded then
-t=e.ExpandedIcon
-end
-if e.Expanded and e.ContentView then
-e.ContentView:Draw()
-end
-Drawing.DrawCharacters(e.X+e.Width-2,e.Y,t,UIColours.ToolbarText,UIColours.ToolbarItemTitle)
-end,
-Initialise=function(n,a,o,s,t,i)
-local e={}
-setmetatable(e,{__index=n})
-e.Expanded=s
-e.Title=a.Title
-e.Width=t.Width
-e.Height=o or 5
-e.Module=a
-e.MenuItems=i or{}
-table.insert(e.MenuItems,
-{
-Title='Shrink',
-Click=function()
-e:ToggleExpanded()
-end
-})
-e.ExpandedHeight=o or 5
-e.Y=1
-e.X=t.X
-e.ContentView=ContentView:Initialise(1,2,e.Width,e.Height-1,nil,e)
-e.Toolbar=t
-return e
-end,
-ToggleExpanded=function(e)
-e.Expanded=not e.Expanded
-if e.Expanded then
-e.Height=e.ExpandedHeight
-else
-e.Height=1
-end
-end,
-Click=function(e,n,a,t)
-local o=GetAbsolutePosition(e)
-if a==e.Width and t==1 then
-local i="Shrink"
-if not e.Expanded then
-i="Expand"
-end
-e.MenuItems[#e.MenuItems].Title=i
-Menu:New(o.X+a,o.Y+t,e.MenuItems,e)
-return true
-elseif a==e.Width-1 and t==1 then
-e:ToggleExpanded()
-return true
-elseif t~=1 then
-return e.ContentView:Click(n,a-e.ContentView.X+1,t-e.ContentView.Y+1)
-end
-return false
-end
-}
-ContentView={
-X=1,
-Y=1,
-Width=0,
-Height=0,
-Parent=nil,
-Views={},
-AbsolutePosition=function(e)
-return e.Parent:AbsolutePosition()
-end,
-Draw=function(e)
-for t,e in ipairs(e.Views)do
-e:Draw()
-end
-end,
-Initialise=function(t,a,i,h,s,n,o)
-local e={}
-setmetatable(e,{__index=t})
-e.Width=h
-e.Height=s
-e.Y=i
-e.X=a
-e.Views=n or{}
-e.Parent=o
-return e
-end,
-Click=function(e,t,a,o)
-for i,e in pairs(e.Views)do
-if DoClick(e,t,a,o)then
-return true
-end
-end
-end
-}
-Button={
-X=1,
-Y=1,
-Width=0,
-Height=0,
-BackgroundColour=colours.lightGrey,
-TextColour=colours.white,
-ActiveBackgroundColour=colours.lightGrey,
-Text="",
-Parent=nil,
-_Click=nil,
-Toggle=nil,
-AbsolutePosition=function(e)
-return e.Parent:AbsolutePosition()
-end,
-Draw=function(e)
-local t=e.BackgroundColour
-local o=e.TextColour
-if type(t)=='function'then
-t=t()
-end
-if e.Toggle then
-o=UIColours.MenuBarActive
-t=e.ActiveBackgroundColour
-end
-local a=GetAbsolutePosition(e)
-Drawing.DrawBlankArea(a.X,a.Y,e.Width,e.Height,t)
-Drawing.DrawCharactersCenter(a.X,a.Y,e.Width,e.Height,e.Text,o,t)
-end,
-Initialise=function(h,r,l,d,t,u,s,o,a,i,n,c)
-local e={}
-setmetatable(e,{__index=h})
-t=t or 1
-e.Width=d or#a+2
-e.Height=t
-e.Y=l
-e.X=r
-e.Text=a or""
-e.BackgroundColour=u or colours.lightGrey
-e.TextColour=i or colours.white
-e.ActiveBackgroundColour=c or colours.lightGrey
-e.Parent=s
-e._Click=o
-e.Toggle=n
-return e
-end,
-Click=function(e,a,t,o)
-if e._Click then
-if e:_Click(a,t,o,not e.Toggle)~=false and e.Toggle~=nil then
-e.Toggle=not e.Toggle
-Draw()
-end
-return true
-else
-return false
-end
-end
-}
-TextBox={
-X=1,
-Y=1,
-Width=0,
-Height=0,
-BackgroundColour=colours.lightGrey,
-TextColour=colours.black,
-Parent=nil,
-TextInput=nil,
-AbsolutePosition=function(e)
-return e.Parent:AbsolutePosition()
-end,
-Draw=function(e)
-local t=GetAbsolutePosition(e)
-Drawing.DrawBlankArea(t.X,t.Y,e.Width,e.Height,e.BackgroundColour)
-local a=e.TextInput.Value
-if#a>(e.Width-2)then
-a=a:sub(#a-(e.Width-3))
-if Current.Input==e.TextInput then
-Current.CursorPos={t.X+1+e.Width-2,t.Y}
-end
-else
-if Current.Input==e.TextInput then
-Current.CursorPos={t.X+1+e.TextInput.CursorPos,t.Y}
-end
-end
-Drawing.DrawCharacters(t.X+1,t.Y,a,e.TextColour,e.BackgroundColour)
-term.setCursorBlink(true)
-Current.CursorColour=e.TextColour
-end,
-Initialise=function(r,h,u,d,t,l,o,n,s,a,i)
-local e={}
-setmetatable(e,{__index=r})
-t=t or 1
-e.Width=d or#o+2
-e.Height=t
-e.Y=u
-e.X=h
-e.TextInput=TextInput:Initialise(o or'',function(e)
-if a then
-a(e)
-end
-Draw()
-end,i)
-e.BackgroundColour=n or colours.lightGrey
-e.TextColour=s or colours.black
-e.Parent=l
-return e
-end,
-Click=function(e,t,t,t)
-Current.Input=e.TextInput
-e:Draw()
-end
-}
-TextInput={
-Value="",
-Change=nil,
-CursorPos=nil,
-Numerical=false,
-Initialise=function(o,t,a,i)
-local e={}
-setmetatable(e,{__index=o})
-e.Value=t
-e.Change=a
-e.CursorPos=#t
-e.Numerical=i
-return e
-end,
-Char=function(e,t)
-if e.Numerical then
-t=tostring(tonumber(t))
-end
-if t=='nil'then
-return
-end
-e.Value=string.sub(e.Value,1,e.CursorPos)..t..string.sub(e.Value,e.CursorPos+1)
-e.CursorPos=e.CursorPos+1
-e.Change(key)
-end,
-Key=function(e,t)
-if t==keys.enter then
-e.Change(t)
-elseif t==keys.left then
-if e.CursorPos>0 then
-e.CursorPos=e.CursorPos-1
-e.Change(t)
-end
-elseif t==keys.right then
-if e.CursorPos<string.len(e.Value)then
-e.CursorPos=e.CursorPos+1
-e.Change(t)
-end
-elseif t==keys.backspace then
-if e.CursorPos>0 then
-e.Value=string.sub(e.Value,1,e.CursorPos-1)..string.sub(e.Value,e.CursorPos+1)
-e.CursorPos=e.CursorPos-1
-end
-e.Change(t)
-elseif t==keys.home then
-e.CursorPos=0
-e.Change(t)
-elseif t==keys.delete then
-if e.CursorPos<string.len(e.Value)then
-e.Value=string.sub(e.Value,1,e.CursorPos)..string.sub(e.Value,e.CursorPos+2)
-e.Change(t)
-end
-elseif t==keys["end"]then
-e.CursorPos=string.len(e.Value)
-e.Change(t)
-end
-end
-}
-LayerItem={
-X=1,
-Y=1,
-Parent=nil,
-Layer=nil,
-Draw=function(e)
-e.Y=e.Layer.Index
-local t=GetAbsolutePosition(e)
-local a=colours.lightGrey
-if Current.Layer==e.Layer then
-a=colours.white
-end
-Drawing.DrawBlankArea(t.X,t.Y,e.Width,e.Height,UIColours.Toolbar)
-Drawing.DrawCharacters(t.X+3,t.Y,e.Layer.Name,a,UIColours.Toolbar)
-if e.Layer.Visible then
-Drawing.DrawCharacters(t.X+1,t.Y,"@",a,UIColours.Toolbar)
-else
-Drawing.DrawCharacters(t.X+1,t.Y,"X",a,UIColours.Toolbar)
-end
-end,
-Initialise=function(o,a,t)
-local e={}
-setmetatable(e,{__index=o})
-e.Width=t.Width
-e.Height=1
-e.Y=1
-e.X=1
-e.Layer=a
-e.Parent=t
-return e
-end,
-Click=function(e,a,t,a)
-if t==2 then
-e.Layer.Visible=not e.Layer.Visible
-else
-Current.Layer=e.Layer
-end
-return true
-end
-}
-Menu={
-X=0,
-Y=0,
-Width=0,
-Height=0,
-Owner=nil,
-Items={},
-RemoveTop=false,
-Draw=function(e)
-Drawing.DrawBlankArea(e.X+1,e.Y+1,e.Width,e.Height,UIColours.Shadow)
-if not e.RemoveTop then
-Drawing.DrawBlankArea(e.X,e.Y,e.Width,e.Height,UIColours.MenuBackground)
-for a,t in ipairs(e.Items)do
-if t.Separator then
-Drawing.DrawArea(e.X,e.Y+a,e.Width,1,'-',colours.grey,UIColours.MenuBackground)
-else
-local o=UIColours.MenuText
-if(t.Enabled and type(t.Enabled)=='function'and t.Enabled()==false)or t.Enabled==false then
-o=UIColours.MenuDisabledText
-end
-Drawing.DrawCharacters(e.X+1,e.Y+a,t.Title,o,UIColours.MenuBackground)
-end
-end
-else
-Drawing.DrawBlankArea(e.X,e.Y,e.Width,e.Height,UIColours.MenuBackground)
-for o,t in ipairs(e.Items)do
-if t.Separator then
-Drawing.DrawArea(e.X,e.Y+o-1,e.Width,1,'-',colours.grey,UIColours.MenuBackground)
-else
-local a=UIColours.MenuText
-if(t.Enabled and type(t.Enabled)=='function'and t.Enabled()==false)or t.Enabled==false then
-a=UIColours.MenuDisabledText
-end
-Drawing.DrawCharacters(e.X+1,e.Y+o-1,t.Title,a,UIColours.MenuBackground)
-Drawing.DrawCharacters(e.X-1+e.Width-#t.KeyName,e.Y+o-1,t.KeyName,a,UIColours.MenuBackground)
-end
-end
-end
-end,
-NameForKey=function(t,e)
-if e==keys.leftCtrl then
-return'^'
-elseif e==keys.tab then
-return'Tab'
-elseif e==keys.delete then
-return'Delete'
-elseif e==keys.n then
-return'N'
-elseif e==keys.s then
-return'S'
-elseif e==keys.o then
-return'O'
-elseif e==keys.z then
-return'Z'
-elseif e==keys.y then
-return'Y'
-elseif e==keys.c then
-return'C'
-elseif e==keys.x then
-return'X'
-elseif e==keys.v then
-return'V'
-elseif e==keys.r then
-return'R'
-elseif e==keys.l then
-return'L'
-elseif e==keys.t then
-return'T'
-elseif e==keys.h then
-return'H'
-elseif e==keys.e then
-return'E'
-elseif e==keys.p then
-return'P'
-elseif e==keys.f then
-return'F'
-elseif e==keys.m then
-return'M'
-else
-return'?'
-end
-end,
-Initialise=function(h,o,a,t,n,s)
-local e={}
-setmetatable(e,{__index=h})
-if not n then
-return
-end
-local i={}
-for e,a in ipairs(t)do
-t[e].KeyName=''
-if a.Keys then
-for o,a in ipairs(a.Keys)do
-t[e].KeyName=t[e].KeyName..h:NameForKey(a)
-end
-end
-if t[e].KeyName~=''then
-table.insert(i,t[e].KeyName)
-end
-end
-local i=LongestString(i)
-if i>0 then
-i=i+2
-end
-e.Width=LongestString(t,'Title')+2+i
-if e.Width<10 then
-e.Width=10
-end
-e.Height=#t+2
-e.RemoveTop=s or false
-if s then
-e.Height=e.Height-1
-end
-if a<1 then
-a=1
-end
-if o<1 then
-o=1
-end
-if a+e.Height>Drawing.Screen.Height+1 then
-a=Drawing.Screen.Height-e.Height
-end
-if o+e.Width>Drawing.Screen.Width+1 then
-o=Drawing.Screen.Width-e.Width
-end
-e.Y=a
-e.X=o
-e.Items=t
-e.Owner=n
-return e
-end,
-New=function(n,o,a,t,e,i)
-if Current.Menu and Current.Menu.Owner==e then
-Current.Menu=nil
-return
-end
-local e=n:Initialise(o,a,t,e,i)
-Current.Menu=e
-return e
-end,
-Click=function(e,t,t,a)
-local t=a-1
-if e.RemoveTop then
-t=a
-end
-if t>=1 and a<e.Height then
-if not((e.Items[t].Enabled and type(e.Items[t].Enabled)=='function'and e.Items[t].Enabled()==false)or e.Items[t].Enabled==false)and e.Items[t].Click then
-e.Items[t]:Click()
-if Current.Menu.Owner and Current.Menu.Owner.Toggle then
-Current.Menu.Owner.Toggle=false
-end
-Current.Menu=nil
-e=nil
-end
-return true
-end
-end
-}
-MenuBar={
-X=1,
-Y=1,
-Width=Drawing.Screen.Width,
-Height=1,
-MenuBarItems={},
-AbsolutePosition=function(e)
-return{X=e.X,Y=e.Y}
-end,
-Draw=function(e)
-Drawing.DrawBlankArea(e.X,e.Y,e.Width,e.Height,UIColours.Toolbar)
-for t,e in ipairs(e.MenuBarItems)do
-e:Draw()
-end
-end,
-Initialise=function(a,t)
-local e={}
-setmetatable(e,{__index=a})
-e.X=1
-e.Y=1
-e.MenuBarItems=t
-return e
-end,
-AddToolbarItem=function(e,t)
-table.insert(e.ToolbarItems,t)
-e:CalculateToolbarItemPositions()
-end,
-CalculateToolbarItemPositions=function(t)
-local e=1
-for a,t in ipairs(t.ToolbarItems)do
-t.Y=e
-e=e+t.Height
-end
-end,
-Click=function(e,a,t,o)
-for o,e in ipairs(e.MenuBarItems)do
-if e.X<=t and e.X+e.Width>t then
-if e:Click(e,a,t-e.X+1,1)then
-break
-end
-end
-end
-return false
-end
-}
-Modules={
-{
-Title="Colours",
-ToolbarItem=nil,
-Initialise=function(e)
-e.ToolbarItem=ToolbarItem:Initialise(e,nil,true,Current.Toolbar)
-local n={}
-local a=0
-local t=8
-local o={
-colours.brown,
-colours.yellow,
-colours.orange,
-colours.red,
-colours.green,
-colours.lime,
-colours.magenta,
-colours.pink,
-colours.purple,
-colours.blue,
-colours.cyan,
-colours.lightBlue,
-colours.lightGrey,
-colours.grey,
-colours.black,
-colours.white
-}
-for o,i in pairs(o)do
-if type(i)=='number'and i~=-1 then
-a=a+1
-local o=math.floor(a/(t/2))
-local a=(a%(t/2))
-if a==0 then
-a=(t/2)
-o=o-1
-end
-table.insert(n,
-{
-X=a*2-2+e.ToolbarItem.Width-t,
-Y=o+1,
-Width=2,
-Height=1,
-BackgroundColour=i,
-Click=function(e,t,t,t)
-SetColour(e.BackgroundColour)
-end
-}
-)
-end
-end
-for a,t in ipairs(n)do
-table.insert(e.ToolbarItem.ContentView.Views,
-Button:Initialise(t.X,t.Y,t.Width,t.Height,t.BackgroundColour,e.ToolbarItem.ContentView,t.Click))
-end
-table.insert(e.ToolbarItem.ContentView.Views,
-Button:Initialise(1,1,4,3,function()return Current.Colour end,e.ToolbarItem.ContentView,nil))
-Current.Toolbar:AddToolbarItem(e.ToolbarItem)
-end
-},
-{
-Title="Tools",
-ToolbarItem=nil,
-Update=function(t)
-for a,e in ipairs(t.ToolbarItem.ContentView.Views)do
-if(Current.Tool and Current.Tool.Name==e.Text)then
-e.TextColour=colours.white
-else
-e.TextColour=colours.lightGrey
-end
-end
-t.ToolbarItem.ContentView.Views[1].Text='Size: '..Current.ToolSize
-end,
-Initialise=function(e)
-e.ToolbarItem=ToolbarItem:Initialise(e,#Tools+2,true,Current.Toolbar,
-{{
-Title="Change Tool Size",
-Click=function()
-DisplayToolSizeWindow()
-end,
-}})
-table.insert(e.ToolbarItem.ContentView.Views,Button:Initialise(1,1,e.ToolbarItem.Width,1,UIColours.Toolbar,e.ToolbarItem.ContentView,DisplayToolSizeWindow,'Size: '..Current.ToolSize))
-local t=2
-for o,a in ipairs(Tools)do
-table.insert(e.ToolbarItem.ContentView.Views,Button:Initialise(1,t,e.ToolbarItem.Width,1,UIColours.Toolbar,e.ToolbarItem.ContentView,function()SetTool(a)e:Update(e.ToolbarItem)end,a.Name))
-t=t+1
-end
-e:Update(e.ToolbarItem)
-Current.Toolbar:AddToolbarItem(e.ToolbarItem)
-end
-},
-{
-Title="Layers",
-ToolbarItem=nil,
-Update=function(e)
-if Current.Artboard then
-e.ToolbarItem.ContentView.Views={}
-for t=1,#Current.Artboard.Layers do
-table.insert(e.ToolbarItem.ContentView.Views,LayerItem:Initialise(Current.Artboard.Layers[#Current.Artboard.Layers-t+1],e.ToolbarItem.ContentView))
-end
-end
-end,
-Initialise=function(e)
-e.ToolbarItem=ToolbarItem:Initialise(e,nil,true,Current.Toolbar,
-{{
-Title="New Layer",
-Click=function()
-MakeNewLayer()
-end,
-Enabled=function()
-return CheckOpenArtboard()
-end
-},
-{
-Title='Delete Layer',
-Click=function()
-DeleteLayer()
-end,
-Enabled=function()
-return CheckSelectedLayer()
-end
-},
-{
-Title='Rename Layer...',
-Click=function()
-RenameLayer()
-end,
-Enabled=function()
-return CheckSelectedLayer()
-end
-}})
-e:Update()
-Current.Toolbar:AddToolbarItem(e.ToolbarItem)
-end
-}
-}
-function ModuleNamed(t)
-for a,e in ipairs(Modules)do
-if e.Title==t then
-return e
-end
-end
-end
-function ToolAffectedPixels(e,t)
-if not CheckSelectedLayer()then
-return{}
-end
-if Current.ToolSize==1 then
-if Current.Layer.Pixels[e]and Current.Layer.Pixels[e][t]then
-return{{Current.Layer.Pixels[e][t],e,t}}
-end
-else
-local i={}
-local a=e-math.ceil(Current.ToolSize/2)
-local o=t-math.ceil(Current.ToolSize/2)
-for e=1,Current.ToolSize do
-for t=1,Current.ToolSize do
-if Current.Layer.Pixels[a+e]and Current.Layer.Pixels[a+e][o+t]then
-table.insert(i,{Current.Layer.Pixels[a+e][o+t],a+e,o+t})
-end
-end
-end
-return i
-end
-end
-local a={}
-Tools={
-{
-Name="Hand",
-Use=function(o,e,t,o,a)
-Current.Input=nil
-if a and Current.HandDragStart and Current.HandDragStart[1]and Current.HandDragStart[2]then
-local e=e-Current.HandDragStart[1]
-local t=t-Current.HandDragStart[2]
-Current.Artboard.X=Current.Artboard.X+e
-Current.Artboard.Y=Current.Artboard.Y+t
-else
-Current.HandDragStart={e,t}
-end
-sleep(0)
-end,
-Select=function(e)
-return true
-end
-},
-{
-Name="Pencil",
-Use=function(o,a,e,t,o)
-Current.Input=nil
-for a,e in ipairs(ToolAffectedPixels(a,e))do
-if t==1 then
-e[1].BackgroundColour=Current.Colour
-elseif t==2 then
-e[1].TextColour=Current.Colour
-end
-e[1]:Draw(e[2],e[3])
-end
-end,
-Select=function(e)
-return true
-end
-},
-{
-Name="Eraser",
-Use=function(a,t,e,a)
-Current.Input=nil
-Current.Layer:SetPixel(t,e,nil,Current.Layer.BackgroundColour,nil)
-for t,e in ipairs(ToolAffectedPixels(t,e))do
-Current.Layer:SetPixel(e[2],e[3],nil,Current.Layer.BackgroundColour,nil)
-end
-end,
-Select=function(e)
-return true
-end
-},
-{
-Name="Fill Bucket",
-Use=function(e,a,o,i)
-local s=Current.Layer.Pixels[a][o].BackgroundColour
-if i==2 then
-s=Current.Layer.Pixels[a][o].TextColour
-end
-local t={{X=a,Y=o}}
-while#t>0 do
-local e=t[1]
-if Current.Layer.Pixels[e.X]and Current.Layer.Pixels[e.X][e.Y]then
-local n=Current.Layer.Pixels[e.X][e.Y].BackgroundColour
-if i==2 then
-n=Current.Layer.Pixels[e.X][e.Y].TextColour
-end
-if n==s and n~=Current.Colour then
-if i==1 then
-Current.Layer.Pixels[e.X][e.Y].BackgroundColour=Current.Colour
-elseif i==2 then
-Current.Layer.Pixels[e.X][e.Y].TextColour=Current.Colour
-end
-table.insert(t,{X=e.X,Y=e.Y+1})
-table.insert(t,{X=e.X+1,Y=e.Y})
-if a>1 then
-table.insert(t,{X=e.X-1,Y=e.Y})
-end
-if o>1 then
-table.insert(t,{X=e.X,Y=e.Y-1})
-end
-end
-end
-table.remove(t,1)
-end
-Draw()
-end,
-Select=function(e)
-return true
-end
-},
-{
-Name="Select",
-Use=function(o,e,t,o,a)
-Current.Input=nil
-if not a then
-Current.Selection[1]=vector.new(e,t,0)
-Current.Selection[2]=nil
-else
-Current.Selection[2]=vector.new(e,t,0)
-end
-end,
-Select=function(e)
-return true
-end
-},
-{
-Name="Move",
-Use=function(i,e,t,i,o)
-Current.Input=nil
-if Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then
-if o and a then
-local i=Current.Layer:PixelsInSelection(true)
-local o=Current.Selection[1]-Current.Selection[2]
-Current.Selection[1]=vector.new(e-a[1],t-a[2],0)
-Current.Selection[2]=vector.new(e-a[1]-o.x,t-a[2]-o.y,0)
-Current.Layer:InsertPixels(i)
-else
-a={e-Current.Selection[1].x,t-Current.Selection[1].y}
-end
-end
-end,
-Select=function(e)
-return true
-end
-},
-{
-Name="Text",
-Use=function(a,e,t)
-Current.Input=TextInput:Initialise('',function(a)
-if a==keys.delete or a==keys.backspace then
-if#Current.Input.Value==0 then
-if Current.Layer.Pixels[e]and Current.Layer.Pixels[e][t]then
-Current.Layer.Pixels[e][t]:Set(nil,nil,' ')
-local e=Current.CursorPos[1]-Current.Artboard.X
-if e<Current.Artboard.X-1 then
-e=Current.Artboard.X-1
-end
-Current.Tool:Use(e,Current.CursorPos[2]-Current.Artboard.Y+1)
-Draw()
-end
-return
-else
-if Current.Layer.Pixels[e+#Current.Input.Value]and Current.Layer.Pixels[e+#Current.Input.Value][t]then
-Current.Layer.Pixels[e+#Current.Input.Value][t]:Set(nil,nil,' ')
-end
-end
-else
-local a=#Current.Input.Value
-if Current.Layer.Pixels[e+a-1]then
-Current.Layer.Pixels[e+a-1][t]:Set(Current.Colour,nil,Current.Input.Value:sub(a,a))
-Current.Layer.Pixels[e+a-1][t]:Draw(e+a-1,t)
-end
-end
-local a=e+Current.Input.CursorPos
-if a>Current.Artboard.Width then
-Current.Input.CursorPos=Current.Input.CursorPos-1
-end
-Current.CursorPos={e+Current.Input.CursorPos+Current.Artboard.X-1,t+Current.Artboard.Y-1}
-Current.CursorColour=Current.Colour
-Draw()
-end)
-Current.CursorPos={e+Current.Artboard.X-1,t+Current.Artboard.Y-1}
-Current.CursorColour=Current.Colour
-end,
-Select=function(e)
-if Current.Artboard.Format=='.nfp'then
-ButtonDialougeWindow:Initialise('NFP does not support text!','The format you are using, NFP, does not support text. Use NFT or SKCH to use text.','Ok',nil,function(e)
-e:Close()
-end):Show()
-return false
-else
-return true
-end
-end
-}
-}
-function ToolNamed(t)
-for a,e in ipairs(Tools)do
-if e.Name==t then
-return e
-end
-end
-end
-NewDocumentWindow={
-X=1,
-Y=1,
-Width=0,
-Height=0,
-CursorPos=1,
-Visible=true,
-Return=nil,
-OkButton=nil,
-Format='.skch',
-ImageBackgroundColour=colours.white,
-NameLabelHighlight=false,
-SizeLabelHighlight=false,
-AbsolutePosition=function(e)
-return{X=e.X,Y=e.Y}
-end,
-Draw=function(e)
-if not e.Visible then
-return
-end
-Drawing.DrawBlankArea(e.X+1,e.Y+1,e.Width,e.Height,colours.grey)
-Drawing.DrawBlankArea(e.X,e.Y,e.Width,1,colours.lightGrey)
-Drawing.DrawBlankArea(e.X,e.Y+1,e.Width,e.Height-1,colours.white)
-Drawing.DrawCharactersCenter(e.X,e.Y,e.Width,1,e.Title,colours.black,colours.lightGrey)
-local t=colours.black
-if e.NameLabelHighlight then
-t=colours.red
-end
-Drawing.DrawCharacters(e.X+1,e.Y+2,"Name",t,colours.white)
-Drawing.DrawCharacters(e.X+1,e.Y+4,"Type",colours.black,colours.white)
-local t=colours.black
-if e.SizeLabelHighlight then
-t=colours.red
-end
-Drawing.DrawCharacters(e.X+1,e.Y+6,"Size",t,colours.white)
-Drawing.DrawCharacters(e.X+11,e.Y+6,"x",colours.black,colours.white)
-Drawing.DrawCharacters(e.X+1,e.Y+8,"Background",colours.black,colours.white)
-e.OkButton:Draw()
-e.CancelButton:Draw()
-e.SKCHButton:Draw()
-e.NFTButton:Draw()
-e.NFPButton:Draw()
-e.PathTextBox:Draw()
-e.WidthTextBox:Draw()
-e.HeightTextBox:Draw()
-e.WhiteButton:Draw()
-e.BlackButton:Draw()
-e.TransparentButton:Draw()
-end,
-Initialise=function(t,o)
-local e={}
-setmetatable(e,{__index=t})
-e.Width=32
-e.Height=13
-e.Return=o
-e.X=math.ceil((Drawing.Screen.Width-e.Width)/2)
-e.Y=math.ceil((Drawing.Screen.Height-e.Height)/2)
-e.Title='New Document'
-e.Visible=true
-e.NameLabelHighlight=false
-e.SizeLabelHighlight=false
-e.Format='.skch'
-e.OkButton=Button:Initialise(e.Width-4,e.Height-1,nil,nil,colours.lightGrey,e,function(t,t,t,t,t)
-local t=e.PathTextBox.TextInput.Value
-local a=true
-e.NameLabelHighlight=false
-e.SizeLabelHighlight=false
-local i=fs
-if OneOS then
-i=OneOS.FS
-end
-if t:sub(-1)=='/'or i.isDir(t)or#t==0 then
-a=false
-e.NameLabelHighlight=true
-end
-if#e.WidthTextBox.TextInput.Value==0 or tonumber(e.WidthTextBox.TextInput.Value)<=0 then
-a=false
-e.SizeLabelHighlight=true
-end
-if#e.HeightTextBox.TextInput.Value==0 or tonumber(e.HeightTextBox.TextInput.Value)<=0 then
-a=false
-e.SizeLabelHighlight=true
-end
-if a then
-o(e,true,t,tonumber(e.WidthTextBox.TextInput.Value),tonumber(e.HeightTextBox.TextInput.Value),e.Format,e.ImageBackgroundColour)
-else
-Draw()
-end
-end,'Ok',colours.black)
-e.CancelButton=Button:Initialise(e.Width-13,e.Height-1,nil,nil,colours.lightGrey,e,function(t,t,t,t,t)o(e,false)end,'Cancel',colours.black)
-e.SKCHButton=Button:Initialise(7,5,nil,nil,colours.lightGrey,e,function(t,a,a,a,a)
-e.NFTButton.Toggle=false
-e.NFPButton.Toggle=false
-t.Toggle=false
-e.Format='.skch'
-end,'.skch',colours.black,true,colours.lightBlue)
-e.NFTButton=Button:Initialise(15,5,nil,nil,colours.lightGrey,e,function(t,a,a,a,a)
-e.SKCHButton.Toggle=false
-e.NFPButton.Toggle=false
-t.Toggle=false
-e.Format='.nft'
-end,'.nft',colours.black,false,colours.lightBlue)
-e.NFPButton=Button:Initialise(22,5,nil,nil,colours.lightGrey,e,function(t,a,a,a,a)
-e.SKCHButton.Toggle=false
-e.NFTButton.Toggle=false
-t.Toggle=false
-e.Format='.nfp'
-end,'.nfp',colours.black,false,colours.lightBlue)
-local t=''
-if OneOS then
-t='/Desktop/'
-end
-e.PathTextBox=TextBox:Initialise(7,3,e.Width-7,1,e,t,nil,nil,function(t)
-if t==keys.enter or t==keys.tab then
-Current.Input=e.WidthTextBox.TextInput
-end
-end)
-e.WidthTextBox=TextBox:Initialise(7,7,4,1,e,tostring(15),nil,nil,function()
-if key==keys.enter or key==keys.tab then
-Current.Input=e.HeightTextBox.TextInput
-end
-end,true)
-e.HeightTextBox=TextBox:Initialise(14,7,4,1,e,tostring(10),nil,nil,function()
-if key==keys.enter or key==keys.tab then
-Current.Input=e.PathTextBox.TextInput
-end
-end,true)
-Current.Input=e.PathTextBox.TextInput
-e.WhiteButton=Button:Initialise(2,10,nil,nil,colours.lightGrey,e,function(t,a,a,a,a)
-e.TransparentButton.Toggle=false
-e.BlackButton.Toggle=false
-t.Toggle=false
-e.ImageBackgroundColour=colours.white
-end,'White',colours.black,true,colours.lightBlue)
-e.BlackButton=Button:Initialise(10,10,nil,nil,colours.lightGrey,e,function(t,a,a,a,a)
-e.TransparentButton.Toggle=false
-e.WhiteButton.Toggle=false
-t.Toggle=false
-e.ImageBackgroundColour=colours.black
-end,'Black',colours.black,false,colours.lightBlue)
-e.TransparentButton=Button:Initialise(18,10,nil,nil,colours.lightGrey,e,function(t,a,a,a,a)
-e.WhiteButton.Toggle=false
-e.BlackButton.Toggle=false
-t.Toggle=false
-e.ImageBackgroundColour=colours.transparent
-end,'Transparent',colours.black,false,colours.lightBlue)
-return e
-end,
-Show=function(e)
-Current.Window=e
-return e
-end,
-Close=function(e)
-Current.Input=nil
-Current.Window=nil
-e=nil
-end,
-Flash=function(e)
-e.Visible=false
-Draw()
-sleep(.15)
-e.Visible=true
-Draw()
-sleep(.15)
-e.Visible=false
-Draw()
-sleep(.15)
-e.Visible=true
-Draw()
-end,
-ButtonClick=function(o,e,t,a)
-if e.X<=t and e.Y<=a and e.X+e.Width>t and e.Y+e.Height>a then
-e:Click()
-end
-end,
-Click=function(e,o,a,t)
-local e={e.OkButton,e.CancelButton,e.SKCHButton,e.NFTButton,e.NFPButton,e.PathTextBox,e.WidthTextBox,e.HeightTextBox,e.WhiteButton,e.BlackButton,e.TransparentButton}
-for i,e in ipairs(e)do
-if CheckClick(e,a,t)then
-e:Click(o,a,t)
-end
-end
-return true
-end
-}
-local o=function(e)
-e='/'..e
-local t=fs
-if OneOS then
-t=OneOS.FS
-end
-if t.isDir(e)then
-e=e..'/'
-end
-e,n=e:gsub("//","/")
-while n>0 do
-e,n=e:gsub("//","/")
-end
-return e
-end
-local n=function(t,o)
-local e={''}
-for a,t in t:gmatch('(%S+)(%s*)')do
-local i=e[#e]..a..t:gsub('\n','')
-if#i>o then
-table.insert(e,'')
-end
-if t:find('\n')then
-e[#e]=e[#e]..a
-t=t:gsub('\n',function()
-table.insert(e,'')
-return''
-end)
-else
-e[#e]=e[#e]..a..t
-end
-end
-return e
-end
-OpenDocumentWindow={
-X=1,
-Y=1,
-Width=0,
-Height=0,
-CursorPos=1,
-Visible=true,
-Return=nil,
-OpenButton=nil,
-PathTextBox=nil,
-CurrentDirectory='/',
-Scroll=0,
-MaxScroll=0,
-GoUpButton=nil,
-SelectedFile='',
-Files={},
-Typed=false,
-AbsolutePosition=function(e)
-return{X=e.X,Y=e.Y}
-end,
-Draw=function(e)
-if not e.Visible then
-return
-end
-Drawing.DrawBlankArea(e.X+1,e.Y+1,e.Width,e.Height,colours.grey)
-Drawing.DrawBlankArea(e.X,e.Y,e.Width,3,colours.lightGrey)
-Drawing.DrawBlankArea(e.X,e.Y+1,e.Width,e.Height-6,colours.white)
-Drawing.DrawCharactersCenter(e.X,e.Y,e.Width,1,e.Title,colours.black,colours.lightGrey)
-Drawing.DrawBlankArea(e.X,e.Y+e.Height-5,e.Width,5,colours.lightGrey)
-e:DrawFiles()
-local t=fs
-if OneOS then
-t=OneOS.FS
-end
-if(t.exists(e.PathTextBox.TextInput.Value))or(e.SelectedFile and#e.SelectedFile>0 and t.exists(e.CurrentDirectory..e.SelectedFile))then
-e.OpenButton.TextColour=colours.black
-else
-e.OpenButton.TextColour=colours.lightGrey
-end
-e.PathTextBox:Draw()
-e.OpenButton:Draw()
-e.CancelButton:Draw()
-e.GoUpButton:Draw()
-end,
-DrawFiles=function(e)
-local o=fs
-if OneOS then
-o=OneOS.FS
-end
-for a,t in ipairs(e.Files)do
-if a>e.Scroll and a-e.Scroll<=11 then
-if t==e.SelectedFile then
-Drawing.DrawCharacters(e.X+1,e.Y+a-e.Scroll,t,colours.white,colours.lightBlue)
-elseif string.find(t,'%.skch')or string.find(t,'%.nft')or string.find(t,'%.nfp')or o.isDir(e.CurrentDirectory..t)then
-Drawing.DrawCharacters(e.X+1,e.Y+a-e.Scroll,t,colours.black,colours.white)
-else
-Drawing.DrawCharacters(e.X+1,e.Y+a-e.Scroll,t,colours.grey,colours.white)
-end
-end
-end
-e.MaxScroll=#e.Files-11
-if e.MaxScroll<0 then
-e.MaxScroll=0
-end
-end,
-Initialise=function(t,a)
-local e={}
-setmetatable(e,{__index=t})
-e.Width=32
-e.Height=17
-e.Return=a
-e.X=math.ceil((Drawing.Screen.Width-e.Width)/2)
-e.Y=math.ceil((Drawing.Screen.Height-e.Height)/2)
-e.Title='Open Document'
-e.Visible=true
-e.CurrentDirectory='/'
-e.SelectedFile=nil
-if OneOS then
-e.CurrentDirectory='/Desktop/'
-end
-local t=fs
-if OneOS then
-t=OneOS.FS
-end
-e.OpenButton=Button:Initialise(e.Width-6,e.Height-1,nil,nil,colours.white,e,function(i,n,n,n,n)
-if t.exists(e.PathTextBox.TextInput.Value)and i.TextColour==colours.black and not t.isDir(e.PathTextBox.TextInput.Value)then
-a(e,true,o(e.PathTextBox.TextInput.Value))
-elseif e.SelectedFile and i.TextColour==colours.black and t.isDir(e.CurrentDirectory..e.SelectedFile)then
-e:GoToDirectory(e.CurrentDirectory..e.SelectedFile)
-elseif e.SelectedFile and i.TextColour==colours.black then
-a(e,true,o(e.CurrentDirectory..'/'..e.SelectedFile))
-end
-end,'Open',colours.black)
-e.CancelButton=Button:Initialise(e.Width-15,e.Height-1,nil,nil,colours.white,e,function(t,t,t,t,t)
-a(e,false)
-end,'Cancel',colours.black)
-e.GoUpButton=Button:Initialise(2,e.Height-1,nil,nil,colours.white,e,function(a,a,a,a,a)
-local t=t.getName(e.CurrentDirectory)
-local t=e.CurrentDirectory:sub(1,#e.CurrentDirectory-#t-1)
-e:GoToDirectory(t)
-end,'Go Up',colours.black)
-e.PathTextBox=TextBox:Initialise(2,e.Height-3,e.Width-2,1,e,e.CurrentDirectory,colours.white,colours.black)
-e:GoToDirectory(e.CurrentDirectory)
-return e
-end,
-Show=function(e)
-Current.Window=e
-return e
-end,
-Close=function(e)
-Current.Input=nil
-Current.Window=nil
-e=nil
-end,
-GoToDirectory=function(e,t)
-t=o(t)
-e.CurrentDirectory=t
-e.Scroll=0
-e.SelectedFile=nil
-e.Typed=false
-e.PathTextBox.TextInput.Value=t
-local t=fs
-if OneOS then
-t=OneOS.FS
-end
-e.Files=t.list(e.CurrentDirectory)
-Draw()
-end,
-Flash=function(e)
-e.Visible=false
-Draw()
-sleep(.15)
-e.Visible=true
-Draw()
-sleep(.15)
-e.Visible=false
-Draw()
-sleep(.15)
-e.Visible=true
-Draw()
-end,
-Click=function(e,n,i,t)
-local s={e.OpenButton,e.CancelButton,e.PathTextBox,e.GoUpButton}
-local a=false
-for o,e in ipairs(s)do
-if CheckClick(e,i,t)then
-e:Click(n,i,t)
-a=true
-end
-end
-if not a then
-if t<=12 then
-local a=fs
-if OneOS then
-a=OneOS.FS
-end
-e.SelectedFile=a.list(e.CurrentDirectory)[t-1]
-e.PathTextBox.TextInput.Value=o(e.CurrentDirectory..'/'..e.SelectedFile)
-Draw()
-end
-end
-return true
-end
-}
-ButtonDialougeWindow={
-X=1,
-Y=1,
-Width=0,
-Height=0,
-CursorPos=1,
-Visible=true,
-CancelButton=nil,
-OkButton=nil,
-Lines={},
-AbsolutePosition=function(e)
-return{X=e.X,Y=e.Y}
-end,
-Draw=function(e)
-if not e.Visible then
-return
-end
-Drawing.DrawBlankArea(e.X+1,e.Y+1,e.Width,e.Height,colours.grey)
-Drawing.DrawBlankArea(e.X,e.Y,e.Width,1,colours.lightGrey)
-Drawing.DrawBlankArea(e.X,e.Y+1,e.Width,e.Height-1,colours.white)
-Drawing.DrawCharactersCenter(e.X,e.Y,e.Width,1,e.Title,colours.black,colours.lightGrey)
-for t,a in ipairs(e.Lines)do
-Drawing.DrawCharacters(e.X+1,e.Y+1+t,a,colours.black,colours.white)
-end
-e.OkButton:Draw()
-if e.CancelButton then
-e.CancelButton:Draw()
-end
-end,
-Initialise=function(s,i,h,t,o,a)
-local e={}
-setmetatable(e,{__index=s})
-e.Width=28
-e.Lines=n(h,e.Width-2)
-e.Height=5+#e.Lines
-e.Return=a
-e.X=math.ceil((Drawing.Screen.Width-e.Width)/2)
-e.Y=math.ceil((Drawing.Screen.Height-e.Height)/2)
-e.Title=i
-e.Visible=true
-e.Visible=true
-e.OkButton=Button:Initialise(e.Width-#t-2,e.Height-1,nil,1,nil,e,function()
-a(e,true)
-end,t)
-if o then
-e.CancelButton=Button:Initialise(e.Width-#t-2-1-#o-2,e.Height-1,nil,1,nil,e,function()
-a(e,false)
-end,o)
-end
-return e
-end,
-Show=function(e)
-Current.Window=e
-return e
-end,
-Close=function(e)
-Current.Window=nil
-e=nil
-end,
-Flash=function(e)
-e.Visible=false
-Draw()
-sleep(.15)
-e.Visible=true
-Draw()
-sleep(.15)
-e.Visible=false
-Draw()
-sleep(.15)
-e.Visible=true
-Draw()
-end,
-Click=function(e,o,a,t)
-local e={e.OkButton,e.CancelButton}
-local i=false
-for n,e in ipairs(e)do
-if CheckClick(e,a,t)then
-e:Click(o,a,t)
-i=true
-end
-end
-return true
-end
-}
-TextDialougeWindow={
-X=1,
-Y=1,
-Width=0,
-Height=0,
-CursorPos=1,
-Visible=true,
-CancelButton=nil,
-OkButton=nil,
-Lines={},
-TextInput=nil,
-AbsolutePosition=function(e)
-return{X=e.X,Y=e.Y}
-end,
-Draw=function(e)
-if not e.Visible then
-return
-end
-Drawing.DrawBlankArea(e.X+1,e.Y+1,e.Width,e.Height,colours.grey)
-Drawing.DrawBlankArea(e.X,e.Y,e.Width,1,colours.lightGrey)
-Drawing.DrawBlankArea(e.X,e.Y+1,e.Width,e.Height-1,colours.white)
-Drawing.DrawCharactersCenter(e.X,e.Y,e.Width,1,e.Title,colours.black,colours.lightGrey)
-for a,t in ipairs(e.Lines)do
-Drawing.DrawCharacters(e.X+1,e.Y+1+a,t,colours.black,colours.white)
-end
-Drawing.DrawBlankArea(e.X+1,e.Y+e.Height-4,e.Width-2,1,colours.lightGrey)
-Drawing.DrawCharacters(e.X+2,e.Y+e.Height-4,e.TextInput.Value,colours.black,colours.lightGrey)
-Current.CursorPos={e.X+2+e.TextInput.CursorPos,e.Y+e.Height-4}
-Current.CursorColour=colours.black
-e.OkButton:Draw()
-if e.CancelButton then
-e.CancelButton:Draw()
-end
-end,
-Initialise=function(r,h,s,a,o,t,i)
-local e={}
-setmetatable(e,{__index=r})
-e.Width=28
-e.Lines=n(s,e.Width-2)
-e.Height=7+#e.Lines
-e.Return=t
-e.X=math.ceil((Drawing.Screen.Width-e.Width)/2)
-e.Y=math.ceil((Drawing.Screen.Height-e.Height)/2)
-e.Title=h
-e.Visible=true
-e.Visible=true
-e.OkButton=Button:Initialise(e.Width-#a-2,e.Height-1,nil,1,nil,e,function()
-if#e.TextInput.Value>0 then
-t(e,true,e.TextInput.Value)
-end
-end,a)
-if o then
-e.CancelButton=Button:Initialise(e.Width-#a-2-1-#o-2,e.Height-1,nil,1,nil,e,function()
-t(e,false)
-end,o)
-end
-e.TextInput=TextInput:Initialise('',function(t)
-if t then
-e.OkButton:Click()
-end
-Draw()
-end,i)
-Current.Input=e.TextInput
-return e
-end,
-Show=function(e)
-Current.Window=e
-return e
-end,
-Close=function(e)
-Current.Window=nil
-Current.Input=nil
-e=nil
-end,
-Flash=function(e)
-e.Visible=false
-Draw()
-sleep(.15)
-e.Visible=true
-Draw()
-sleep(.15)
-e.Visible=false
-Draw()
-sleep(.15)
-e.Visible=true
-Draw()
-end,
-Click=function(e,o,t,a)
-local e={e.OkButton,e.CancelButton}
-local i=false
-for n,e in ipairs(e)do
-if CheckClick(e,t,a)then
-e:Click(o,t,a)
-i=true
-end
-end
-return true
-end
-}
-ResizeDocumentWindow={
-X=1,
-Y=1,
-Width=0,
-Height=0,
-CursorPos=1,
-Visible=true,
-Return=nil,
-OkButton=nil,
-AnchorPosition=5,
-WidthLabelHighlight=false,
-HeightLabelHighlight=false,
-AbsolutePosition=function(e)
-return{X=e.X,Y=e.Y}
-end,
-Draw=function(e)
-if not e.Visible then
-return
-end
-Drawing.DrawBlankArea(e.X+1,e.Y+1,e.Width,e.Height,colours.grey)
-Drawing.DrawBlankArea(e.X,e.Y,e.Width,1,colours.lightGrey)
-Drawing.DrawBlankArea(e.X,e.Y+1,e.Width,e.Height-1,colours.white)
-Drawing.DrawCharactersCenter(e.X,e.Y,e.Width,1,e.Title,colours.black,colours.lightGrey)
-Drawing.DrawCharacters(e.X+1,e.Y+2,"New Size",colours.lightGrey,colours.white)
-if(#e.WidthTextBox.TextInput.Value>0 and tonumber(e.WidthTextBox.TextInput.Value)<Current.Artboard.Width)or(#e.HeightTextBox.TextInput.Value>0 and tonumber(e.HeightTextBox.TextInput.Value)<Current.Artboard.Height)then
-Drawing.DrawCharacters(e.X+1,e.Y+8,"Clipping will occur!",colours.red,colours.white)
-end
-local t=colours.black
-if e.WidthLabelHighlight then
-t=colours.red
-end
-local a=colours.black
-if e.HeightLabelHighlight then
-a=colours.red
-end
-Drawing.DrawCharacters(e.X+1,e.Y+4,"Width",t,colours.white)
-Drawing.DrawCharacters(e.X+1,e.Y+6,"Height",a,colours.white)
-Drawing.DrawCharacters(e.X+14,e.Y+2,"Anchor",colours.lightGrey,colours.white)
-e.WidthTextBox:Draw()
-e.HeightTextBox:Draw()
-e.OkButton:Draw()
-e.Anchor1:Draw()
-e.Anchor2:Draw()
-e.Anchor3:Draw()
-e.Anchor4:Draw()
-e.Anchor5:Draw()
-e.Anchor6:Draw()
-e.Anchor7:Draw()
-e.Anchor8:Draw()
-e.Anchor9:Draw()
-end,
-Initialise=function(t,a)
-local e={}
-setmetatable(e,{__index=t})
-e.Width=27
-e.Height=10
-e.Return=a
-e.X=math.ceil((Drawing.Screen.Width-e.Width)/2)
-e.Y=math.ceil((Drawing.Screen.Height-e.Height)/2)
-e.Title='Resize Document'
-e.Visible=true
-e.WidthTextBox=TextBox:Initialise(9,5,4,1,e,tostring(Current.Artboard.Width),nil,nil,function()
-e:UpdateAnchorButtons()
-end,true)
-e.HeightTextBox=TextBox:Initialise(9,7,4,1,e,tostring(Current.Artboard.Height),nil,nil,function()
-e:UpdateAnchorButtons()
-end,true)
-e.OkButton=Button:Initialise(e.Width-4,e.Height-1,nil,nil,colours.lightGrey,e,function(t,t,t,t,t)
-local t=true
-e.WidthLabelHighlight=false
-e.HeightLabelHighlight=false
-if#e.WidthTextBox.TextInput.Value==0 or tonumber(e.WidthTextBox.TextInput.Value)<=0 then
-t=false
-e.WidthLabelHighlight=true
-end
-if#e.HeightTextBox.TextInput.Value==0 or tonumber(e.HeightTextBox.TextInput.Value)<=0 then
-t=false
-e.HeightLabelHighlight=true
-end
-if t then
-a(e,tonumber(e.WidthTextBox.TextInput.Value),tonumber(e.HeightTextBox.TextInput.Value),e.AnchorPosition)
-else
-Draw()
-end
-end,'Ok',colours.black)
-local a=15
-local t=5
-e.Anchor1=Button:Initialise(a,t,1,1,colours.lightGrey,e,function(t,t,t,t,t)e.AnchorPosition=1 e:UpdateAnchorButtons()end,' ',colours.black)
-e.Anchor2=Button:Initialise(a+1,t,1,1,colours.lightGrey,e,function(t,t,t,t,t)e.AnchorPosition=2 e:UpdateAnchorButtons()end,'^',colours.black)
-e.Anchor3=Button:Initialise(a+2,t,1,1,colours.lightGrey,e,function(t,t,t,t,t)e.AnchorPosition=3 e:UpdateAnchorButtons()end,' ',colours.black)
-e.Anchor4=Button:Initialise(a,t+1,1,1,colours.lightGrey,e,function(t,t,t,t,t)e.AnchorPosition=4 e:UpdateAnchorButtons()end,'<',colours.black)
-e.Anchor5=Button:Initialise(a+1,t+1,1,1,colours.lightGrey,e,function(t,t,t,t,t)e.AnchorPosition=5 e:UpdateAnchorButtons()end,'#',colours.black)
-e.Anchor6=Button:Initialise(a+2,t+1,1,1,colours.lightGrey,e,function(t,t,t,t,t)e.AnchorPosition=6 e:UpdateAnchorButtons()end,'>',colours.black)
-e.Anchor7=Button:Initialise(a,t+2,1,1,colours.lightGrey,e,function(t,t,t,t,t)e.AnchorPosition=7 e:UpdateAnchorButtons()end,' ',colours.black)
-e.Anchor8=Button:Initialise(a+1,t+2,1,1,colours.lightGrey,e,function(t,t,t,t,t)e.AnchorPosition=8 e:UpdateAnchorButtons()end,'v',colours.black)
-e.Anchor9=Button:Initialise(a+2,t+2,1,1,colours.lightGrey,e,function(t,t,t,t,t)e.AnchorPosition=9 e:UpdateAnchorButtons()end,' ',colours.black)
-return e
-end,
-UpdateAnchorButtons=function(e)
-local r=' '
-local n=' '
-local d=' '
-local a=' '
-local t=' '
-local o=' '
-local h=' '
-local i=' '
-local s=' '
-e.AnchorPosition=e.AnchorPosition or 5
-if e.AnchorPosition==1 then
-r='#'
-n='>'
-a='v'
-elseif e.AnchorPosition==2 then
-r='<'
-n='#'
-d='>'
-t='v'
-elseif e.AnchorPosition==3 then
-n='<'
-d='#'
-o='v'
-elseif e.AnchorPosition==4 then
-r='^'
-a='#'
-t='>'
-h='v'
-elseif e.AnchorPosition==5 then
-n='^'
-a='<'
-t='#'
-o='>'
-i='v'
-elseif e.AnchorPosition==6 then
-d='^'
-o='#'
-t='<'
-s='v'
-elseif e.AnchorPosition==7 then
-a='^'
-h='#'
-i='>'
-elseif e.AnchorPosition==8 then
-t='^'
-i='#'
-h='<'
-s='>'
-elseif e.AnchorPosition==9 then
-o='^'
-s='#'
-i='<'
-end
-if#e.HeightTextBox.TextInput.Value>0 and Current.Artboard.Height>tonumber(e.HeightTextBox.TextInput.Value)then
-local e=function(e)
-if string.find(e,"%^")then
-e=e:gsub('%^','v')
-elseif string.find(e,"v")then
-e=e:gsub('v','%^')
-end
-return e
-end
-r=e(r)
-n=e(n)
-d=e(d)
-a=e(a)
-t=e(t)
-o=e(o)
-h=e(h)
-i=e(i)
-s=e(s)
-end
-if#e.WidthTextBox.TextInput.Value>0 and Current.Artboard.Width>tonumber(e.WidthTextBox.TextInput.Value)then
-local e=function(e)
-if string.find(e,">")then
-e=e:gsub('>','<')
-elseif string.find(e,"<")then
-e=e:gsub('<','>')
-end
-return e
-end
-r=e(r)
-n=e(n)
-d=e(d)
-a=e(a)
-t=e(t)
-o=e(o)
-h=e(h)
-i=e(i)
-s=e(s)
-end
-e.Anchor1.Text=r
-e.Anchor2.Text=n
-e.Anchor3.Text=d
-e.Anchor4.Text=a
-e.Anchor5.Text=t
-e.Anchor6.Text=o
-e.Anchor7.Text=h
-e.Anchor8.Text=i
-e.Anchor9.Text=s
-end,
-Show=function(e)
-Current.Window=e
-return e
-end,
-Close=function(e)
-Current.Input=nil
-Current.Window=nil
-e=nil
-end,
-Flash=function(e)
-e.Visible=false
-Draw()
-sleep(.15)
-e.Visible=true
-Draw()
-sleep(.15)
-e.Visible=false
-Draw()
-sleep(.15)
-e.Visible=true
-Draw()
-end,
-ButtonClick=function(o,e,t,a)
-if e.X<=t and e.Y<=a and e.X+e.Width>t and e.Y+e.Height>a then
-e:Click()
-end
-end,
-Click=function(e,o,t,a)
-local e={e.OkButton,e.WidthTextBox,e.HeightTextBox,e.Anchor1,e.Anchor2,e.Anchor3,e.Anchor4,e.Anchor5,e.Anchor6,e.Anchor7,e.Anchor8,e.Anchor9}
-for i,e in ipairs(e)do
-if CheckClick(e,t,a)then
-e:Click(o,t,a)
-end
-end
-return true
-end
-}
-function CheckOpenArtboard()
-if Current.Artboard then
-return true
-else
-return false
-end
-end
-function CheckSelectedLayer()
-if Current.Artboard and Current.Layer then
-return true
-else
-return false
-end
-end
-function DisplayNewDocumentWindow()
-NewDocumentWindow:Initialise(function(i,a,e,n,o,t,s)
-if a then
-if e:sub(-4)~=t then
-e=e..t
-end
-local a=i
-Current.Input=nil
-Current.Window=nil
-makeDocument=function()a:Close()NewDocument(e,n,o,t,s)end
-local o=fs
-if OneOS then
-o=OneOS.FS
-end
-if o.exists(e)then
-ButtonDialougeWindow:Initialise('File Exists',e..' already exists! Use a different name and try again.','Ok',nil,function(e,t)
-e:Close()
-a:Show()
-end):Show()
-elseif t=='.nfp'then
-Current.Window=nil
-ButtonDialougeWindow:Initialise('Use NFP?','The NFT format does not support text or layers, if you use it you will only be able to use 1 layer and not have any text.','Use NFP','Cancel',function(t,e)
-t:Close()
-if e then
-makeDocument()
-else
-a:Show()
-end
-end):Show()
-elseif t=='.nft'then
-ButtonDialougeWindow:Initialise('Use NFT?','The NFT format does not support layers, if you use it you will only be able to use 1 layer.','Use NFT','Cancel',function(t,e)
-t:Close()
-if e then
-makeDocument()
-else
-a:Show()
-end
-end):Show()
-else
-makeDocument()
-end
-else
-i:Close()
-end
-end):Show()
-end
-function NewDocument(e,o,i,a,n)
-local t=fs
-if OneOS then
-t=OneOS.FS
-end
-ab=Artboard:New(t.getName(e),e,o,i,a,n)
-Current.Tool=Tools[2]
-Current.Toolbar:Update()
-Current.Modified=false
-Draw()
-end
-function DisplayToolSizeWindow()
-if not CheckOpenArtboard()then
-return
-end
-TextDialougeWindow:Initialise('Change Tool Size','Enter the new tool size you\'d like to use.','Ok','Cancel',function(a,e,t)
-if e then
-Current.ToolSize=math.ceil(tonumber(t))
-if Current.ToolSize<1 then
-Current.ToolSize=1
-elseif Current.ToolSize>50 then
-Current.ToolSize=50
-end
-ModuleNamed('Tools'):Update()
-end
-a:Close()
-end,true):Show()
-end
-function GetFormat(t)
-local e=fs
-if OneOS then
-e=OneOS.FS
-end
-local t=e.open(t,'r')
-local e=t.readAll()
-t.close()
-if type(textutils.unserialize(e))=='table'then
-return'.skch'
-elseif string.find(e,string.char(30))or string.find(e,string.char(31))then
-return'.nft'
-else
-return'.nfp'
-end
-end
-function DisplayOpenDocumentWindow()
-OpenDocumentWindow:Initialise(function(a,t,e)
-a:Close()
-if t then
-OpenDocument(e)
-end
-end):Show()
-end
-local function o(e,t)
-if not e then
-return nil
-elseif not string.find(fs.getName(e),'%.')then
-if not t then
-return fs.getName(e)
-else
-return''
-end
-else
-local a=e
-if e:sub(#e)=='/'then
-a=e:sub(1,#e-1)
-end
-local e=a:gmatch('%.[0-9a-z]+$')()
-if e then
-e=e:sub(2)
-else
-return''
-end
-if t then
-e='.'..e
-end
-return e:lower()
-end
-end
-local e=function(e)
-if e:sub(1,1)=='.'then
-return e
-end
-local t=o(e)
-if t==e then
-return fs.getName(e)
-end
-return string.gsub(e,t,''):sub(1,-2)
-end
-function OpenDocument(a)
-local e=fs
-if OneOS then
-e=OneOS.FS
-end
-if e.exists(a)and not e.isDir(a)then
-local e=o(a,true)
-if(not e or e=='')and(e~='.nfp'and e~='.nft'and e~='.skch')then
-e=GetFormat(a)
-end
-local t={}
-if e=='.nfp'then
-t=ReadNFP(a)
-elseif e=='.nft'then
-t=ReadNFT(a)
-elseif e=='.skch'then
-t=ReadSKCH(a)
-end
-for t,e in ipairs(t)do
-if e.Visible==nil then
-e.Visible=true
-end
-if e.Index==nil then
-e.Index=1
-end
-if e.Name==nil then
-if e.Index==1 then
-e.Name='Background'
-else
-e.Name='Layer'
-end
-end
-if e.BackgroundColour==nil then
-e.BackgroundColour=colours.white
-end
-end
-if not t[1]then
-return
-end
-local i=#t[1].Pixels
-local n=#t[1].Pixels[1]
-Current.Artboard=nil
-local o=fs
-if OneOS then
-o=OneOS.FS
-end
-ab=Artboard:New(o.getName('Image'),a,i,n,e,nil,t)
-Current.Tool=Tools[2]
-Current.Toolbar:Update()
-Current.Modified=false
-Draw()
-end
-end
-function MakeNewLayer()
-if not CheckOpenArtboard()then
-return
-end
-if Current.Artboard.Format=='.skch'then
-TextDialougeWindow:Initialise('New Layer Name','Enter the name you want for the next layer.','Ok','Cancel',function(a,e,t)
-if e then
-Current.Artboard:MakeLayer(t,colours.transparent)
-end
-a:Close()
-end):Show()
-else
-local e='NFP'
-if Current.Artboard.Format=='.nft'then
-e='NFT'
-end
-ButtonDialougeWindow:Initialise(e..' does not support layers!','The format you are using, '..e..', does not support multiple layers. Use SKCH to have more than one layer.','Ok',nil,function(e)
-e:Close()
-end):Show()
-end
-end
+	OneOS.CanClose = function()
+		return CloseDocument(function(close)
+				if close then
+					program:Quit()
+				end
+			end)
+	end
+end
+
 function ResizeDocument()
-if not CheckOpenArtboard()then
-return
-end
-ResizeDocumentWindow:Initialise(function(e,s,n,i)
-e:Close()
-local t=0
-local a=0
-local e=0
-local o=0
-if i==1 then
-a=1
-e=1
-elseif i==2 then
-a=.5
-o=.5
-e=1
-elseif i==3 then
-o=1
-e=1
-elseif i==4 then
-a=1
-e=.5
-t=.5
-elseif i==5 then
-a=.5
-o=.5
-e=.5
-t=.5
-elseif i==6 then
-o=1
-e=.5
-t=.5
-elseif i==7 then
-a=1
-t=1
-elseif i==8 then
-a=.5
-o=.5
-t=1
-elseif i==9 then
-o=1
-t=1
-end
-t=t*(n-Current.Artboard.Height)
-if t>0 then
-t=math.floor(t)
-else
-t=math.ceil(t)
-end
-e=e*(n-Current.Artboard.Height)
-if e>0 then
-e=math.ceil(e)
-else
-e=math.floor(e)
-end
-o=o*(s-Current.Artboard.Width)
-if o>0 then
-o=math.floor(o)
-else
-o=math.ceil(o)
-end
-a=a*(s-Current.Artboard.Width)
-if a>0 then
-a=math.ceil(a)
-else
-a=math.floor(a)
-end
-Current.Artboard:Resize(t,e,o,a)
-end):Show()
-end
-function RenameLayer()
-if not CheckOpenArtboard()then
-return
-end
-if Current.Artboard.Format=='.skch'then
-TextDialougeWindow:Initialise("Rename Layer '"..Current.Layer.Name.."'",'Enter the new name you want the layer to be called.','Ok','Cancel',function(t,e,a)
-if e then
-Current.Layer.Name=a
-end
-t:Close()
-end):Show()
-else
-local e='NFP'
-if Current.Artboard.Format=='.nft'then
-e='NFT'
-end
-ButtonDialougeWindow:Initialise(e..' does not support layers!','The format you are using, '..e..', does not support renaming layers. Use SKCH to rename layers.','Ok',nil,function(e)
-e:Close()
-end):Show()
-end
-end
-function DeleteLayer()
-if not CheckOpenArtboard()then
-return
-end
-if Current.Artboard.Format=='.skch'then
-if#Current.Artboard.Layers>1 then
-ButtonDialougeWindow:Initialise("Delete Layer '"..Current.Layer.Name.."'?",'Are you sure you want delete the layer?','Ok','Cancel',function(e,t)
-if t then
-Current.Layer:Remove()
-end
-e:Close()
-end):Show()
-else
-ButtonDialougeWindow:Initialise('Can not delete layer!','You can not delete the last layer of an image! Make another layer to delete this one.','Ok',nil,function(e)
-e:Close()
-end):Show()
-end
-else
-local e='NFP'
-if Current.Artboard.Format=='.nft'then
-e='NFT'
-end
-ButtonDialougeWindow:Initialise(e..' does not support layers!','The format you are using, '..e..', does not support deleting layers. Use SKCH to deleting layers.','Ok',nil,function(e)
-e:Close()
-end):Show()
-end
-end
-needsDraw=false
-isDrawing=false
-function Draw()
-if isDrawing then
-needsDraw=true
-return
-end
-needsDraw=false
-isDrawing=true
-if not Current.Window then
-Drawing.Clear(UIColours.Background)
-else
-Drawing.DrawArea(1,2,Drawing.Screen.Width,Drawing.Screen.Height,'|',colours.black,colours.lightGrey)
-end
-if Current.Artboard then
-ab:Draw()
-end
-if Current.InterfaceVisible then
-Current.MenuBar:Draw()
-Current.Toolbar.Width=Current.Toolbar.ExpandedWidth
-Current.Toolbar:Draw()
-else
-Current.Toolbar.Width=Current.Toolbar.ExpandedWidth
-end
-if Current.InterfaceVisible and Current.Menu then
-Current.Menu:Draw()
-end
-if Current.Window then
-Current.Window:Draw()
-end
-if not Current.InterfaceVisible then
-ShowInterfaceButton:Draw()
-end
-Drawing.DrawBuffer()
-if Current.Input and not Current.Menu then
-term.setCursorPos(Current.CursorPos[1],Current.CursorPos[2])
-term.setCursorBlink(true)
-term.setTextColour(Current.CursorColour)
-else
-term.setCursorBlink(false)
-end
-if Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then
-Current.SelectionDrawTimer=os.startTimer(.5)
-end
-isDrawing=false
-if needsDraw then
-Draw()
-end
-end
-function LoadMenuBar()
-Current.MenuBar=MenuBar:Initialise({
-Button:Initialise(1,1,nil,nil,colours.grey,Current.MenuBar,function(e,a,a,a,t)
-if t then
-Menu:New(1,2,{
-{
-Title="New...",
-Click=function()
-DisplayNewDocumentWindow()
-end,
-Keys={
-keys.leftCtrl,
-keys.n
-}
-},
-{
-Title='Open...',
-Click=function()
-DisplayOpenDocumentWindow()
-end,
-Keys={
-keys.leftCtrl,
-keys.o
-}
-},
-{
-Separator=true
-},
-{
-Title='Save...',
-Click=function()
-Current.Artboard:Save()
-end,
-Keys={
-keys.leftCtrl,
-keys.s
-},
-Enabled=function()
-return CheckOpenArtboard()
-end
-},
-{
-Separator=true
-},
-{
-Title='Quit',
-Click=function()
-if Close()then
-OneOS.Close()
-end
-end
-},
-},e,true)
-else
-Current.Menu=nil
-end
-return true
-end,'File',colours.lightGrey,false),
-Button:Initialise(7,1,nil,nil,colours.grey,Current.MenuBar,function(e,t,t,t,t)
-if not e.Toggle then
-Menu:New(7,2,{
-{
-Title='Cut',
-Click=function()
-Clipboard.Cut(Current.Layer:PixelsInSelection(true),'sketchpixels')
-end,
-Keys={
-keys.leftCtrl,
-keys.x
-},
-Enabled=function()
-return Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil
-end
-},
-{
-Title='Copy',
-Click=function()
-Clipboard.Copy(Current.Layer:PixelsInSelection(),'sketchpixels')
-end,
-Keys={
-keys.leftCtrl,
-keys.c
-},
-Enabled=function()
-return Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil
-end
-},
-{
-Title='Paste',
-Click=function()
-Current.Layer:InsertPixels(Clipboard.Paste())
-end,
-Keys={
-keys.leftCtrl,
-keys.v
-},
-Enabled=function()
-return(not Clipboard.isEmpty())and Clipboard.Type=='sketchpixels'
-end
-}
-},e,true)
-else
-Current.Menu=nil
-end
-return true
-end,'Edit',colours.lightGrey,false),
-Button:Initialise(13,1,nil,nil,colours.grey,Current.MenuBar,function(i,t,t,t,e)
-if e then
-Menu:New(13,2,{
-{
-Title="Resize...",
-Click=function()
-ResizeDocument()
-end,
-Keys={
-keys.leftCtrl,
-keys.r
-},
-Enabled=function()
-return CheckOpenArtboard()
-end
-},
-{
-Title="Crop",
-Click=function()
-local o=0
-local a=0
-local t=0
-local e=0
-if Current.Selection[1].x<Current.Selection[2].x then
-a=Current.Selection[1].x-1
-e=Current.Artboard.Width-Current.Selection[2].x
-else
-a=Current.Selection[2].x-1
-e=Current.Artboard.Width-Current.Selection[1].x
-end
-if Current.Selection[1].y<Current.Selection[2].y then
-o=Current.Selection[1].y-1
-t=Current.Artboard.Height-Current.Selection[2].y
-else
-o=Current.Selection[2].y-1
-t=Current.Artboard.Height-Current.Selection[1].y
-end
-Current.Artboard:Resize(-1*o,-1*t,-1*a,-1*e)
-Current.Selection[2]=nil
-end,
-Enabled=function()
-if CheckSelectedLayer()and Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then
-return true
-else
-return false
-end
-end
-},
-{
-Separator=true
-},
-{
-Title='New Layer...',
-Click=function()
-MakeNewLayer()
-end,
-Keys={
-keys.leftCtrl,
-keys.l
-},
-Enabled=function()
-return CheckOpenArtboard()
-end
-},
-{
-Title='Delete Layer',
-Click=function()
-DeleteLayer()
-end,
-Enabled=function()
-return CheckSelectedLayer()
-end
-},
-{
-Title='Rename Layer...',
-Click=function()
-RenameLayer()
-end,
-Enabled=function()
-return CheckSelectedLayer()
-end
-},
-{
-Separator=true
-},
-{
-Title='Erase Selection',
-Click=function()
-Current.Layer:EraseSelection()
-end,
-Keys={
-keys.delete
-},
-Enabled=function()
-if CheckSelectedLayer()and Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then
-return true
-else
-return false
-end
-end
-},
-{
-Separator=true
-},
-{
-Title='Hide Interface',
-Click=function()
-Current.InterfaceVisible=not Current.InterfaceVisible
-end,
-Keys={
-keys.tab
-}
-}
-},i,true)
-else
-Current.Menu=nil
-end
-return true
-end,'Image',colours.lightGrey,false),
-Button:Initialise(20,1,nil,nil,colours.grey,Current.MenuBar,function(a,t,t,t,e)
-if e then
-local t={{
-Title="Change Size",
-Click=function()
-DisplayToolSizeWindow()
-end,
-Keys={
-keys.leftCtrl,
-keys.t
-}
-},
-{
-Separator=true
-}
-}
-local o={'h','p','e','f','s','m','t'}
-for a,e in ipairs(Tools)do
-table.insert(t,{
-Title=e.Name,
-Click=function()
-SetTool(e)
-local e=ModuleNamed('Tools')
-e:Update(e.ToolbarItem)
-end,
-Keys={
-keys[o[a]]
-},
-Enabled=function()
-return CheckOpenArtboard()
-end
-})
-end
-Menu:New(20,2,t,a,true)
-else
-Current.Menu=nil
-end
-return true
-end,'Tools',colours.lightGrey,false),
-})
-end
-function Timer(t,e)
-if e==Current.ControlPressedTimer then
-Current.ControlPressedTimer=nil
-elseif e==Current.SelectionDrawTimer then
-if Current.Artboard then
-Current.Artboard.SelectionIsBlack=not Current.Artboard.SelectionIsBlack
-Draw()
-end
-end
-end
-function Initialise(e)
-if not OneOS then
-SplashScreen()
-end
-EventRegister('mouse_click',TryClick)
-EventRegister('mouse_drag',function(o,a,t,e)TryClick(o,a,t,e,true)end)
-EventRegister('mouse_scroll',Scroll)
-EventRegister('key',HandleKey)
-EventRegister('char',HandleKey)
-EventRegister('timer',Timer)
-EventRegister('terminate',function(e)if Close()then error("Terminated",0)end end)
-Current.Toolbar=Toolbar:New('right',true)
-for t,e in pairs(Modules)do
-e:Initialise()
-end
-term.setBackgroundColour(UIColours.Background)
-term.clear()
-LoadMenuBar()
-local t=fs
-if OneOS then
-t=OneOS.FS
-end
-if e and t.exists(e)then
-OpenDocument(e)
-else
-DisplayNewDocumentWindow()
-Current.Window.Visible=false
-end
-ShowInterfaceButton=Button:Initialise(Drawing.Screen.Width-15,1,nil,1,colours.grey,nil,function(e)
-Current.InterfaceVisible=true
-Draw()
-end,'Show Interface')
-Draw()
-if Current.Window then
-Current.Window.Visible=true
-Draw()
-end
-EventHandler()
-end
-function SplashScreen()
-local e={{1,1,1,256,256,256,256,256,256,256,256,1,1,1,},{1,256,256,8,8,8,8,8,8,8,8,256,256,1,},{256,8,8,8,8,8,8,8,8,8,8,8,8,256,},{256,256,256,8,8,8,8,8,8,8,8,256,256,256,},{256,256,256,256,256,256,256,256,256,256,256,256,256,256,},{2048,2048,256,256,256,256,256,256,256,256,256,256,2048,2048,},{2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,},{2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,},{2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,},{2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,},{256,256,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,256,256,},{1,256,256,256,256,256,256,256,256,256,256,256,256,1,},{1,1,1,256,256,256,256,256,256,256,256,1,1,1,},["text"]={{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," ","S","k","e","t","c","h"," "," "," "," ",},{" "," "," "," "," "," ","b","y"," "," "," "," "," "," ",},{" "," "," "," "," ","o","e","e","d"," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},{" "," "," "," "," "," "," "," "," "," "," "," "," "," ",},},["textcol"]={{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,256,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,1,1,1,1,1,1,32768,32768,32768,32768,},{32768,32768,32768,32768,8,8,8,8,8,8,8,32768,32768,32768,},{32768,32768,32768,32768,1,1,1,1,1,32768,8,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},{32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,32768,},},}
-Drawing.Clear(colours.white)
-Drawing.DrawImage((Drawing.Screen.Width-14)/2,(Drawing.Screen.Height-13)/2,e,14,13)
-Drawing.DrawBuffer()
-parallel.waitForAny(function()sleep(1)end,function()os.pullEvent('mouse_click')end)
-end
-LongestString=function(e,a)
-local t=0
-for o=1,#e do
-local e=e[o]
-if a then
-if e[a]then
-e=e[a]
-else
-e=''
-end
-end
-local e=string.len(e)
-if e>t then
-t=e
-end
-end
-return t
-end
-function HandleKey(...)
-local e={...}
-local a=e[1]
-local t=e[2]
-if a=='key'and Current.Tool and Current.Tool.Name=='Text'and Current.Input and(t==keys.up or t==keys.down or t==keys.left or t==keys.right)then
-local e={Current.CursorPos[1]-Current.Artboard.X+1,Current.CursorPos[2]-Current.Artboard.Y+1}
-if t==keys.up then
-e[2]=e[2]-1
-elseif t==keys.down then
-e[2]=e[2]+1
-elseif t==keys.left then
-e[1]=e[1]-1
-elseif t==keys.right then
-e[1]=e[1]+1
-end
-if e[1]<1 then
-e[1]=1
-end
-if e[1]>Current.Artboard.Width then
-e[1]=Current.Artboard.Width
-end
-if e[2]<1 then
-e[2]=1
-end
-if e[2]>Current.Artboard.Height then
-e[2]=Current.Artboard.Height
-end
-Current.Tool:Use(e[1],e[2])
-Current.Modified=true
-Draw()
-elseif Current.Input then
-if a=='char'then
-Current.Input:Char(t)
-elseif a=='key'then
-Current.Input:Key(t)
-end
-elseif a=='key'then
-CheckKeyboardShortcut(t)
-end
-end
-function Scroll(t,e,t,t)
-if Current.Window and Current.Window.OpenButton then
-Current.Window.Scroll=Current.Window.Scroll+e
-if Current.Window.Scroll<0 then
-Current.Window.Scroll=0
-elseif Current.Window.Scroll>Current.Window.MaxScroll then
-Current.Window.Scroll=Current.Window.MaxScroll
-end
-end
-Draw()
-end
-function CheckKeyboardShortcut(t)
-local e={}
-if t==keys.leftCtrl then
-Current.ControlPressedTimer=os.startTimer(.5)
-return
-end
-if Current.ControlPressedTimer then
-e[keys.n]=function()DisplayNewDocumentWindow()end
-e[keys.o]=function()DisplayOpenDocumentWindow()end
-e[keys.s]=function()Current.Artboard:Save()end
-e[keys.x]=function()if Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then Clipboard.Cut(Current.Layer:PixelsInSelection(true),'sketchpixels')end end
-e[keys.c]=function()if Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then Clipboard.Copy(Current.Layer:PixelsInSelection(),'sketchpixels')end end
-e[keys.v]=function()if(not Clipboard.isEmpty())and Clipboard.Type=='sketchpixels'then Current.Layer:InsertPixels(Clipboard.Paste())end end
-e[keys.r]=function()ResizeDocument()end
-e[keys.l]=function()MakeNewLayer()end
-end
-e[keys.delete]=function()if CheckSelectedLayer()and Current.Selection and Current.Selection[1]and Current.Selection[2]~=nil then Current.Layer:EraseSelection()Draw()end end
-e[keys.backspace]=e[keys.delete]
-e[keys.tab]=function()Current.InterfaceVisible=not Current.InterfaceVisible Draw()end
-e[keys.h]=function()SetTool(ToolNamed('Hand'))ModuleNamed('Tools'):Update()Draw()end
-e[keys.e]=function()SetTool(ToolNamed('Eraser'))ModuleNamed('Tools'):Update()Draw()end
-e[keys.p]=function()SetTool(ToolNamed('Pencil'))ModuleNamed('Tools'):Update()Draw()end
-e[keys.f]=function()SetTool(ToolNamed('Fill Bucket'))ModuleNamed('Tools'):Update()Draw()end
-e[keys.m]=function()SetTool(ToolNamed('Move'))ModuleNamed('Tools'):Update()Draw()end
-e[keys.s]=function()SetTool(ToolNamed('Select'))ModuleNamed('Tools'):Update()Draw()end
-e[keys.t]=function()SetTool(ToolNamed('Text'))ModuleNamed('Tools'):Update()Draw()end
-if e[t]then
-e[t]()
-return true
-else
-return false
-end
-end
-function CheckClick(e,t,a)
-if e.X<=t and e.Y<=a and e.X+e.Width>t and e.Y+e.Height>a then
-return true
-end
-end
-function DoClick(e,i,a,t,o)
-if e and CheckClick(e,a,t)then
-return e:Click(i,a-e.X+1,t-e.Y+1,o)
-end
-end
-function TryClick(e,a,i,o,t)
-if Current.InterfaceVisible and Current.Menu then
-if DoClick(Current.Menu,a,i,o,t)then
-Draw()
-return
-else
-if Current.Menu.Owner and Current.Menu.Owner.Toggle then
-Current.Menu.Owner.Toggle=false
-end
-Current.Menu=nil
-Draw()
-return
-end
-elseif Current.Window then
-if DoClick(Current.Window,a,i,o,t)then
-Draw()
-return
-else
-Current.Window:Flash()
-return
-end
-end
-local e={}
-if Current.InterfaceVisible then
-table.insert(e,Current.MenuBar)
-else
-table.insert(e,ShowInterfaceButton)
-end
-for a,t in ipairs(Lists.Interface.Toolbars)do
-for a,t in ipairs(t.ToolbarItems)do
-table.insert(e,t)
-end
-table.insert(e,t)
-end
-table.insert(e,Current.Artboard)
-for n,e in ipairs(e)do
-if DoClick(e,a,i,o,t)then
-Draw()
-return
-end
-end
-Draw()
-end
-function EventRegister(e,t)
-if not Events[e]then
-Events[e]={}
-end
-table.insert(Events[e],t)
-end
-function EventHandler()
-while true do
-local e,t,a,i,n=os.pullEventRaw()
-if Events[e]then
-for s,o in ipairs(Events[e])do
-o(e,t,a,i,n)
-end
-end
-end
-end
-local t={[10]="a",[11]="b",[12]="c",[13]="d",[14]="e",[15]="f"}
-local function a(e)
-if e==colours.transparent or not e or not tonumber(e)then
-return" "
-end
-local e=math.log(e)/math.log(2)
-if e>9 then
-e=t[e]
-end
-return e
-end
-local function h(e)
-if e==' 'then
-return colours.transparent
-end
-local e=tonumber(e,16)
-if not e then return nil end
-e=math.pow(2,e)
-return e
-end
-function SaveSKCH()
-local t={}
-for a,e in ipairs(Current.Artboard.Layers)do
-local a=SaveNFT(a)
-local e={
-Name=e.Name,
-Pixels=a,
-BackgroundColour=e.BackgroundColour,
-Visible=e.Visible,
-Index=e.Index,
-}
-table.insert(t,e)
-end
-return t
-end
-function SaveNFT(t)
-t=t or 1
-local n={}
-local h=Current.Artboard.Width
-local e=Current.Artboard.Height
-for s=1,e do
-local e=''
-local i=nil
-local o=nil
-for n=1,h do
-local t=Current.Artboard.Layers[t].Pixels[n][s]
-if t.BackgroundColour~=i then
-e=e..string.char(30)..a(t.BackgroundColour)
-i=t.BackgroundColour
-end
-if t.TextColour~=o then
-e=e..string.char(31)..a(t.TextColour)
-o=t.TextColour
-end
-e=e..t.Character
-end
-table.insert(n,e)
-end
-return n
-end
-function SaveNFP()
-local t={}
-local o=Current.Artboard.Width
-local e=Current.Artboard.Height
-for i=1,e do
-local e=''
-for t=1,o do
-e=e..a(Current.Artboard.Layers[1].Pixels[t][i].BackgroundColour)
-end
-table.insert(t,e)
-end
-return t
-end
-function ReadNFP(t)
-local a={}
-local e=fs
-if OneOS then
-e=OneOS.FS
-end
-local o=e.open(t,'r')
-local t=o.readLine()
-local i=1
-while t do
-for e=1,#t do
-if not a[e]then
-a[e]={}
-end
-a[e][i]={BackgroundColour=h(t:sub(e,e))}
-end
-i=i+1
-t=o.readLine()
-end
-o.close()
-return{{Pixels=a}}
-end
-function ReadNFT(t)
-local e=fs
-if OneOS then
-e=OneOS.FS
-end
-local t=e.open(t,'r')
-local e=t.readLine()
-local a={}
-while e do
-table.insert(a,e)
-e=t.readLine()
-end
-t.close()
-return{{Pixels=ParseNFT(a)}}
-end
-function ParseNFT(e)
-local a={}
-for d,r in ipairs(e)do
-local s,n=false,false
-local o,i=nil,nil
-local t=1
-for e=1,#r do
-if not a[t]then
-a[t]={}
-end
-local e=string.sub(r,e,e)
-if e:byte()==30 then
-s=true
-elseif e:byte()==31 then
-n=true
-elseif s then
-o=h(e)
-if o==nil then
-o=colours.transparent
-end
-s=false
-elseif n then
-i=h(e)
-n=false
-else
-if e~=" "and i==nil then
-i=colours.white
-end
-a[t][d]={BackgroundColour=o,TextColour=i,Character=e}
-t=t+1
-end
-end
-end
-return a
-end
-function ReadSKCH(t)
-local e=fs
-if OneOS then
-e=OneOS.FS
-end
-local e=e.open(t,'r')
-local a=textutils.unserialize(e.readAll())
-e.close()
-local t={}
-for a,e in ipairs(a)do
-local e={
-Name=e.Name,
-Pixels=ParseNFT(e.Pixels),
-BackgroundColour=e.BackgroundColour,
-Visible=e.Visible,
-Index=e.Index,
-}
-table.insert(t,e)
-end
-return t
-end
-if term.isColor and term.isColor()then
-Initialise(...)
-else
-print('Sorry, but Sketch only works on Advanced (gold) Computers')
-end
+	local artboard = program:GetObject('Artboard')
+	if artboard then
+		program:DisplayWindow('resizewindow', 'Resize Image')
+
+		local constrainProportions = true
+		local keepTextDetail = true
+		local proportions = artboard.Width / artboard.Height
+
+		local widthNumberBox = program:GetObject('WidthNumberBox')
+		local heightNumberBox = program:GetObject('HeightNumberBox')
+
+		widthNumberBox.Value = artboard.Width
+		heightNumberBox.Value = artboard.Height
+
+		local proportionChange = false
+
+		widthNumberBox.OnChange = function()
+			if constrainProportions and not proportionChange then
+				proportionChange = true
+				heightNumberBox:SetValue(program.Helpers.Round(widthNumberBox.Value / proportions))
+			else
+				proportionChange = false
+			end
+		end
+
+		heightNumberBox.OnChange = function()
+			if constrainProportions and not proportionChange then
+				proportionChange = true
+				widthNumberBox:SetValue(program.Helpers.Round(heightNumberBox.Value * proportions))
+			else
+				proportionChange = false
+			end
+		end
+		
+		program:GetObject('ProportionsButton').OnClick = function(self)
+			constrainProportions = self.Toggle
+		end
+		
+		program:GetObject('TextDetailButton').OnClick = function(self)
+			keepTextDetail = self.Toggle
+		end
+
+		program:GetObject('ResizeButton').OnClick = function()
+			artboard:Resize(widthNumberBox.Value, heightNumberBox.Value, keepTextDetail)
+			program.Window:Close()
+		end
+
+		program:GetObject('CancelButton').OnClick = function()
+			program.Window:Close()
+		end
+	end
+end
+
+function ChangeCanvasSize()
+	local artboard = program:GetObject('Artboard')
+	if artboard then
+		print('splie')
+		program:DisplayWindow('canvassizewindow', 'Change Canvas Size')
+
+		-- local constrainProportions = true
+		-- local keepTextDetail = true
+		-- local proportions = artboard.Width / artboard.Height
+
+		local widthNumberBox = program:GetObject('WidthNumberBox')
+		local heightNumberBox = program:GetObject('HeightNumberBox')
+
+		widthNumberBox.Value = artboard.Width
+		heightNumberBox.Value = artboard.Height
+
+		local anchorPosition = 5
+
+		local function updateAnchorButtons(self)
+			local anchors = {' ',' ',' ',' ',' ',' ',' ',' ',' '}
+
+			-- i'm sure there's a better way to do this...
+			if anchorPosition == 1 then
+				anchors[1] = '#'
+				anchors[2] = '>'
+				anchors[4] = 'v'
+			elseif anchorPosition == 2 then
+				anchors[1] = '<'
+				anchors[2] = '#'
+				anchors[3] = '>'
+				anchors[5] = 'v'
+			elseif anchorPosition == 3 then
+				anchors[2] = '<'
+				anchors[3] = '#'
+				anchors[6] = 'v'
+			elseif anchorPosition == 4 then
+				anchors[1] = '^'
+				anchors[4] = '#'
+				anchors[5] = '>'
+				anchors[7] = 'v'
+			elseif anchorPosition == 5 then
+				anchors[2] = '^'
+				anchors[4] = '<'
+				anchors[5] = '#'
+				anchors[6] = '>'
+				anchors[8] = 'v'
+			elseif anchorPosition == 6 then
+				anchors[3] = '^'
+				anchors[6] = '#'
+				anchors[5] = '<'
+				anchors[9] = 'v'
+			elseif anchorPosition == 7 then
+				anchors[4] = '^'
+				anchors[7] = '#'
+				anchors[8] = '>'
+			elseif anchorPosition == 8 then
+				anchors[5] = '^'
+				anchors[8] = '#'
+				anchors[7] = '<'
+				anchors[9] = '>'
+			elseif anchorPosition == 9 then
+				anchors[6] = '^'
+				anchors[9] = '#'
+				anchors[8] = '<'
+			end
+
+			if artboard.Height > heightNumberBox.Value then
+				for i, v in ipairs(anchors) do
+					if string.find(v, "%^") then
+						v = v:gsub('%^','v')
+					elseif string.find(v, "v") then
+						v = v:gsub('v','%^')
+					end
+					anchors[i] = v
+				end
+			end
+
+			if artboard.Width > widthNumberBox.Value then
+				for i, v in ipairs(anchors) do
+					if string.find(v, ">") then
+						v = v:gsub('>','<')
+					elseif string.find(v, "<") then
+						v = v:gsub('<','>')
+					end
+					anchors[i] = v
+				end
+			end
+
+			for i, v in ipairs(anchors) do
+				program:GetObject('Anchor'..i..'Button').Text = v
+			end
+		end
+
+		for i = 1, 9 do
+			program:GetObject('Anchor'..i..'Button').OnClick = function()
+				anchorPosition = i
+				updateAnchorButtons()
+			end
+		end
+
+		updateAnchorButtons()
+
+		widthNumberBox.OnChange = function()
+			updateAnchorButtons()
+		end
+
+		heightNumberBox.OnChange = function()
+			updateAnchorButtons()
+		end
+
+		program:GetObject('OkButton').OnClick = function()
+			artboard:ChangeCanvasSize(widthNumberBox.Value, heightNumberBox.Value, anchorPosition)
+			program.Window:Close()
+		end
+
+		program:GetObject('CancelButton').OnClick = function()
+			program.Window:Close()
+		end
+	end
+end
+
+local tArgs = {...}
+
+program:Run(function()
+
+	if OneOS then
+		Clipboard = OneOS.Clipboard
+	end
+
+
+	-- NewDocument()
+	--------------------------------File Menu---------------------------------------
+	program:PrepareMenu('filemenu')
+
+	program:GetObject('NewMenuItem').OnClick = function(self, event, side, x, y)
+		NewDocument()
+	end
+	program:GetObject('OpenMenuItem').OnClick = function(self, event, side, x, y)
+		program:DisplayOpenFileWindow('Open Image', function(success, path)
+			if success then
+				OpenDocument(path)
+			end
+		end)
+	end
+	program:GetObject('SaveMenuItem').OnClick = function(self, event, side, x, y)
+		SaveDocument()
+	end
+	program:GetObject('SaveAsMenuItem').OnClick = function(self, event, side, x, y)
+		SaveDocumentAs()
+	end
+	program:GetObject('QuitMenuItem').OnClick = function(self, event, side, x, y)
+		CloseDocument(function(close)
+			if close then
+				program:Quit()
+				term.setBackgroundColour(colours.black)
+				term.setTextColour(colours.white)
+				term.clear()
+				term.setCursorPos(1, 1)
+
+				local function PrintCentered(text, y)
+				    local w, h = term.getSize()
+				    x = math.ceil(math.ceil((w / 2) - (#text / 2)), 0)+1
+				    term.setCursorPos(x, y)
+				    print(text)
+				end
+
+				PrintCentered("Thanks for using Sketch 2!", (Drawing.Screen.Height / 2) - 1)
+				term.setTextColour(colours.lightGrey)
+				PrintCentered("Photoshop Inspired Image Editor for ComputerCraft", (Drawing.Screen.Height / 2))
+				term.setTextColour(colours.white)
+				PrintCentered("(c) oeed 2013 - 2014", (Drawing.Screen.Height / 2) + 3)
+				term.setCursorPos(1, Drawing.Screen.Height)
+			end
+		end)
+	end
+
+	program:GetObject('FileMenuButton').OnClick = function(self, event, side, x, y)
+		self:ToggleMenu('filemenu')
+	end
+	--------------------------------------------------------------------------------
+
+	--------------------------------Edit Menu---------------------------------------
+	program:PrepareMenu('editmenu')
+
+	program:GetObject('UndoMenuItem').OnClick = function(self, event, side, x, y)
+		local artboard = program:GetObject('Artboard')
+		if artboard then
+			artboard:Undo()
+		end
+	end
+	program:GetObject('RedoMenuItem').OnClick = function(self, event, side, x, y)
+		local artboard = program:GetObject('Artboard')
+		if artboard then
+			artboard:Redo()
+		end
+	end
+	program:GetObject('CutMenuItem').OnClick = function(self, event, side, x, y)
+		local artboard = program:GetObject('Artboard')
+		if artboard then
+			artboard:Cut()
+		end
+	end
+	program:GetObject('CopyMenuItem').OnClick = function(self, event, side, x, y)
+		local artboard = program:GetObject('Artboard')
+		if artboard then
+			artboard:Copy()
+		end
+	end
+	program:GetObject('PasteMenuItem').OnClick = function(self, event, side, x, y)
+		local artboard = program:GetObject('Artboard')
+		if artboard then
+			artboard:Paste()
+		end
+	end
+
+	program:GetObject('EditMenuButton').OnClick = function(self, event, side, x, y)
+		self:ToggleMenu('editmenu')
+	end
+	--------------------------------------------------------------------------------
+
+	--------------------------------Image Menu--------------------------------------
+	program:PrepareMenu('imagemenu')
+
+	program:GetObject('ResizeMenuItem').OnClick = function(self, event, side, x, y)
+		ResizeDocument()
+	end
+	program:GetObject('CanvasSizeMenuItem').OnClick = function(self, event, side, x, y)
+		ChangeCanvasSize()
+	end
+	program:GetObject('CropMenuItem').OnClick = function(self, event, side, x, y)
+		local artboard = program:GetObject('Artboard')
+		if artboard then
+			artboard:Crop()
+		end
+	end
+	program:GetObject('EraseMenuItem').OnClick = function(self, event, side, x, y)
+		local artboard = program:GetObject('Artboard')
+		if artboard then
+			return artboard:EraseSelection()
+		end
+		return false
+	end
+	program:GetObject('NewLayerImageMenuItem').OnClick = function(self, event, side, x, y)
+		local artboard = program:GetObject('Artboard')
+		if artboard then
+			artboard:NewLayer()
+		end
+	end
+	program:GetObject('FlattenMenuItem').OnClick = function(self, event, side, x, y)
+		local artboard = program:GetObject('Artboard')
+		if artboard then
+			artboard:FlattenImage()
+		end
+	end
+
+	program:GetObject('ImageMenuButton').OnClick = function(self, event, side, x, y)
+		self:ToggleMenu('imagemenu')
+	end
+	--------------------------------------------------------------------------------
+
+	--------------------------------View Menu---------------------------------------
+	program:PrepareMenu('viewmenu')
+
+	program:GetObject('ZoomOutMenuItem').OnClick = function(self, event, side, x, y)
+		local artboard = program:GetObject('Artboard')
+		if artboard then
+			artboard:SetZoom(artboard.Zoom / 2)
+		end
+	end
+	program:GetObject('ZoomInMenuItem').OnClick = function(self, event, side, x, y)
+		local artboard = program:GetObject('Artboard')
+		if artboard then
+			artboard:SetZoom(artboard.Zoom * 2)
+		end
+	end
+	program:GetObject('100%ZoomMenuItem').OnClick = function(self, event, side, x, y)
+		local artboard = program:GetObject('Artboard')
+		if artboard then
+			artboard:SetZoom(1)
+		end
+	end
+	program:GetObject('FilterMaskMenuItem').OnClick = function(self, event, side, x, y)
+		local artboard = program:GetObject('Artboard')
+		if artboard then
+			artboard.ShowFilterMask = not artboard.ShowFilterMask
+		end
+	end
+
+	program:GetObject('ViewMenuButton').OnClick = function(self, event, side, x, y)
+		self:ToggleMenu('viewmenu')
+	end
+	--------------------------------------------------------------------------------
+
+	--------------------------------Tools Menu--------------------------------------
+	program:PrepareMenu('toolsmenu')
+
+	for i, v in ipairs(program:GetObjects('ToolMenuItem')) do
+		v.OnClick = function(self, event, side, x, y)
+			local artboard = program:GetObject('Artboard')
+			if artboard then
+				artboard:SetTool(getfenv()[self.ToolName])
+			end
+		end
+	end
+	program:GetObject('ToolsMenuButton').OnClick = function(self, event, side, x, y)
+		self:ToggleMenu('toolsmenu')
+	end
+	--------------------------------------------------------------------------------
+
+
+	program:GetObject('PrimaryColourView').OnClick = function(self, event, side, x, y)
+		program:GetObject('ColoursSidebarButton'):Click(event, side, x, y)
+	end
+
+	program:GetObject('SecondaryColourView').OnClick = function(self, event, side, x, y)
+		program:GetObject('ColoursSidebarButton'):Click(event, side, x, y)
+	end
+
+	program:GetObject('CurrentToolLabel').OnClick = function(self, event, side, x, y)
+		program:GetObject('ToolsSidebarButton'):Click(event, side, x, y)
+	end
+
+	program.View.Click = ViewClick
+
+
+	program.OnArtboardClose()
+
+	if #tArgs == 1 then
+		OpenDocument(tArgs[1])
+	else
+		NewDocument()
+	end
+	-- TODO: remove!
+	-- program:RegisterKeyboardShortcut({'\\'}, function()os.reboot()end)
+end)
