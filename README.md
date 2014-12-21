@@ -38,9 +38,17 @@ Installation
 ====
 
 Simply run:
-pastebin run E1xftzLa
 
-If the above does not work replace run with 'get' and add 'installer' to the end, then type 'installer' in to the shell.
+```
+pastebin run E1xftzLa
+```
+
+If the above does not work, try running these 2 commands:
+
+```
+pastebin get E1xftzLa installer
+installer
+```
 
 FAQ
 ====
