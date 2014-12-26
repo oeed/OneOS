@@ -1,0 +1,44 @@
+{
+	Children = {
+		{
+			X = "50%,-9",
+			Y = 2,
+			Type = 'Button',
+			Name = 'AboutButton',
+			Text = '?',
+			BackgroundColour = 'white'
+		},
+		{
+			X = "50%,-5",
+			Y = 2,
+			Type = 'Button',
+			Name = 'SettingsButton',
+			Text = 'U',
+			BackgroundColour = 'white'
+		},
+		{
+			X = "50%,-1",
+			Y = 2,
+			Type = 'Button',
+			Name = 'SettingsButton',
+			Text = '#',
+			BackgroundColour = 'white'
+		},
+		{
+			X = "50%,3",
+			Y = 2,
+			Type = 'Button',
+			Name = 'ShutdownButton',
+			Text = 'S',
+			BackgroundColour = 'white'
+		},
+		{
+			X = "50%,7",
+			Y = 2,
+			Type = 'Button',
+			Name = 'RestartButton',
+			Text = 'R',
+			BackgroundColour = 'white'
+		}
+	}
+}

@@ -1,4 +1,4 @@
---Bedrock Build: 447
+--Bedrock Build: 463
 --This code is squished down in to one, rather hard to read file.
 --As such it is not much good for anything other than being loaded as an API.
 --If you want to look at the code to learn from it, copy parts or just take a look,
@@ -206,7 +206,7 @@ function FilterColour(colour, filter)
 	if filter[colour] then
 		return filter[colour]
 	else
-		return colours.black
+		return colour
 	end
 end
 
@@ -567,6 +567,9 @@ WrapText = function(text, maxWidth)
                     lines[#lines] = lines[#lines] .. word .. space
             end
     end
+    if #lines[1] == 0 then
+        table.remove(lines,1)
+    end
 	return lines
 end
 
@@ -605,6 +608,7 @@ Name = nil
 ClipDrawing = true
 UpdateDrawBlacklist = {}
 Fixed = false
+Ready = false
 
 DrawCache = {}
 
@@ -774,6 +778,43 @@ Initialise = function(self, values)
 	return new
 end
 
+AnimateValue = function(self, valueName, from, to, duration, done)
+	if type(self[valueName]) ~= 'number' then
+		error('Animated value ('..valueName..') must be number.')
+	elseif not self.Bedrock.AnimationEnabled then
+		self[valueName] = to
+		if done then
+			done()
+		end
+		return
+	end
+	from = from or self[valueName]
+	duration = duration or 0.2
+	local delta = to - from
+
+	local startTime = os.clock()
+	local previousFrame = startTime
+	local frame
+	frame = function()
+		local time = os.clock()
+		local totalTime = time - startTime
+		local isLast = totalTime >= duration
+
+		if isLast then
+			self[valueName] = to
+			if done then
+				done()
+			end
+		else
+			self[valueName] = self.Bedrock.Helpers.Round(from + delta * (totalTime / duration))
+			self.Bedrock:StartTimer(function()
+				frame()
+			end, 0.05)
+		end
+	end
+	frame()
+end
+
 Click = function(self, event, side, x, y)
 	if self.Visible and not self.IgnoreClick then
 		if event == 'mouse_click' and self.OnClick and self:OnClick(event, side, x, y) ~= false then
@@ -844,7 +885,6 @@ OnDraw = function(self, x, y)
     elseif self.Align == 'Center' then
         _x = math.floor((self.Width - #self.Text) / 2)
     end
-
 
 	Drawing.DrawCharacters(x + _x, y-1+math.ceil(self.Height/2), self.Text, txt, bg)
 end
@@ -926,7 +966,7 @@ local function AddItem(self, v, i)
 		["Name"]="CollectionViewItem",
 		["Type"]="View",
 		["TextColour"]=self.TextColour,
-		["BackgroundColour"]=0F,
+		["BackgroundColour"]=0,
 		OnClick = function(itm)
 			if self.CanSelect then
 				for i2, _v in ipairs(self.Children) do
@@ -1398,6 +1438,103 @@ OnLoad = function(self)
 		self:RegisterShortcut()
 	end
 	-- self:OnUpdate('Text')
+end
+]],
+["NumberBox"] = [[
+Inherit = 'View'
+
+Value = 1
+Minimum = 1
+Maximum = 99
+BackgroundColour = colours.lightGrey
+TextBoxTimer = nil
+Width = 7
+
+OnLoad = function(self)
+	self:AddObject({
+		X = self.Width - 1,
+		Y = 1,
+		Width = 1,
+		AutoWidth = false,
+		Text = '-',
+		Type = 'Button',
+		Name = 'AddButton',
+		BackgroundColour = colours.transparent,
+		OnClick = function()
+			self:ShiftValue(-1)
+		end
+	})
+
+	self:AddObject({
+		X = self.Width,
+		Y = 1,
+		Width = 1,
+		AutoWidth = false,
+		Text = '+',
+		Type = 'Button',
+		Name = 'SubButton',
+		BackgroundColour = colours.transparent,
+		OnClick = function()
+			self:ShiftValue(1)
+		end
+	})
+
+	self:AddObject({
+		X = 1,
+		Y = 1,
+		Width = self.Width - 2,
+		Text = tostring(self.Value),
+		Align = 'Center',
+		Type = 'TextBox',
+		BackgroundColour = colours.transparent,
+		OnChange = function(_self, event, keychar)
+			if keychar == keys.enter then
+				self:SetValue(tonumber(_self.Text))
+				self.TextBoxTimer = nil
+			end
+			if self.TextBoxTimer then
+				self.Bedrock:StopTimer(self.TextBoxTimer)
+			end
+
+			self.TextBoxTimer = self.Bedrock:StartTimer(function(_, timer)
+				if timer and timer == self.TextBoxTimer then
+					self:SetValue(tonumber(_self.Text))
+					self.TextBoxTimer = nil
+				end
+			end, 2)
+		end
+	})
+end
+
+OnScroll = function(self, event, dir, x, y)
+	self:ShiftValue(-dir)
+end
+
+ShiftValue = function(self, delta)
+	local val = tonumber(self:GetObject('TextBox').Text) or self.Minimum
+	self:SetValue(val + delta)
+end
+
+SetValue = function(self, newValue)
+	newValue = newValue or 0
+	if self.Maximum and newValue > self.Maximum then
+		newValue = self.Maximum
+	elseif self.Minimum and newValue < self.Minimum then
+		newValue = self.Minimum
+	end
+	self.Value = newValue
+	if self.OnChange then
+		self:OnChange()
+	end
+end
+
+OnUpdate = function(self, value)
+	if value == 'Value' then
+		local textbox = self:GetObject('TextBox')
+		if textbox then
+			textbox.Text = tostring(self.Value)
+		end
+	end
 end
 ]],
 ["ProgressBar"] = [[
@@ -2005,7 +2142,27 @@ local function findObjectNamed(view, name, minI)
 	end
 end
 
-function AddObject(self, info, extra)
+function ReorderObjects(self)
+	if self.Children then
+		if Log then
+		Log.i('--'..self.Name..'--')
+		end
+		table.sort(self.Children, function(a,b)
+			return a.Z < b.Z 
+		end)
+		if Log then
+			for i, v in ipairs(self.Children) do
+				Log.i(v.Z .. ' - ' .. v.Name)
+				if v.ReorderObjects then
+					v:ReorderObjects()
+				end
+			end
+			Log.i('-----')
+		end
+	end
+end
+
+function AddObject(self, info, extra, first)
 	if type(info) == 'string' then
 		local h = fs.open(self.Bedrock.ViewPath..info..'.view', 'r')
 		if h then
@@ -2026,10 +2183,18 @@ function AddObject(self, info, extra)
 
 	local view = self.Bedrock:ObjectFromFile(info, self)
 	if not view.Z then
-		view.Z = #self.Children + 1
+		if first then
+			view.Z = 1
+		else
+			view.Z = #self.Children + 1
+		end
 	end
 	
-	table.insert(self.Children, view)
+	if first then
+		table.insert(self.Children, 1, view)
+	else
+		table.insert(self.Children, view)
+	end
 	if self.Bedrock.View then
 		self.Bedrock:ReorderObjects()
 	end
@@ -2300,6 +2465,8 @@ Running = true
 
 DefaultView = 'main'
 
+AnimationEnabled = true
+
 EventHandlers = {
 	
 }
@@ -2535,6 +2702,12 @@ function LoadView(self, name, draw)
 	end
 	local success = false
 
+	if Drawing.Screen.Width <= 26 and fs.exists(self.ViewPath..name..'-pocket.view') then
+		name = name..'-pocket'
+	elseif Drawing.Screen.Width <= 39 and fs.exists(self.ViewPath..name..'-turtle.view') then
+		name = name..'-turtle'
+	end
+
 	if not fs.exists(self.ViewPath..name..'.view') then
 		error('The view: '..name..'.view does not exist.')
 	end
@@ -2687,6 +2860,7 @@ function ObjectFromFile(self, file, view)
 		if object.OnLoad then
 			object:OnLoad()
 		end
+		object.Ready = true
 		return object
 	elseif not file.Type then
 		error('No object type specified. (e.g. Type = "Button")')
@@ -2697,14 +2871,12 @@ end
 
 function ReorderObjects(self)
 	if self.View and self.View.Children then
-		table.sort(self.View.Children, function(a,b)
-			return a.Z < b.Z 
-		end)
+		self.View:ReorderObjects()
 	end
 end
 
-function AddObject(self, info, extra)
-	return self.View:AddObject(info, extra)
+function AddObject(self, info, extra, first)
+	return self.View:AddObject(info, extra, first)
 end
 
 function GetObject(self, name)

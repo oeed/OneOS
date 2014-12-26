@@ -177,6 +177,7 @@ OneOS = function(env, program, path)
 		end,
 		CanClose = function()end,
 		Close = function()
+			Log.i('here')
 			program:Close(true)
 		end,
 		Run = function(path, ...)

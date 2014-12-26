@@ -1,0 +1,84 @@
+{
+	Width = "100%",
+	Height = 6,
+	Type = 'Switcher',
+	BackgroundColour = 'black',
+	Children = {
+		-- {
+		-- 	X = 1,
+		-- 	Y = "100%,-2",
+		-- 	Width = "100%",
+		-- 	Height = 3,
+		-- 	Type = 'View',
+		-- 	BackgroundColour = 'grey',
+		-- 	InheritView = 'switcher-controls'
+		-- },
+		-- {
+		-- 	X = 1,
+		-- 	Y = "100%,-2",
+		-- 	Type = 'Label',
+		-- 	Text = 'OneOS',
+		-- 	TextColour = 'white'
+		-- },
+		-- {
+		-- 	X = 7,
+		-- 	Y = "100%,-2",
+		-- 	Type = 'Label',
+		-- 	Text = 'by oeed',
+		-- 	TextColour = 'lightGrey'
+		-- },
+		{
+			Y = 2,
+			X = 3,
+			Type = 'ImageView',
+			Path = '/icons/files',
+			Width = 4,
+			Height = 3,
+		},
+		{
+			Y = 5,
+			X = 1,
+			Type = 'Label',
+			Text = 'Files',
+			TextColour = 'white',
+			Align = 'Center',
+			Width = 8
+		},
+
+		{
+			Y = 2,
+			X = 11,
+			Type = 'ImageView',
+			Path = '/icons/ink',
+			Width = 4,
+			Height = 3,
+		},
+		{
+			Y = 5,
+			X = 9,
+			Type = 'Label',
+			Text = 'Ink',
+			TextColour = 'white',
+			Align = 'Center',
+			Width = 8
+		},
+
+		{
+			Y = 2,
+			X = 19,
+			Type = 'ImageView',
+			Path = '/icons/sketch',
+			Width = 4,
+			Height = 3,
+		},
+		{
+			Y = 5,
+			X = 17,
+			Type = 'Label',
+			Text = 'Sketch',
+			TextColour = 'white',
+			Align = 'Center',
+			Width = 8
+		},
+	}
+}

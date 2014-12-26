@@ -1,0 +1,10 @@
+{
+	Children = {
+		{
+			X = 1,
+			Y = 1,
+			Type = 'Button',
+			Text = 'Shutdown'
+		}
+	}
+}

@@ -1,210 +1,401 @@
-UpdateDrawBlacklist = {['CachedProgram']=true, ['CachedIndex']=true}
-CachedProgram = false
-CachedIndex = false
-Animation = false
-Ready = false
+-- drawing
+Term = nil
+CursorPos = nil
+TextColour = colours.white
+BackgroundColour = colours.black
+CursorBlink = false
+Buffer = {}
+UpdateDrawBlacklist = {
+	['EventQueue'] = true
+}
 
-OnUpdate = function(self, value)
-	--TODO: resize the buffer
-	if value == 'Width' then
-	end
+-- program
+Process = nil
+EventQueue = nil
+Timers = nil
+Running = true
+Path = nil
+Title = nil
+Environment = nil
+Arguments = nil
+Hidden = false
+
+OnLoad = function(self)
+	self.CursorPos = {1, 1}
+	self.Buffer = {}
+
+	self.Term = self:MakeTerm()
+	self.EventQueue = {}
+	self.Timers = {}
+	self.Environment = Environment:Initialise(self, shell, self.Path)
+	self.Running = true
+	self:Execute()
 end
 
-local function getProgramIndex(program)
-	for i, _program in ipairs(Current.Programs) do
-		if program == _program then
-			return i
+Execute = function(self)
+	local executable = function()
+		local _, err = pcall(function()
+			local fnFile, err2 = nil
+			local h = OneOS.FS.open( self.Path, "r")
+			if h then
+				fnFile, err2 = loadstring( h.readAll(), OneOS.FS.getName(self.Path) )
+				if err2 then
+					err2 = err2:gsub("^.-: %[string \"","")
+					err2 = err2:gsub('"%]',"")
+				end
+				h.close()
+			end
+	        local tEnv = self.Environment
+			setmetatable( tEnv, { __index = _G } )
+			setfenv( fnFile, tEnv )
+
+			if (not fnFile) or err2 then
+				term.setTextColour(colours.red)
+				term.setBackgroundColour(colours.black)
+				if err2 then
+					print(err2)
+				end
+				if err2 == 'File not found' then
+					term.clear()
+					term.setTextColour(colours.white)
+					term.setCursorPos(1,2)
+					print('The program could not be found or is corrupt.')
+					print()
+					print('Try running the program again or reinstalling it.')
+					print()
+					print()
+				end
+				return false
+			end
+
+			local ok, err3 = pcall( function()
+	        	fnFile( unpack( self.Arguments ) )
+	        end )
+	        if not ok then
+	        	if err3 and err3 ~= "" then
+					term.setTextColour(colours.red)
+					term.setBackgroundColour(colours.black)
+					term.setCursorPos(1,1)
+					print(err3)
+		        end
+	        end
+		end)
+
+    	if not _ and err and err ~= "" then
+			term.setTextColour(colours.red)
+			term.setBackgroundColour(colours.black)
+			term.setCursorPos(1,1)
+			print(err)
 		end
 	end
-	return 1
+
+	setfenv(executable, self.Environment)
+	self.Process = coroutine.create(executable)
+	self:Resume()		
 end
+
+MakeActive = function(self)
+	self.Bedrock:SetActiveObject(self)
+	self.Visible = true
+	for i, v in ipairs(self.Bedrock:GetObjects('ProgramView')) do
+		if v ~= self then
+			v.Visible = false
+		end
+	end
+	self.Bedrock:StartTimer(function()
+		self.UpdateSwitcher()
+	end, 0.05)
+end
+
+Resume = function(self, ...)
+	local event = {...}
+	local result = false
+	xpcall(
+		function()
+			if not self.Process or coroutine.status(self.Process) == "dead" then
+				return false
+			end
+			
+			term.redirect(self.Term)
+			local response = {coroutine.resume(self.Process, unpack(event))}
+			if not response[1] and response[2] then
+				print()
+		    	term.setTextColour(colours.red)
+		    	print('The program has crashed.')
+		    	print(response[2])
+		    	Log.e('Program crashed')
+		    	Log.e(response[2])
+		    	self:Kill(1)
+			elseif coroutine.status(self.Process) == "dead" then
+		    	print()
+		    	term.setTextColour(colours.red)
+		    	print('The program has finished.')
+		    	self:Kill(0)
+		    end
+		    restoreTerm()
+		    result = unpack(response)
+		end,
+		function(err)
+			if string.find(err, "Too long without yielding") then
+		    	term.redirect(self.Term)
+		    	print()
+		    	term.setTextColour(colours.red)
+		    	print('Too long without yielding')
+		    	Log.e('Too long without yielding')
+		    	self:Kill(0)
+		    	restoreTerm()
+		    else
+		    	Log.e(err)
+		    	error(err)
+			end
+		end)
+	self:ForceDraw(nil, nil, true)
+	self.Bedrock:Draw()
+	if result then
+		return result
+	end
+end
+
+Close = function(self, force)
+	if force or not self.Environment.OneOS.CanClose or self.Environment.OneOS.CanClose() ~= false then
+		Log.i('Closing program: '..self.Title)
+		
+		if self.Bedrock:GetActiveObject() == self then
+			local programIndex = 2
+			local name = tostring(self)
+			for i, _program in ipairs(self.Bedrock:GetObject('Switcher').ProgramOrder) do
+				if name == _program then
+					programIndex = i
+				end
+			end
+			self.Bedrock:RemoveObject(self)
+
+			local programs = self.Bedrock:GetObjects('ProgramView')
+			if programs[programIndex] then
+				programs[programIndex]:MakeActive()
+			elseif programs[programIndex - 1] then
+				programs[programIndex - 1]:MakeActive()
+			end
+		else
+			self.Bedrock:RemoveObject(self)
+		end
+
+		self.UpdateSwitcher()
+		return true
+	else
+		Log.i('Closing program aborted: '..self.Title)
+		return false
+	end
+end
+
+QueueEvent = function(self, ...)
+	table.insert(self.EventQueue, {...})
+end
+
+OnClick = function(self, ...)
+	if self.Running then
+		self:QueueEvent(...)
+	else
+		self:Close()
+	end
+end
+
+OnDrag = function(self, ...)
+	self:QueueEvent(...)
+end
+
+OnScroll = function(self, ...)
+	self:QueueEvent(...)
+end
+
+OnKeyChar = function(self, ...)
+	self:QueueEvent(...)
+end
+
+Kill = function(self, code)
+	Log.i('Kill program "'..self.Title..'": '..code)
+	term.setBackgroundColour(colours.black)
+	term.setTextColour(colours.white)
+	term.setCursorBlink(false)
+	print('Click anywhere to close this program.')
+	-- coroutine.yield(self.Process)
+	self.Process = nil
+	self.Running = false
+end
+
+--TODO: program close: switcher middle click
 
 OnDraw = function(self, x, y)
-	local currentIndex = getProgramIndex(Current.Program)
-
-	if Current.Program == nil and #Current.Programs > 1 then
-		if Current.Programs[self.CachedIndex] then
-			Current.Program = Current.Programs[self.CachedIndex]
-		elseif Current.Programs[self.CachedIndex-1] then
-			Current.Program = Current.Programs[self.CachedIndex-1]
+	local wtb = Drawing.WriteToBuffer
+	for _y, row in ipairs(self.Buffer) do
+		for _x, pixel in pairs(row) do
+			wtb(x+_x-1, y+_y-1, pixel[1], pixel[2], pixel[3])
 		end
 	end
-
-	if not self.Ready and #Current.Programs > 0 then
-		self.Ready = true
-	end
-
-	if not self.Animation then
-		self.Bedrock.DrawSpeed = self.Bedrock.DefaultDrawSpeed
-	end
-
-	if self.Animation then
-		self:DrawAnimation()
-	elseif (#Current.Programs == 1 or (Current.Program and Current.Program.Hidden)) and self.CachedProgram and not self.CachedProgram.Hidden then
-		--closing a program
-		UpdateOverlay()
-		local centerX = math.ceil(self.Width / 2)
-		local centerY = math.ceil(self.Height / 2)
-
-		local w = self.Width
-		local h = self.Height
-		local deltaW = w / 5
-		local deltaH = h / 5
-
-		local colour = colours.white
-		if self.CachedProgram.Environment.OneOS.ToolBarColor ~= colours.white then
-			colour = self.CachedProgram.Environment.OneOS.ToolBarColor
-		elseif self.CachedProgram.Environment.OneOS.ToolBarColour then
-			colour = self.CachedProgram.Environment.OneOS.ToolBarColour
-		end
-
-		self.Animation = {
-			Count = 5,
-			Function = function(i)
-				self:DrawProgram(Current.Desktop, x, y)
-				self:DrawPreview(self.CachedProgram, x + centerX - (w / 2) - 2, y + centerY - (h / 2), w, h, colour)
-				w = w - deltaW
-				h = h - deltaH
-			end
-		}
-		self:DrawAnimation()
-
-		Current.Desktop:SwitchTo()
-	elseif Current.Program and not Current.Program.Hidden and self.CachedProgram and self.CachedProgram.Hidden then
-		--opening a program
-		UpdateOverlay()
-		local centerX = math.ceil(self.Width / 2)
-		local centerY = math.ceil(self.Height / 2)
-
-		local deltaW = self.Width / 5
-		local deltaH = self.Height / 5
-		local w = 0
-		local h = 0
-		local colour = colours.white
-		if Current.Program.Environment.OneOS.ToolBarColor ~= colours.white then
-			colour = Current.Program.Environment.OneOS.ToolBarColor
-		elseif Current.Program.Environment.OneOS.ToolBarColour then
-			colour = Current.Program.Environment.OneOS.ToolBarColour
-		end
-
-		self.Animation = {
-			Count = 5,
-			Function = function(i)
-				self:DrawProgram(Current.Desktop, x, y)
-				w = w + deltaW
-				h = h + deltaH
-				self:DrawPreview(Current.Program, x + centerX - (w / 2) - 2, y + centerY - (h / 2), w, h, colour)
-			end
-		}
-		self:DrawAnimation()
-	elseif Current.Program and self.CachedProgram and Current.Program ~= self.CachedProgram and not Current.Program.Hidden and not self.CachedProgram.Hidden then
-		--switching program
-		UpdateOverlay()
-		local direction = 1
-		local isPos = 0
-		local isNeg = 1
-		if getProgramIndex(Current.Program) >= self.CachedIndex then
-			direction = -1
-			isPos = 1
-			isNeg = 0
-		end
-		local delta = (self.Width + 4) / 5
-		self.Animation = {
-			Count = 5,
-			Function = function(i)
-				local offset = x + ((5-i) * delta * direction)
-				self:DrawProgram(self.CachedProgram, x + offset - 1, y)
-				Drawing.DrawBlankArea(x + offset + isPos * (self.Width) - isNeg * 4 - 1, y, 4, self.Height, colours.black)
-				self:DrawProgram(Current.Program, x + offset - isNeg * 2 - direction * (3 + self.Width), y)
-			end
-		}
-		self:DrawAnimation()
-	elseif Current.Program then
-		if Current.Overlay and self.CachedProgram and self.CachedProgram.Environment and (Current.Program.Environment.OneOS.ToolBarColor ~= Current.Overlay.BackgroundColour or Current.Program.Environment.OneOS.ToolBarColour ~= Current.Overlay.BackgroundColour  or Current.Program.Environment.OneOS.ToolBarTextColor ~= Current.Overlay.TextColour  or Current.Program.Environment.OneOS.ToolBarTextColour ~= Current.Overlay.TextColour) then
-			UpdateOverlay()
-		end
-		self:DrawProgram(Current.Program, x, y)
-		self.CachedProgram = Current.Program
-		self.CachedIndex = currentIndex
-		if self.Bedrock:GetActiveObject() == self then
-			if Current.Program.AppRedirect.CursorBlink then
-				self.Bedrock.CursorPos = {x + Current.Program.AppRedirect.CursorPos[1] - 1, y + Current.Program.AppRedirect.CursorPos[2] - 1}
-				self.Bedrock.CursorColour = Current.Program.AppRedirect.TextColour
-			else
-				self.Bedrock.CursorPos = nil
-			end
-		end
-	elseif self.Ready then
-		Drawing.DrawBlankArea(x, y, self.Width, self.Height, colours.grey)
-		Drawing.DrawCharactersCenter(nil,-1,nil,nil, 'Something went wrong :(', colours.white, colours.transparent)
-		Drawing.DrawCharactersCenter(nil,1,nil,nil, 'The desktop crashed or something bugged out.', colours.lightGrey, colours.transparent)
-		Drawing.DrawCharactersCenter(nil,2,nil,nil, 'Try restarting.', colours.lightGrey, colours.transparent)
-	else
-		Drawing.DrawBlankArea(x, y, self.Width, self.Height, Settings:GetValues()['DesktopColour'])
-	end
-end
-
-DrawAnimation = function(self)
-	if Settings:GetValues()['UseAnimations'] then
-		self.Animation.Function(self.Animation.Count)
-		self.Animation.Count = self.Animation.Count - 1
-		if self.Animation.Count <= 0 then
-			self.Animation = nil
-			self.CachedProgram = Current.Program
-			self.CachedIndex = currentIndex
-		end
-		self:ForceDraw()
-	else
-		self.Animation = nil
-		self.CachedProgram = Current.Program
-		self.CachedIndex = currentIndex
-		self:ForceDraw()
-		self.Bedrock:Draw()
-	end
-end
-
-DrawProgram = function(self, program, x, y)
-	if program then
-		for _y, row in ipairs(program.AppRedirect.Buffer) do
-			for _x, pixel in pairs(row) do
-				Drawing.WriteToBuffer(x+_x-1, y+_y-1, pixel[1], pixel[2], pixel[3])
-			end
+	if self.Bedrock:GetActiveObject() == self then
+		if self.CursorBlink then
+			self.Bedrock.CursorPos = {x + self.CursorPos[1] - 1, y + self.CursorPos[2] - 1}
+			self.Bedrock.CursorColour = self.TextColour
+		else
+			self.Bedrock.CursorPos = nil
 		end
 	end
 end
 
-DrawPreview = function(self, program, x, y, w, h, _colour)
-	if program then
-		local preview = program:RenderPreview(w, h)
-		for _x, col in pairs(preview) do
-			for _y, colour in ipairs(col) do
-				local char = '-'
-				if colour[1] == ' ' then
-					char = ' '
-				end
-				Drawing.WriteToBuffer(x+_x, y+_y-1, char, colour[2], colour[3])
-			end
+ResizeBuffer = function(self)
+	if #self.Buffer ~= self.Width then
+		while #self.Buffer < self.Width do
+			table.insert(self.Buffer, {})
 		end
-	else
-		Drawing.DrawBlankArea(x, y, w, h, colours.red)
+
+		while #self.Buffer > self.Width do
+			table.remove(self.Buffer, #self.Buffer)
+		end
+	end
+
+	for i, row in ipairs(self.Buffer) do
+		while #row < self.Height do
+			table.insert(row, {' ', self.TextColour, self.BackgroundColour})
+		end
+
+		while #row > self.Height do
+			table.remove(row, #row)
+		end
 	end
 end
 
-OnClick = function(self, event, side, x, y)
-	if not self.Bedrock:GetActiveObject() then
-		self.Bedrock:SetActiveObject(self)
+ClearLine = function(self, y, backgroundColour)
+	if y > self.Height or y < 1 then
+		return
 	end
 	
-	if Current.Program then
-		Current.Program:Click(event, side, x, y)
+	if not self.Buffer[y] then
+		self.Buffer[y] = {}
+	end
+
+	for x = 1, self.Width do
+		self.Buffer[y][x] = {' ', self.TextColour, backgroundColour}
 	end
 end
 
-OnKeyChar = function(self, event, keychar)
-	if Current.Program then
-		Current.Program:QueueEvent(event, keychar)
+WriteToBuffer = function(self, character, textColour, backgroundColour)
+	local x = math.floor(self.CursorPos[1])
+	local y = math.floor(self.CursorPos[2])
+	if y > self.Height or y < 1 or x > self.Width or x < 1 then
+		return
 	end
+	
+	if not self.Buffer[y] then
+		self.Buffer[y] = {}
+	end
+	self.Buffer[y][x] = {character, textColour, backgroundColour}
 end
 
-OnDrag = OnClick
-OnScroll = OnClick
+MakeTerm = function(self)
+	local _term = {}
+	_term.native = _term
+
+	_term.write = function(characters)
+		-- Log.i('write')
+		if type(characters) == 'number' then
+			characters = tostring(characters)
+		end
+		assert(type(characters) == 'string', 'bad argument: string expected, got '..type(characters))
+		self.CursorPos[1] = self.CursorPos[1] - 1
+		for i = 1, #characters do
+			local character = characters:sub(i,i)
+			self.CursorPos[1] = self.CursorPos[1] + 1
+			self:WriteToBuffer(character, self.TextColour, self.BackgroundColour)
+		end
+		
+		self.CursorPos[1] = self.CursorPos[1] + 1
+	end
+
+	_term.clear = function()
+		local buffer = {}
+		local tc = self.TextColour
+		local bc = self.BackgroundColour
+		for y = 1, self.Height do
+			buffer[y] = {}
+			for x = 1, self.Width do
+				buffer[y][x] = {' ', tc, bc}
+			end
+		end
+		self.Buffer = buffer
+	end	
+
+	_term.clearLine = function()
+		local cursorPosX, cursorPosY = self.CursorPos[1], self.CursorPos[2]
+		self:ClearLine(cursorPosY, self.BackgroundColour)
+		self.CursorPos = {cursorPosX, cursorPosY}
+	end	
+
+	_term.getCursorPos = function()
+		return self.CursorPos[1], self.CursorPos[2]
+	end
+
+	_term.setCursorPos = function(x, y)
+		self.CursorPos[1] = math.floor( tonumber(x) ) or self.CursorPos[1]
+		self.CursorPos[2] = math.floor( tonumber(y) ) or self.CursorPos[2]
+	end
+
+	_term.setCursorBlink = function(blink)
+		self.CursorBlink = blink
+	end
+
+	_term.isColour = function()
+		return true
+	end
+
+	_term.isColor = _term.isColour
+
+	_term.setTextColour = function(colour)
+		if colour and colour <= 32768 and colour >= 1 then
+			self.TextColour = colour
+		end
+	end
+
+	_term.setTextColor = _term.setTextColour
+
+	_term.setBackgroundColour = function(colour)
+		if colour and colour <= 32768 and colour >= 1 then
+			self.BackgroundColour = colour
+		end
+	end
+
+	_term.setBackgroundColor = _term.setBackgroundColour
+
+	_term.getSize = function()
+		return self.Width, self.Height
+	end
+
+	_term.scroll = function(amount)
+		if amount == nil then
+			error("Expected number", 2)
+		end
+		local lines = {}
+		if amount > 0 then
+			for _ = 1, amount do
+				table.remove(self.Buffer, 1)
+				table.insert(lines, #self.Buffer+1)
+			end
+		elseif amount < 0 then
+			for _ = 1, amount do
+				table.remove(self.Buffer, #self.Buffer)
+				local row = {}
+				for i = 1, self.Width do
+					table.insert(row, {' ', self.TextColour, self.BackgroundColour})
+				end
+				table.insert(self.Buffer, 1, row)
+				table.insert(lines, _)
+			end
+		end
+		self:ResizeBuffer()
+		for i, v in ipairs(lines) do
+			self:ClearLine(v, self.BackgroundColour)
+		end
+	end
+
+	_term.clear()
+	return _term
+end

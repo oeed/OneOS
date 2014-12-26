@@ -1,51 +1,45 @@
 {
-  ["Children"]={
-    [1]={
-      ["Name"]="SearchView",
-      ["Type"]="SearchView",
-      ["X"]="100%,-19",
-      ["Y"]=1,
-      ["Width"]=20,
-      ["Height"]="100%"
-    },
-    [2]={
-      ["Name"]="ClickCatcherView",
-      ["Type"]="View",
-      ["X"]=1,
-      ["Y"]=1,
-      ["Width"]="100%",
-      ["Height"]="100%",
-      ["BackgroundColour"]=0,
-    },
-    [3]={
-      ["Y"]=2,
-      ["X"]=1,
-      ["Width"]="100%",
-      ["Height"]="100%,-1",
-      ["Name"]="ProgramView",
-      ["Type"]="ProgramView",
-      ["Active"]=true,
-    },
-    [4]={
-      ["Name"]="CentrePoint",
-      ["Type"]="CentrePoint",
-      ["InheritView"]="centrepoint",
-      ["Visible"]=false,
-    },
-    [5]={
-      ["Name"]="Overlay",
-      ["Type"]="Overlay",
-      ["InheritView"]="overlay",
-    },
-    [6]={
-      ["Name"]="LoginView",
-      ["Type"]="LoginView",
-      ["InheritView"]="password",
-      ["X"]=1,
-      ["Y"]=1,
-      ["Width"]="100%",
-      ["Height"]="100%",
-      ["Visible"]=false,
-    },
-  }
+	Children = {
+		{
+			X = 1,
+			Y = 2,
+			Width = "100%",
+			Height = "100%,-1",
+			Type = 'View',
+			BackgroundColour = 'cyan'
+		},
+		-- {
+		-- 	X = 1,
+		-- 	Y = 1,
+		-- 	Width = "100%",
+		-- 	Height = 1,
+		-- 	Type = 'Button',
+		-- 	Name = 'OneButton',
+		-- 	Text = '',
+		-- 	BackgroundColour = 'white'
+		-- },
+		-- {
+		-- 	X = 1,
+		-- 	Y = 1,
+		-- 	Height = 1,
+		-- 	Type = 'Label',
+		-- 	Name = 'HomeButton',
+		-- 	Text = '<'
+		-- },
+		-- {
+		-- 	X = "100%",
+		-- 	Y = 1,
+		-- 	Height = 1,
+		-- 	Type = 'Label',
+		-- 	Name = 'CloseButton',
+		-- 	Text = 'x'
+		-- },
+		{
+			X = 1,
+			Y = 1,
+			Type = 'Switcher',
+			Width = '100%'
+			-- InheritView = 'switcher',
+		}
+	}
 }
