@@ -1,6 +1,7 @@
 Bedrock.ProgramPath = shell.getRunningProgram()
 
 local bedrock = Bedrock:Initialise('/System')
+System.Bedrock = bedrock
 
 bedrock.OnKeyChar = function(self, event, keychar)
 	if keychar == '\\' then
@@ -43,28 +44,7 @@ bedrock.EventHandler = function(self)
 	end
 end
 
-local function updateSwitcher()
-	bedrock:GetObject('Switcher'):UpdateButtons()
-end
 
-local function startProgram(path, args, isHidden)
-	args = args or {}
-	if fs.isDir(path) and fs.exists(path..'/startup') then
-		local program = bedrock:AddObject({
-			Type = 'ProgramView',
-			X = 1,
-			Y = 2,
-			Width = '100%',
-			Height = '100%',
-			Path = path .. '/startup',
-			Title = bedrock.Helpers.RemoveExtension(fs.getName(path)),
-			Arguments = args,
-			Hidden = isHidden or false,
-			UpdateSwitcher = updateSwitcher
-		})
-		program:MakeActive()
-	end
-end
 
 bedrock:Run(function()
 	-- program:LoadView('main')
@@ -90,13 +70,13 @@ bedrock:Run(function()
 	-- updateClock()
 
 
-	startProgram('/System/Programs/Desktop.program', nil, true)
+	System.StartProgram('/System/Programs/Desktop.program', nil, true)
 
 	bedrock:GetObject('OneButton').OnClick = function()
 		bedrock:GetObject('ProgramView'):MakeActive()
 	end
-	startProgram('/Programs/test.program')
-	startProgram('/Programs/Sketch.program')
+	-- startProgram('/Programs/test.program')
+	-- startProgram('/Programs/Sketch.program')
 end)
 
 

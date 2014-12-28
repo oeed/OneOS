@@ -7,7 +7,6 @@ end
 
 OnUpdate = function(self, value)
 	if value == 'FilterName' then
-		Log.i('filterup')
 		self.Filter = Drawing.Filters[self.FilterName or 'None']
 	elseif value == 'TextFilter' then
 		self.TextFilter = Drawing.Filters[self.TextFilterName]

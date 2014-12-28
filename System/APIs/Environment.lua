@@ -39,14 +39,14 @@ GetCleanEnvironment = function(self)
 	return cleanEnv
 end
 
-Initialise = function(self, program, shell, path)
+Initialise = function(self, program, shell, path, bedrock)
 	local env = {}    -- the new instance
 	local cleanEnv = self:GetCleanEnvironment()
 	setmetatable( env, {__index = cleanEnv} )
 	env._G = cleanEnv
-	env.fs = addErrorHandler(program, self.FS(env, program, path), 'FS API')
-	env.io = addErrorHandler(program, self.IO(env, program, path), 'IO API')
-	env.os = addErrorHandler(program, self.OS(env, program, path), 'OS API')
+	env.fs = addErrorHandler(program, self.FS(env, program, path, bedrock), 'FS API')
+	env.io = addErrorHandler(program, self.IO(env, program, path, bedrock), 'IO API')
+	env.os = addErrorHandler(program, self.OS(env, program, path, bedrock), 'OS API')
 	env.loadfile = function( _sFile)
 		local file = env.fs.open( _sFile, "r")
 		if file then
@@ -152,17 +152,17 @@ OneOS = function(env, program, path)
 
 	local tAPIsLoading = {}
 	return {
-		ToolBarColour = colours.white,
-		ToolBarColor = colours.white,
+		ToolBarColour = nil,
+		ToolBarColor = nil,
 		ToolBarTextColor = colours.black,
 		ToolBarTextColour = colours.black,
-		OpenFile = Helpers.OpenFile,
-		Helpers = Helpers,
+		OpenFile = System.OpenFile,
+		GetIcon = System.GetIcon,
 		Settings = Settings,
 		Version = version,
-		Restart = function(f)Restart(f, false)end,
-		Reboot = function(f)Restart(f, false)end,
-		Shutdown = function(f)Shutdown(f, false, true)end,
+		Restart = function(f)System.Restart(f, false)end,
+		Reboot = function(f)System.Restart(f, false)end,
+		Shutdown = function(f)System.Shutdown(f, false, true)end,
 		KillSystem = function()os.reboot()end,
 		Clipboard = Clipboard,
 		FS = fs,
@@ -284,11 +284,12 @@ OneOS = function(env, program, path)
 	}
 end
 
-FS = function(env, program, path)
+FS = function(env, program, path, bedrock)
 	local function doIndex()
-		Current.Bedrock:StartTimer(Indexer.DoIndex, 4)
+		-- Current.Bedrock:StartTimer(Indexer.DoIndex, 4)
 	end
-	local relPath = Helpers.RemoveFileName(path)
+	local relPath = bedrock.Helpers.RemoveFileName(path)
+	Log.i('rel path ' .. relPath)
 	local list = {}
 	for k, f in pairs(fs) do
 		if k ~= 'open' and k ~= 'combine' and k ~= 'copy' and k ~= 'move' and k ~= 'delete' and k ~= 'makeDir' then

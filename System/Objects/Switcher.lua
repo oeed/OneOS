@@ -1,24 +1,25 @@
 Inherit = 'View'
 
-AnimationSpeed = 0.2
+AnimationSpeed = 2
 LastPrograms = {}
 ProgramOrder = {}
-TextColour = colours.white
+LeftMargin = 0
 
 OnLoad = function(self)
+	self.BackgroundColour = colours.green
+
 	self:AddObject({
 		X = 1,
-		Type = 'Button',
+		Type = 'FilterLabel',
 		Name = 'ProgramCloseButton',
 		Text = 'x',
-		TextColour = self.TextColour,
-		BackgroundColour = colours.transparent,
-		ActiveBackgroundColour = colours.transparent,
+		Align = 'Center',
+		Width = 3,
+		AutoWidth = false,
+		FilterName = 'Highlight',
 		OnClick = function()
-			Log.i('click')
-			local program = self.Bedrock:GetActiveObject()
+			local program = System.CurrentProgram()
 			if program and program.Close then
-			Log.i('close')
 				program:Close()
 			end
 		end
@@ -29,7 +30,7 @@ OnLoad = function(self)
 		Width = 1,
 		Visible = false,
 		Type = 'FilterView',
-		FilterName = 'Lighter'
+		FilterName = 'Highlight'
 	})
 
 	-- self:AddObject({
@@ -41,41 +42,72 @@ OnLoad = function(self)
 	-- })
 
 	self:AddObject({
-		X = 1,
-		Type = 'Button',
+		X = -4,
+		Type = 'FilterLabel',
 		Name = 'OneButton',
 		Text = 'One',
-		TextColour = self.TextColour,
-		BackgroundColour = colours.transparent,
-		ActiveBackgroundColour = colours.transparent
+		AutoWidth = false,
+		Width = 5,
+		Align = 'Center',
+		Passes = 2,
+		FilterName = 'Highlight'
+	})
+
+	self:AddObject({
+		X = 1,
+		Width = '100%',
+		Align = 'Center',
+		Type = 'FilterLabel',
+		Name = 'OneLabel',
+		Text = 'OneOS',
+		FilterName = 'Highlight'
 	})
 end
 
 OnUpdate = function(self, value)
-	if value == 'BackgroundColour' and self:GetObject('FilterView') then
-		if self.BackgroundColour == colours.white then
-			self.TextColour = colours.grey
-		else
-			self.TextColour = colours.orange
-		end
-		if Drawing.FilterColour(self.BackgroundColour, Drawing.Filters['Lighter']) == colours.white then
-			self:GetObject('FilterView').FilterName = 'Darker'
-		else
-			self:GetObject('FilterView').FilterName = 'Lighter'
-		end
-	elseif value == 'TextColour' then
-		for i, v in ipairs(self.Children) do
-			if v.Name == 'OneButton' then
-				v.TextColour = Drawing.FilterColour(self.TextColour, Drawing.Filters[self:GetObject('FilterView').FilterName])
-			else
-				v.TextColour = self.TextColour
-			end
+	if value == 'LeftMargin' then
+		local oneButton = self:GetObject('OneButton')
+		if oneButton then
+			oneButton:AnimateValue('X', nil, self.LeftMargin - 4, self.AnimationSpeed)
 		end
 	end
 end
 
+SwitchBackground = function(self, from, to, direction)
+	self.BackgroundColour = colours.black
+	
+	local margin = 5
+	
+	local one = self:AddObject({
+		X = (self.Width + margin) * direction,
+		BackgroundColour = to,
+		Type = 'View',
+		Width = self.Width
+	}, nil, true)
+	one:AnimateValue('X', (self.Width + margin) * direction, 1, self.AnimationSpeed)
+
+	local two = self:AddObject({
+		X = 1,
+		BackgroundColour = from,
+		Type = 'View',
+		Width = self.Width
+	}, nil, true)
+	two:AnimateValue('X', 1, (self.Width + 1 + margin) * -direction, self.AnimationSpeed, function()
+		self.Bedrock:RemoveObject(one)
+		self.Bedrock:RemoveObject(two)
+		self.BackgroundColour = to
+	end)
+
+end
+
 UpdateButtons = function(self)
-	self.BackgroundColour = colours.red
+
+	if System.CurrentProgram().Hidden then
+		self.LeftMargin = 0
+	else
+		self.LeftMargin = self:GetObject('OneButton').Width
+	end
+
 	local count = 0
 	local newPrograms = {}
 	for i, v in ipairs(self.Bedrock:GetObjects('ProgramView')) do
@@ -86,18 +118,15 @@ UpdateButtons = function(self)
 			if not self.LastPrograms[name] then
 				self:AddObject({
 					Name = 'ProgramButton:' .. name,
-					Type = 'Button',
+					Type = 'FilterLabel',
 					Align = 'Center',
 					AutoWidth = false,
-					BackgroundColour = colours.transparent,
-					ActiveBackgroundColour = colours.transparent,
+					FilterName = 'Highlight',
 					Text = v.Title,
-					TextColour = self.TextColour,
 					OnClick = function(_, event, side)
 						if side == 1 then
 							v:MakeActive()
 						elseif side == 3 then
-							Log.i('hi')
 							v:Close()
 						end
 					end
@@ -120,12 +149,12 @@ UpdateButtons = function(self)
 	end
 	self.LastPrograms = newPrograms
 
-	local buttonWidth = math.floor((self.Width - 5) / count)
-	local activeButtonWidth = self.Width - 5 - (buttonWidth * (count - 1))
+	local buttonWidth = math.floor((self.Width - self.LeftMargin) / count)
+	local activeButtonWidth = self.Width - self.LeftMargin - (buttonWidth * (count - 1))
 
-	local x = 6
+	local x = 1 + self.LeftMargin
 	local activeX
-	local activeProgram = self.Bedrock:GetActiveObject()
+	local activeProgram = System.CurrentProgram()
 	for i, name in pairs(self.ProgramOrder) do
 		local program = newPrograms[name]
 		local button = self:GetObject('ProgramButton:'..name)
@@ -138,10 +167,7 @@ UpdateButtons = function(self)
 			button.Width = newWidth
 			button.X = newX
 		else
-			Log.i('start anm1')
-			Log.i(self.Bedrock.AnimationEnabled)
 			button:AnimateValue('Width', nil, newWidth, self.AnimationSpeed, function()
-				Log.i('done')
 				end)
 			button:AnimateValue('X', nil, newX, self.AnimationSpeed)
 		end
@@ -163,17 +189,21 @@ UpdateButtons = function(self)
 			closeButton.Visible = true
 			closeButton.X = activeX
 		else
-			Log.i('start anm2')
 			filterView:AnimateValue('X', nil, activeX, self.AnimationSpeed)
 			filterView:AnimateValue('Width', nil, activeButtonWidth, self.AnimationSpeed)
 			closeButton:AnimateValue('X', nil, activeX, self.AnimationSpeed)
 		end
 		
 	else
-		Log.i('NONONONON')
 		self:GetObject('FilterView').Visible = false
 		self:GetObject('ProgramCloseButton').Visible = false
 		self:GetObject('FilterView').X = 1
+	end
+	
+	if self.LeftMargin == 0 and count == 0 then
+		self:GetObject('OneLabel').Visible = true
+	else
+		self:GetObject('OneLabel').Visible = false
 	end
 
 end

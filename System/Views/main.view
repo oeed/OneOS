@@ -1,13 +1,5 @@
 {
 	Children = {
-		{
-			X = 1,
-			Y = 2,
-			Width = "100%",
-			Height = "100%,-1",
-			Type = 'View',
-			BackgroundColour = 'cyan'
-		},
 		-- {
 		-- 	X = 1,
 		-- 	Y = 1,
@@ -41,5 +33,6 @@
 			Width = '100%'
 			-- InheritView = 'switcher',
 		}
-	}
+	},
+	BackgroundColour = 'black'
 }

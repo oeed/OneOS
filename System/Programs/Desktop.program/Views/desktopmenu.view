@@ -1,0 +1,23 @@
+{
+  Type = 'Menu',
+  Children = {
+    {
+      Name = 'NewFileMenuItem',
+      Type = 'MenuItem',
+      Text = 'New File...'
+    },
+    {
+      Name = 'NewFolderMenuItem',
+      Type = 'MenuItem',
+      Text = 'New Folder...'
+    },
+    {
+      Type = 'Separator'
+    },
+    {
+      Name = 'RefreshMenuItem',
+      Type = 'MenuItem',
+      Text = 'Refresh'
+    },
+  },
+}

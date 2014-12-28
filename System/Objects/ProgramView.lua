@@ -27,7 +27,7 @@ OnLoad = function(self)
 	self.Term = self:MakeTerm()
 	self.EventQueue = {}
 	self.Timers = {}
-	self.Environment = Environment:Initialise(self, shell, self.Path)
+	self.Environment = Environment:Initialise(self, shell, self.Path, self.Bedrock)
 	self.Running = true
 	self:Execute()
 end
@@ -94,16 +94,82 @@ Execute = function(self)
 	self:Resume()		
 end
 
-MakeActive = function(self)
-	self.Bedrock:SetActiveObject(self)
-	self.Visible = true
-	for i, v in ipairs(self.Bedrock:GetObjects('ProgramView')) do
-		if v ~= self then
-			v.Visible = false
-		end
+SwitcherColour = function(self)
+	Log.i('switcher')
+	local colour
+	if self.Environment.OneOS.ToolBarColour then
+		colour = self.Environment.OneOS.ToolBarColour
+	elseif self.Environment.OneOS.ToolBarColor then
+		colour = self.Environment.OneOS.ToolBarColor
 	end
+
+	if not colour then
+		-- get the average colour at the top row if one hasn't been set
+		local occurences = {}
+		for x, pixel in pairs(self.Buffer[1]) do
+			occurences[pixel[3]] = occurences[pixel[3]] or 0
+			occurences[pixel[3]] = occurences[pixel[3]] + 1
+		end
+
+		local mostCommon = colours.red
+		local count = 0
+		for col, n in pairs(occurences) do
+			if n > count then
+				mostCommon = col
+			end
+		end
+		colour = mostCommon
+	end
+
+	return colour or colours.blue
+end
+
+MakeActive = function(self, previous, done)
+	previous = previous or System.CurrentProgram()
+	self.Bedrock:SetActiveObject(self)
+	self.Visible = false
+	-- for i, v in ipairs(self.Bedrock:GetObjects('ProgramView')) do
+	-- 	if v ~= self then
+	-- 		v.Visible = false
+	-- 	end
+	-- end
 	self.Bedrock:StartTimer(function()
-		self.UpdateSwitcher()
+		System.UpdateSwitcher()
+		self.Visible = true
+		if previous then
+			local newIndex = self:Index()
+			local oldIndex = previous:Index()
+
+			local direction = 1
+			if newIndex <= oldIndex then
+				direction = -1
+			end
+
+			Log.i('New: '..newIndex)
+			Log.i('Old: '..oldIndex)
+		
+			local margin = 5
+
+			self.X = (self.Width + margin) * direction
+			previous.Visible = true
+
+			self:AnimateValue('X', (self.Width + margin) * direction, 1, Switcher.AnimationSpeed)
+
+			previous:AnimateValue('X', 1, (self.Width + 1 + margin) * -direction, Switcher.AnimationSpeed, function()
+				previous.Visible = false
+			end)
+			
+
+
+			self.Bedrock:GetObject('Switcher'):SwitchBackground(previous:SwitcherColour(), self:SwitcherColour(), direction)
+
+			if done then
+				done()
+			end
+		else
+			self.X = 1
+			self.Bedrock:GetObject('Switcher').BackgroundColour = self:SwitcherColour()
+		end
 	end, 0.05)
 end
 
@@ -156,31 +222,38 @@ Resume = function(self, ...)
 	end
 end
 
+Index = function(self)
+	local name = tostring(self)
+	Log.i('INDEX')
+	Log.i(#self.Bedrock:GetObject('Switcher').ProgramOrder)
+	for i, _program in ipairs(self.Bedrock:GetObject('Switcher').ProgramOrder) do
+		Log.i(_program)
+		if name == _program then
+			return i + 1
+		end
+	end
+	return 1
+end
+
 Close = function(self, force)
 	if force or not self.Environment.OneOS.CanClose or self.Environment.OneOS.CanClose() ~= false then
 		Log.i('Closing program: '..self.Title)
 		
-		if self.Bedrock:GetActiveObject() == self then
-			local programIndex = 2
-			local name = tostring(self)
-			for i, _program in ipairs(self.Bedrock:GetObject('Switcher').ProgramOrder) do
-				if name == _program then
-					programIndex = i
-				end
-			end
+		if System.CurrentProgram() == self then
+			local programIndex = self:Index()
 			self.Bedrock:RemoveObject(self)
 
 			local programs = self.Bedrock:GetObjects('ProgramView')
 			if programs[programIndex] then
-				programs[programIndex]:MakeActive()
+				programs[programIndex]:MakeActive(self)
 			elseif programs[programIndex - 1] then
-				programs[programIndex - 1]:MakeActive()
+				programs[programIndex - 1]:MakeActive(self)
 			end
 		else
 			self.Bedrock:RemoveObject(self)
 		end
 
-		self.UpdateSwitcher()
+		System.UpdateSwitcher()
 		return true
 	else
 		Log.i('Closing program aborted: '..self.Title)
@@ -232,7 +305,7 @@ OnDraw = function(self, x, y)
 			wtb(x+_x-1, y+_y-1, pixel[1], pixel[2], pixel[3])
 		end
 	end
-	if self.Bedrock:GetActiveObject() == self then
+	if System.CurrentProgram() == self then
 		if self.CursorBlink then
 			self.Bedrock.CursorPos = {x + self.CursorPos[1] - 1, y + self.CursorPos[2] - 1}
 			self.Bedrock.CursorColour = self.TextColour

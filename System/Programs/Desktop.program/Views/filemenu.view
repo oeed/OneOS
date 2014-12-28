@@ -1,0 +1,44 @@
+{
+  Type = 'Menu',
+  Children = {
+    {
+      Name = 'OpenMenuItem',
+      Type = 'MenuItem',
+      Text = 'Open'
+    },
+    {
+      Type = 'Separator'
+    },
+    {
+      Name = 'RenameMenuItem',
+      Type = 'MenuItem',
+      Text = 'Rename...'
+    },
+    {
+      Name = 'DeleteMenuItem',
+      Type = 'MenuItem',
+      Text = 'Delete...'
+    },
+    {
+      Type = 'Separator'
+    },
+    {
+      Name = 'NewFileMenuItem',
+      Type = 'MenuItem',
+      Text = 'New File...'
+    },
+    {
+      Name = 'NewFolderMenuItem',
+      Type = 'MenuItem',
+      Text = 'New Folder...'
+    },
+    {
+      Type = 'Separator'
+    },
+    {
+      Name = 'RefreshMenuItem',
+      Type = 'MenuItem',
+      Text = 'Refresh'
+    },
+  },
+}

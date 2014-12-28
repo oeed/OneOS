@@ -1,2 +1,143 @@
-term.setBackgroundColour(colours.cyan)
-term.clear()
+OneOS.LoadAPI('/System/API/Bedrock.lua')
+
+-- Bedrock.ProgramPath = shell.getRunningProgram()
+
+local program = Bedrock:Initialise()
+
+local settings = nil
+local dontSave = false
+
+local function saveSettings()
+	if not dontSave then
+		local h = OneOS.FS.open('/Desktop/.Desktop.settings', 'w')
+		if h then
+			h.write(textutils.serialize(settings))
+			h.close()
+		end
+	end
+end
+
+local function loadSettings()
+	local h = OneOS.FS.open('/Desktop/.Desktop.settings', 'r')
+	if h then
+		textutils.unserialize(h.readAll())
+		h.close()
+	end
+end
+
+local function tidyIcons(all)
+	dontSave = true
+	local minX = 1 + math.ceil((Drawing.Screen.Width - FileIcon.Width * math.floor(Drawing.Screen.Width / FileIcon.Width)) / 2)
+	local x = minX
+	local y = 2
+
+	for i, icon in ipairs(program:GetObjects('FileIcon')) do
+		if all or (icon.X == 0 and icon.Y == 0) then
+			icon.X = x
+			icon.Y = y
+		end
+		x = x + icon.Width
+
+		if x + icon.Width - 1 > Drawing.Screen.Width then
+			x = minX
+			if y + 2 * icon.Height + 1 <= Drawing.Screen.Height then
+				y = y + icon.Height + 1
+			end			
+		end
+	end
+	dontSave = false
+	saveSettings()
+end
+
+local function updateIcons()
+	for i, v in ipairs(OneOS.FS.list('/Desktop/')) do
+		if v:sub(1,1) ~= '.' then
+			local x = 0
+			local y = 0
+			if settings and settings[v] then
+				x = settings[v].X
+				y = settings[v].Y
+			end
+			program:AddObject({
+				X = x,
+				Y = y,
+				Type = 'FileIcon',
+				Path = '/Desktop/' .. v,
+				OnUpdate = function(self, value)
+					if value == 'X' or value == 'Y' then
+						settings = settings or {}
+						settings[v] = settings[v] or {}
+						settings[v].X = self.X
+						settings[v].Y = self.Y
+						saveSettings()
+					elseif value == 'Selected' then
+						local label = self:GetObject('NameLabel')
+						if label then
+							label.BackgroundColour = (self.Selected and colours.blue or colours.transparent)
+							label.TextColour = (self.Selected and colours.white or colours.black)
+						end
+
+						if self.Selected then
+							for i, v in ipairs(program:GetObjects('FileIcon')) do
+								if v ~= self then
+									v.Selected = false
+								end
+							end
+						end
+					end
+				end
+			})
+		end
+	end
+	tidyIcons()
+end
+
+local function showSearch()
+	if program.View.ChildOffset.Y ~= 1 then
+		program.View:AnimateValue('Y', nil, 1, 0.4, function()
+		end, program.View.ChildOffset)
+	end
+end
+
+local function closeSearch()
+	if program.View.ChildOffset.Y ~= -4 then
+		program.View:AnimateValue('Y', nil, -4, 0.4, function()
+		end, program.View.ChildOffset)
+	end
+end
+
+local dragStart
+local dragTimer
+
+program:Run(function()
+	loadSettings()
+	updateIcons()
+	program.View.ChildOffset = {X = 0, Y = 0}
+
+	program.View.OnClick = function(self, event, side, x, y)
+		dragStart = y
+		dragTimer = program:StartTimer(function(timer)
+			if timer == dragTimer then
+				dragStart = nil
+				if program.View.ChildOffset.Y ~= 1 then
+					closeSearch()
+				end
+			end
+		end, 1)
+	end
+
+	program.View.OnDrag = function(self, event, side, x, y)
+		if dragStart then
+			program.View.ChildOffset.Y = dragStart - y
+			OneOS.Log.i('drag')
+			dragTimer = program:StartTimer(function(timer)
+				if timer == dragTimer then
+					dragStart = nil
+					if program.View.ChildOffset.Y ~= 1 then
+						closeSearch()
+					end
+				end
+			end, 1)
+		end
+	end
+end)

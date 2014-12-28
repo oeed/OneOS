@@ -1,4 +1,4 @@
---Bedrock Build: 463
+--Bedrock Build: 465
 --This code is squished down in to one, rather hard to read file.
 --As such it is not much good for anything other than being loaded as an API.
 --If you want to look at the code to learn from it, copy parts or just take a look,
@@ -171,6 +171,26 @@ Filters = {
 		[colours.pink] = colours.white,
 		[colours.grey] = colours.lightGrey,
 		[colours.lightGrey] = colours.white,
+		[colours.cyan] = colours.lightBlue,
+		[colours.purple] = colours.magenta,
+		[colours.blue] = colours.lightBlue,
+		[colours.brown] = colours.red,
+		[colours.green] = colours.lime,
+		[colours.red] = colours.orange,
+		[colours.black] = colours.grey,
+		[colours.transparent] = colours.transparent,
+	},
+
+	Highlight = {
+		[colours.white] = colours.lightGrey,
+		[colours.orange] = colours.yellow,
+		[colours.magenta] = colours.pink,
+		[colours.lightBlue] = colours.cyan,
+		[colours.yellow] = colours.orange,
+		[colours.lime] = colours.green,
+		[colours.pink] = colours.magenta,
+		[colours.grey] = colours.lightGrey,
+		[colours.lightGrey] = colours.grey,
 		[colours.cyan] = colours.lightBlue,
 		[colours.purple] = colours.magenta,
 		[colours.blue] = colours.lightBlue,
@@ -797,6 +817,7 @@ AnimateValue = function(self, valueName, from, to, duration, done)
 	local frame
 	frame = function()
 		local time = os.clock()
+		Log.i('Frame: '..time)
 		local totalTime = time - startTime
 		local isLast = totalTime >= duration
 
@@ -2144,20 +2165,13 @@ end
 
 function ReorderObjects(self)
 	if self.Children then
-		if Log then
-		Log.i('--'..self.Name..'--')
-		end
 		table.sort(self.Children, function(a,b)
 			return a.Z < b.Z 
 		end)
-		if Log then
-			for i, v in ipairs(self.Children) do
-				Log.i(v.Z .. ' - ' .. v.Name)
-				if v.ReorderObjects then
-					v:ReorderObjects()
-				end
+		for i, v in ipairs(self.Children) do
+			if v.ReorderObjects then
+				v:ReorderObjects()
 			end
-			Log.i('-----')
 		end
 	end
 end
