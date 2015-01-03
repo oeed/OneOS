@@ -4,6 +4,17 @@ for k, v in pairs(_G) do
 	cleanEnvironment[k] = v
 end
 
+local function anm(col)
+	term.setBackgroundColour(col)
+	term.clear()
+	sleep(0.05)
+end
+
+anm(colours.black)
+anm(colours.grey)
+anm(colours.lightGrey)
+anm(colours.white)
+
 local Extension = function(path, addDot)
 	if not path then
 		return nil

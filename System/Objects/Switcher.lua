@@ -1,6 +1,6 @@
 Inherit = 'View'
 
-AnimationSpeed = 2
+AnimationSpeed = 0.4
 LastPrograms = {}
 ProgramOrder = {}
 LeftMargin = 0
@@ -69,6 +69,10 @@ OnUpdate = function(self, value)
 		local oneButton = self:GetObject('OneButton')
 		if oneButton then
 			oneButton:AnimateValue('X', nil, self.LeftMargin - 4, self.AnimationSpeed)
+		end
+	elseif value == 'BackgroundColour' and self.Bedrock.View then
+		if self.Bedrock:GetObject('SplashView') then
+			self.Bedrock:RemoveObject('SplashView')
 		end
 	end
 end

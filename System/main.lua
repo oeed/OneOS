@@ -27,7 +27,7 @@ bedrock.EventHandler = function(self)
 	for i, v in ipairs(event) do
 		s = s..tostring(v)..', '
 	end
-	Log.i(s)
+	-- Log.i(s)
 
 	local name = event[1]
 	if name ~= 'char' and name ~= 'key' and name ~= 'mouse_click' and name ~= 'mouse_scroll' and name ~= 'mouse_drag' then
@@ -47,6 +47,7 @@ end
 
 
 bedrock:Run(function()
+	Indexer.RefreshIndex()
 	-- program:LoadView('main')
 	-- TODO: debug only!
 	bedrock:RegisterKeyboardShortcut({'\\'}, function()os.reboot()end)

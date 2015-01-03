@@ -11,7 +11,7 @@ OnUpdate = function(self, value)
         if self.AutoWidth then
             self.Width = #self.Text
         else
-            self.Height = #wrapText(self.Text, self.Width)
+            self.Height = #self.Bedrock.Helpers.WrapText(self.Text, self.Width)
         end
 	end
 end

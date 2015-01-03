@@ -3,16 +3,6 @@
 		-- {
 		-- 	X = 1,
 		-- 	Y = 1,
-		-- 	Width = "100%",
-		-- 	Height = 1,
-		-- 	Type = 'Button',
-		-- 	Name = 'OneButton',
-		-- 	Text = '',
-		-- 	BackgroundColour = 'white'
-		-- },
-		-- {
-		-- 	X = 1,
-		-- 	Y = 1,
 		-- 	Height = 1,
 		-- 	Type = 'Label',
 		-- 	Name = 'HomeButton',
@@ -32,7 +22,36 @@
 			Type = 'Switcher',
 			Width = '100%'
 			-- InheritView = 'switcher',
-		}
+		},
+		{
+			X = 1,
+			Y = 1,
+			Width = "100%",
+			Height = '100%',
+			Type = 'View',
+			Name = 'SplashView',
+			BackgroundColour = 'white',
+			Children = {
+				{
+					X = 1,
+					Y = '50%,-1',
+					Width = '100%',
+					Align = 'Center',
+					Text = 'OneOS',
+					Type = 'Label',
+					TextColour = 'grey'
+				},
+				{
+					X = 1,
+					Y = '50%',
+					Width = '100%',
+					Align = 'Center',
+					Text = 'by oeed',
+					Type = 'Label',
+					TextColour = 'lightGrey'
+				},
+			}
+		},
 	},
 	BackgroundColour = 'black'
 }

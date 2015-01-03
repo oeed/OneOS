@@ -1,4 +1,4 @@
---Bedrock Build: 465
+--Bedrock Build: 469
 --This code is squished down in to one, rather hard to read file.
 --As such it is not much good for anything other than being loaded as an API.
 --If you want to look at the code to learn from it, copy parts or just take a look,
@@ -162,15 +162,15 @@ Filters = {
 	},
 
 	Lighter = {
-		[colours.white] = colours.white,
+		[colours.white] = colours.lightGrey,
 		[colours.orange] = colours.yellow,
 		[colours.magenta] = colours.pink,
-		[colours.lightBlue] = colours.white,
-		[colours.yellow] = colours.white,
-		[colours.lime] = colours.white,
-		[colours.pink] = colours.white,
+		[colours.lightBlue] = colours.cyan,
+		[colours.yellow] = colours.orange,
+		[colours.lime] = colours.green,
+		[colours.pink] = colours.magenta,
 		[colours.grey] = colours.lightGrey,
-		[colours.lightGrey] = colours.white,
+		[colours.lightGrey] = colours.grey,
 		[colours.cyan] = colours.lightBlue,
 		[colours.purple] = colours.magenta,
 		[colours.blue] = colours.lightBlue,
@@ -499,11 +499,7 @@ Extension = function(path, addDot)
 	if not path then
 		return nil
 	elseif not string.find(fs.getName(path), '%.') then
-		if not addDot then
-			return fs.getName(path)
-		else
-			return ''
-		end
+		return ''
 	else
 		local _path = path
 		if path:sub(#path) == '/' then
@@ -525,7 +521,7 @@ end
 
 RemoveExtension = function(path)
 --local name = string.match(fs.getName(path), '(%a+)%.?.-')
-	if path:sub(1,1) == '.' then
+	if not path:find('%.') then
 		return path
 	end
 	local extension = Helpers.Extension(path)
@@ -798,17 +794,18 @@ Initialise = function(self, values)
 	return new
 end
 
-AnimateValue = function(self, valueName, from, to, duration, done)
-	if type(self[valueName]) ~= 'number' then
+AnimateValue = function(self, valueName, from, to, duration, done, tbl)
+	tbl = tbl or self
+	if type(tbl[valueName]) ~= 'number' then
 		error('Animated value ('..valueName..') must be number.')
 	elseif not self.Bedrock.AnimationEnabled then
-		self[valueName] = to
+		tbl[valueName] = to
 		if done then
 			done()
 		end
 		return
 	end
-	from = from or self[valueName]
+	from = from or tbl[valueName]
 	duration = duration or 0.2
 	local delta = to - from
 
@@ -817,17 +814,18 @@ AnimateValue = function(self, valueName, from, to, duration, done)
 	local frame
 	frame = function()
 		local time = os.clock()
-		Log.i('Frame: '..time)
 		local totalTime = time - startTime
 		local isLast = totalTime >= duration
 
 		if isLast then
-			self[valueName] = to
+			tbl[valueName] = to
+				self:ForceDraw()
 			if done then
 				done()
 			end
 		else
-			self[valueName] = self.Bedrock.Helpers.Round(from + delta * (totalTime / duration))
+			tbl[valueName] = self.Bedrock.Helpers.Round(from + delta * (totalTime / duration))
+				self:ForceDraw()
 			self.Bedrock:StartTimer(function()
 				frame()
 			end, 0.05)
@@ -2363,7 +2361,6 @@ OnUpdate = function(self, value)
 end
 ]],
 }
-
 BasePath = ''
 ProgramPath = nil
 

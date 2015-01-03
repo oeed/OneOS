@@ -280,13 +280,17 @@ OneOS = function(env, program, path)
 			i = function(msg)Log.i('['..program.Title..'] '..tostring(msg))end,
 			w = function(msg)Log.w('['..program.Title..'] '..tostring(msg))end,
 			e = function(msg)Log.e('['..program.Title..'] '..tostring(msg))end,
-		}
+		},
+		Indexer = Indexer
 	}
 end
 
 FS = function(env, program, path, bedrock)
 	local function doIndex()
-		-- Current.Bedrock:StartTimer(Indexer.DoIndex, 4)
+		bedrock:StartTimer(function()
+			Indexer.RefreshIndex()
+		end, 3)
+		-- Current.Bedrock:StartTimer(d.DoIndex, 4)
 	end
 	local relPath = bedrock.Helpers.RemoveFileName(path)
 	Log.i('rel path ' .. relPath)

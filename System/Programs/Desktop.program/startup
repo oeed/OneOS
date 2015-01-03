@@ -92,52 +92,150 @@ local function updateIcons()
 	tidyIcons()
 end
 
+local searchTimeout
+
 local function showSearch()
-	if program.View.ChildOffset.Y ~= 1 then
-		program.View:AnimateValue('Y', nil, 1, 0.4, function()
+	searchTimeout = nil
+	if program.View.ChildOffset.Y ~= 3 then
+		program.View:AnimateValue('Y', nil, 3, 0.4, function()
 		end, program.View.ChildOffset)
 	end
+	local searchTextBox = program:GetObject('SearchTextBox')
+	local searchView = program:GetObject('SearchView')
+
+	program:SetActiveObject(searchTextBox)
+	searchTextBox.OnChange = function()
+		searchView:OnSearch(searchTextBox.Text)
+	end
+	searchView:OnSearch(searchTextBox.Text)
 end
 
 local function closeSearch()
-	if program.View.ChildOffset.Y ~= -4 then
-		program.View:AnimateValue('Y', nil, -4, 0.4, function()
+	program:SetActiveObject(program.View)
+	OneOS.Log.i('Close')
+	if program.View.ChildOffset.Y ~= 0 then
+		program.View:AnimateValue('Y', nil, 0, 0.4, function()
 		end, program.View.ChildOffset)
 	end
+	program:GetObject('SearchView').Visible = false
+	searchTimeout = program:StartTimer(function(_, timer)
+		if timer == searchTimeout then
+			program:GetObject('SearchTextBox').Text = ''
+		end
+	end, 30)
 end
 
 local dragStart
 local dragTimer
+
+function ViewClick(self, event, side, x, y)
+	if program.DragIcon and event == 'mouse_drag' then
+		program.DragIcon.X = x - program.DragIcon.DragX
+		program.DragIcon.Y = y - program.DragIcon.DragY
+		program.DragIcon:OnIconDrag(x, y)
+		program.IconDragTimer = program:StartTimer(function(_,timer)
+			if timer and timer == program.IconDragTimer then
+				program.IconDragTimer = nil
+				program.DragIcon = nil
+			end
+		end, 0.8)
+	elseif self.Visible and not self.IgnoreClick then
+		if program.View.ChildOffset.Y ~= 3 or y <= 3 then
+			for i = #self.Children, 1, -1 do --children are ordered from smallest Z to highest, so this is done in reverse
+				local child = self.Children[i]
+				if self:DoClick(child, event, side, x, y) then
+					if self.OnChildClick then
+						self:OnChildClick(child, event, side, x, y)
+					end
+					return true
+				end
+			end
+		end
+
+		if event == 'mouse_click' and self.OnClick and self:OnClick(event, side, x, y) ~= false then
+			return true
+		elseif event == 'mouse_drag' and self.OnDrag and self:OnDrag(event, side, x, y) ~= false then
+			return true
+		elseif event == 'mouse_scroll' and self.OnScroll and self:OnScroll(event, side, x, y) ~= false then
+			return true
+		else
+			return false
+		end
+	else
+		return false
+	end
+end
+
+OneOS.Indexer.OnIndex = function()
+	updateIcons()
+end
 
 program:Run(function()
 	loadSettings()
 	updateIcons()
 	program.View.ChildOffset = {X = 0, Y = 0}
 
-	program.View.OnClick = function(self, event, side, x, y)
-		dragStart = y
-		dragTimer = program:StartTimer(function(timer)
-			if timer == dragTimer then
-				dragStart = nil
-				if program.View.ChildOffset.Y ~= 1 then
-					closeSearch()
-				end
-			end
-		end, 1)
-	end
+	program.View.Click = ViewClick
 
-	program.View.OnDrag = function(self, event, side, x, y)
-		if dragStart then
-			program.View.ChildOffset.Y = dragStart - y
-			OneOS.Log.i('drag')
-			dragTimer = program:StartTimer(function(timer)
+	program.View.OnClick = function(self, event, side, x, y)
+		if program.View.ChildOffset.Y == 3 then
+			if y >= 4 then
+				closeSearch()
+			else
+				return false
+			end
+		else
+			dragStart = y
+			dragTimer = program:StartTimer(function(_, timer)
 				if timer == dragTimer then
 					dragStart = nil
-					if program.View.ChildOffset.Y ~= 1 then
+					if program.View.ChildOffset.Y >= 3 then
+						showSearch()
+					else
 						closeSearch()
 					end
 				end
 			end, 1)
 		end
+	end
+
+	program.View.OnDrag = function(self, event, side, x, y)
+		if dragStart then
+			program.View.ChildOffset.Y = y - dragStart
+			program.View:ForceDraw()
+
+			OneOS.Log.i('drag')
+			dragTimer = program:StartTimer(function(_, timer)
+			OneOS.Log.i('times up')
+			OneOS.Log.i(timer)
+				if timer == dragTimer then
+			OneOS.Log.i('right timer')
+					dragStart = nil
+			OneOS.Log.i('trhee')
+					if program.View.ChildOffset.Y >= 3 then
+						showSearch()
+					else
+						closeSearch()
+					end
+				end
+			end, 1)
+		end
+	end
+
+	program.View.OnKeyChar = function(self, event, keychar)
+		if keychar == keys.space and not program:GetObject('SearchView').Visible then
+			showSearch()
+			return false
+		end
+	end
+
+	program:SetActiveObject(program.View)
+
+	program:GetObject('CancelLabel').OnClick = function()
+		closeSearch()
+	end
+
+	program:GetObject('SearchLabel').OnClick = function()
+		showSearch()
 	end
 end)

@@ -14,6 +14,58 @@
 			Type = 'FilterLabel',
 			FilterName = 'Highlight'
 		},
+		{
+			X = '100%,-22',
+			Y = '100%,-1',
+			Text = 'Search',
+			Type = 'FilterLabel',
+			Name = 'SearchLabel',
+			FilterName = 'Highlight'
+		},
+		{
+			X = 1,
+			Y = -12,
+			Height = 13,
+			Width = '100%',
+			Type = 'FilterView',
+			FilterName = 'Darker',
+			Children = {
+				{
+					X = 2,
+					Y = '100%,-1',
+					Width = '100%,-9',
+					Type = 'FilterView',
+					FilterName = 'Highlight'
+				},
+				{
+					X = 2,
+					Y = '100%,-1',
+					Width = '100%,-9',
+					Type = 'TextBox',
+					TextColour = 'white',
+					BackgroundColour = 'transparent',
+					Name = 'SearchTextBox',
+					Placeholder = 'Search',
+					Active = true
+				},
+				{
+					X = '100%,-6',
+					Y = '100%,-1',
+					Text = 'Cancel',
+					Name = 'CancelLabel',
+					Type = 'FilterLabel',
+					FilterName = 'Highlight'
+				}
+			}
+		},
+		{
+			X = 1,
+			Y = 1,
+			Width = '100%',
+			Height = '100%',
+			Type = 'SearchView',
+			BackgroundColour = 'cyan'
+		}
 	},
 	BackgroundColour = 'cyan',
 	ToolBarColour = 'white',
