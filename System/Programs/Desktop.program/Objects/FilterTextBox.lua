@@ -45,7 +45,8 @@ OnDraw = function(self, x, y)
 	-- else
 	end
 	if self.Bedrock:GetActiveObject() == self then
-		self.Bedrock.CursorPos = {x + 1 + self.CursorPos - offset, y}
+		-- error(y)
+		self.Bedrock.CursorPos = {x + 1 + self.CursorPos - offset - objOffset.X, y}
 		self.Bedrock.CursorColour = textColour(x + 1 + self.CursorPos - offset, y)
 	else
 		self.Selected = false

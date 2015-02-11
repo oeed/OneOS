@@ -97,15 +97,13 @@ SwitchBackground = function(self, from, to, direction)
 		Width = self.Width
 	}, nil, true)
 	two:AnimateValue('X', 1, (self.Width + 1 + margin) * -direction, self.AnimationSpeed, function()
-		self.Bedrock:RemoveObject(one)
+		self.Bedrock:RemoveObject(one)		
 		self.Bedrock:RemoveObject(two)
 		self.BackgroundColour = to
 	end)
-
 end
 
 UpdateButtons = function(self)
-
 	if System.CurrentProgram().Hidden then
 		self.LeftMargin = 0
 	else
@@ -127,7 +125,9 @@ UpdateButtons = function(self)
 					AutoWidth = false,
 					FilterName = 'Highlight',
 					Text = v.Title,
+					ProgramView = v,
 					OnClick = function(_, event, side)
+						Log.i('Switch')
 						if side == 1 then
 							v:MakeActive()
 						elseif side == 3 then

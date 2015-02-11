@@ -8,6 +8,10 @@ Buffer = {}
 UpdateDrawBlacklist = {
 	['EventQueue'] = true
 }
+BufferWidth = nil
+BufferHeight = nil
+Opening = false
+
 
 -- program
 Process = nil
@@ -22,7 +26,30 @@ Hidden = false
 
 OnLoad = function(self)
 	self.CursorPos = {1, 1}
+	self.CursorBlink = false
 	self.Buffer = {}
+
+	self.BufferWidth = self.Bedrock.View.Width
+	self.BufferHeight = self.Bedrock.View.Height - 1
+
+	if self.BufferWidth ~= self.Width or self.BufferHeight ~= self.Height then
+		if self.Bedrock.AnimationEnabled then
+			self.Opening = true
+			self.Bedrock:StartTimer(function()
+				self:AnimateValue('Width', nil, self.BufferWidth, nil, function()
+					self.Opening = false
+				end)
+				self:AnimateValue('X', nil, 1)
+				self:AnimateValue('Height', nil, self.BufferHeight)
+				self:AnimateValue('Y', nil, 2)
+			end, 0.05)
+		else
+			self.Width = self.BufferWidth
+			self.Height = self.BufferHeight
+			self.X = 1
+			self.Y = 2
+		end
+	end
 
 	self.Term = self:MakeTerm()
 	self.EventQueue = {}
@@ -50,6 +77,7 @@ Execute = function(self)
 			setfenv( fnFile, tEnv )
 
 			if (not fnFile) or err2 then
+        		OneOS.Log.e(err2 or 'not fnFile')
 				term.setTextColour(colours.red)
 				term.setBackgroundColour(colours.black)
 				if err2 then
@@ -73,6 +101,7 @@ Execute = function(self)
 	        end )
 	        if not ok then
 	        	if err3 and err3 ~= "" then
+	        		OneOS.Log.e(err3)
 					term.setTextColour(colours.red)
 					term.setBackgroundColour(colours.black)
 					term.setCursorPos(1,1)
@@ -82,6 +111,7 @@ Execute = function(self)
 		end)
 
     	if not _ and err and err ~= "" then
+			OneOS.Log.e(err)
 			term.setTextColour(colours.red)
 			term.setBackgroundColour(colours.black)
 			term.setCursorPos(1,1)
@@ -95,7 +125,6 @@ Execute = function(self)
 end
 
 SwitcherColour = function(self)
-	Log.i('switcher')
 	local colour
 	if self.Environment.OneOS.ToolBarColour then
 		colour = self.Environment.OneOS.ToolBarColour
@@ -125,15 +154,20 @@ SwitcherColour = function(self)
 end
 
 MakeActive = function(self, previous, done)
+	Log.i('Make active '.. self.Title)
+	if self.Bedrock:GetActiveObject() == self then
+		Log.i('Already active')
+		return
+	end
+
 	previous = previous or System.CurrentProgram()
-	self.Bedrock:SetActiveObject(self)
-	self.Visible = false
-	-- for i, v in ipairs(self.Bedrock:GetObjects('ProgramView')) do
-	-- 	if v ~= self then
-	-- 		v.Visible = false
-	-- 	end
-	-- end
-	self.Bedrock:StartTimer(function()
+	self.Bedrock:SetActiveObject(self)		
+	if not self.Opening then
+		for i, v in ipairs(self.Bedrock:GetObjects('ProgramView')) do
+			if v ~= self then
+				v.Visible = false
+			end
+		end
 		System.UpdateSwitcher()
 		self.Visible = true
 		if previous then
@@ -144,9 +178,6 @@ MakeActive = function(self, previous, done)
 			if newIndex <= oldIndex then
 				direction = -1
 			end
-
-			Log.i('New: '..newIndex)
-			Log.i('Old: '..oldIndex)
 		
 			local margin = 5
 
@@ -158,8 +189,7 @@ MakeActive = function(self, previous, done)
 			previous:AnimateValue('X', 1, (self.Width + 1 + margin) * -direction, Switcher.AnimationSpeed, function()
 				previous.Visible = false
 			end)
-			
-
+		
 
 			self.Bedrock:GetObject('Switcher'):SwitchBackground(previous:SwitcherColour(), self:SwitcherColour(), direction)
 
@@ -170,7 +200,10 @@ MakeActive = function(self, previous, done)
 			self.X = 1
 			self.Bedrock:GetObject('Switcher').BackgroundColour = self:SwitcherColour()
 		end
-	end, 0.05)
+	else		
+		self.Bedrock:GetObject('Switcher').BackgroundColour = self:SwitcherColour()
+		System.UpdateSwitcher()
+	end
 end
 
 Resume = function(self, ...)
@@ -214,7 +247,7 @@ Resume = function(self, ...)
 		    	Log.e(err)
 		    	error(err)
 			end
-		end)
+		end)		
 	self:ForceDraw(nil, nil, true)
 	self.Bedrock:Draw()
 	if result then
@@ -296,13 +329,24 @@ Kill = function(self, code)
 	self.Running = false
 end
 
---TODO: program close: switcher middle click
-
 OnDraw = function(self, x, y)
 	local wtb = Drawing.WriteToBuffer
-	for _y, row in ipairs(self.Buffer) do
-		for _x, pixel in pairs(row) do
-			wtb(x+_x-1, y+_y-1, pixel[1], pixel[2], pixel[3])
+	if self.BufferWidth == self.Width and self.BufferHeight == self.Height then
+		for _y, row in ipairs(self.Buffer) do
+			for _x, pixel in pairs(row) do
+				wtb(x+_x-1, y+_y-1, pixel[1], pixel[2], pixel[3])
+			end
+		end
+	else
+		local preview = self:RenderPreview(self.Width, self.Height)
+		for _x, col in pairs(preview) do
+			for _y, colour in ipairs(col) do
+				local char = '-'
+				if colour[1] == ' ' then
+					char = ' '
+				end
+				Drawing.WriteToBuffer(x+_x, y+_y-1, char, colour[2], colour[3])
+			end
 		end
 	end
 	if System.CurrentProgram() == self then
@@ -316,29 +360,29 @@ OnDraw = function(self, x, y)
 end
 
 ResizeBuffer = function(self)
-	if #self.Buffer ~= self.Width then
-		while #self.Buffer < self.Width do
+	if #self.Buffer ~= self.BufferWidth then
+		while #self.Buffer < self.BufferWidth do
 			table.insert(self.Buffer, {})
 		end
 
-		while #self.Buffer > self.Width do
+		while #self.Buffer > self.BufferWidth do
 			table.remove(self.Buffer, #self.Buffer)
 		end
 	end
 
 	for i, row in ipairs(self.Buffer) do
-		while #row < self.Height do
+		while #row < self.BufferHeight do
 			table.insert(row, {' ', self.TextColour, self.BackgroundColour})
 		end
 
-		while #row > self.Height do
+		while #row > self.BufferHeight do
 			table.remove(row, #row)
 		end
 	end
 end
 
 ClearLine = function(self, y, backgroundColour)
-	if y > self.Height or y < 1 then
+	if y > self.BufferHeight or y < 1 then
 		return
 	end
 	
@@ -346,7 +390,7 @@ ClearLine = function(self, y, backgroundColour)
 		self.Buffer[y] = {}
 	end
 
-	for x = 1, self.Width do
+	for x = 1, self.BufferWidth do
 		self.Buffer[y][x] = {' ', self.TextColour, backgroundColour}
 	end
 end
@@ -354,7 +398,7 @@ end
 WriteToBuffer = function(self, character, textColour, backgroundColour)
 	local x = math.floor(self.CursorPos[1])
 	local y = math.floor(self.CursorPos[2])
-	if y > self.Height or y < 1 or x > self.Width or x < 1 then
+	if y > self.BufferHeight or y < 1 or x > self.BufferWidth or x < 1 then
 		return
 	end
 	
@@ -388,9 +432,9 @@ MakeTerm = function(self)
 		local buffer = {}
 		local tc = self.TextColour
 		local bc = self.BackgroundColour
-		for y = 1, self.Height do
+		for y = 1, self.BufferHeight do
 			buffer[y] = {}
-			for x = 1, self.Width do
+			for x = 1, self.BufferWidth do
 				buffer[y][x] = {' ', tc, bc}
 			end
 		end
@@ -439,7 +483,7 @@ MakeTerm = function(self)
 	_term.setBackgroundColor = _term.setBackgroundColour
 
 	_term.getSize = function()
-		return self.Width, self.Height
+		return self.BufferWidth, self.BufferHeight
 	end
 
 	_term.scroll = function(amount)
@@ -456,7 +500,7 @@ MakeTerm = function(self)
 			for _ = 1, amount do
 				table.remove(self.Buffer, #self.Buffer)
 				local row = {}
-				for i = 1, self.Width do
+				for i = 1, self.BufferWidth do
 					table.insert(row, {' ', self.TextColour, self.BackgroundColour})
 				end
 				table.insert(self.Buffer, 1, row)
@@ -471,4 +515,20 @@ MakeTerm = function(self)
 
 	_term.clear()
 	return _term
+end
+
+RenderPreview = function(self, width, height)
+	local preview = {}
+	local deltaX = self.BufferWidth / width
+	local deltaY = self.BufferHeight / height
+
+	for _x = 1, width do
+		local x = self.Bedrock.Helpers.Round(1 + (_x - 1) * deltaX)
+		preview[_x] = {}
+		for _y = 1, height do
+			local y = self.Bedrock.Helpers.Round(1 + (_y - 1) * deltaY)
+			preview[_x][_y] = self.Buffer[y][x]
+		end
+	end
+	return preview
 end

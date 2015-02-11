@@ -1,4 +1,4 @@
---Bedrock Build: 469
+--Bedrock Build: 487
 --This code is squished down in to one, rather hard to read file.
 --As such it is not much good for anything other than being loaded as an API.
 --If you want to look at the code to learn from it, copy parts or just take a look,
@@ -819,13 +819,13 @@ AnimateValue = function(self, valueName, from, to, duration, done, tbl)
 
 		if isLast then
 			tbl[valueName] = to
-				self:ForceDraw()
+			self:ForceDraw()
 			if done then
 				done()
 			end
 		else
 			tbl[valueName] = self.Bedrock.Helpers.Round(from + delta * (totalTime / duration))
-				self:ForceDraw()
+			self:ForceDraw()
 			self.Bedrock:StartTimer(function()
 				frame()
 			end, 0.05)
@@ -1653,26 +1653,29 @@ OnScroll = function(self, event, direction, x, y)
 	end
 end
 
+-- TODO: this really needs an overhaul
 OnClick = function(self, event, side, x, y)
 	if event == 'mouse_click' then
 		self.ClickPoint = y
 	else
-		local gapHeight = self.Height - (self.Height * (self.Height / (self.Height + self.MaxScroll)))
-		local barHeight = self.Height * (self.Height / (self.Height + self.MaxScroll))
-		--local delta = (self.Height + self.MaxScroll) * ((y - self.ClickPoint) / barHeight)
-		local delta = ((y - self.ClickPoint)/gapHeight)*self.MaxScroll
-		--l(((y - self.ClickPoint)/gapHeight))
-		--l(delta)
-		self.Scroll = self.Bedrock.Helpers.Round(delta)
-		--l(self.Scroll)
-		--l('----')
-		if self.Scroll < 0 then
-			self.Scroll = 0
-		elseif self.Scroll > self.MaxScroll then
-			self.Scroll = self.MaxScroll
-		end
-		if self.OnChange then
-			self:OnChange()
+		if self.ClickPoint then
+			local gapHeight = self.Height - (self.Height * (self.Height / (self.Height + self.MaxScroll)))
+			local barHeight = self.Height * (self.Height / (self.Height + self.MaxScroll))
+			--local delta = (self.Height + self.MaxScroll) * ((y - self.ClickPoint) / barHeight)
+			local delta = ((y - self.ClickPoint)/gapHeight)*self.MaxScroll
+			--l(((y - self.ClickPoint)/gapHeight))
+			--l(delta)
+			self.Scroll = self.Bedrock.Helpers.Round(delta)
+			--l(self.Scroll)
+			--l('----')
+			if self.Scroll < 0 then
+				self.Scroll = 0
+			elseif self.Scroll > self.MaxScroll then
+				self.Scroll = self.MaxScroll
+			end
+			if self.OnChange then
+				self:OnChange()
+			end
 		end
 	end
 
@@ -2164,7 +2167,13 @@ end
 function ReorderObjects(self)
 	if self.Children then
 		table.sort(self.Children, function(a,b)
-			return a.Z < b.Z 
+			-- if a.Z == nil then error('Z not set for ' .. a.Name) end
+			-- if b.Z == nil then error('Z not set for ' .. b.Name) end
+			-- if not a.Z then a.Z = 1 end
+			-- if not b.Z then b.Z = 1 end
+			-- Log.i(a.Name .. ': ' .. tostring(a.Z))
+			-- Log.i(b.Name .. ': ' .. tostring(b.Z))
+			return a.Z < b.Z
 		end)
 		for i, v in ipairs(self.Children) do
 			if v.ReorderObjects then
@@ -2906,13 +2915,24 @@ function RemoveObjects(self, name)
 	return self.View:RemoveObjects(name)
 end
 
+DrawEvent = nil
+
+function HandleDraw(self, event, id)
+	if id == self.DrawEvent then
+		self.DrawEvent = nil
+		self:Draw()
+	end
+end
+
 function ForceDraw(self)
-	if not self.DrawTimer or self.DrawTimerExpiry <= os.clock() then
-		self.DrawTimer = self:StartTimer(function()
-			self.DrawTimer = nil
-			self:Draw()
-		end, 0.05)
-		self.DrawTimerExpiry = os.clock() + 0.1
+	if not self.DrawEvent then--or self.DrawTimerExpiry <= os.clock() then
+		self.DrawEvent = math.random()
+		os.queueEvent('bedrock_draw', self.DrawEvent)
+		-- self:StartTimer(function()
+		-- 	self.DrawTimer = nil
+		-- 	self:Draw()
+		-- end, 0.05)
+		-- self.DrawTimerExpiry = os.clock() + 0.1
 	end
 end
 
@@ -2932,6 +2952,7 @@ function DisplayWindow(self, _view, title, canClose)
 	_view.Type = 'View'
 	_view.Name = 'View'
 	_view.BackgroundColour = _view.BackgroundColour or colours.white
+	_view.Z = 1
 	self.Window:SetView(self:ObjectFromFile(_view, self.Window))
 end
 
@@ -3073,6 +3094,11 @@ function DisplayOpenFileWindow(self, title, callback)
 	--this is a really, really super bad way of doing it
 	local separator = '                               !'
 
+	local _fs = fs
+	if OneOS then
+		_fs = OneOS.FS
+	end
+
 	local function addFolder(path, level)
 		for i, v in ipairs(_fs.list(path)) do
 			local fPath = path .. '/' .. v
@@ -3081,10 +3107,6 @@ function DisplayOpenFileWindow(self, title, callback)
 				addFolder(fPath, level .. '  ')
 			end
 		end
-	end
-	
-	if OneOS then
-		_fs = OneOS.FS
 	end
 
 	addFolder('','')
@@ -3483,7 +3505,8 @@ local eventFuncs = {
 	OnScroll = {'mouse_scroll'},
 	HandleClick = {'mouse_click', 'mouse_drag', 'mouse_scroll', 'monitor_touch'},
 	HandleKeyChar = {'key', 'char'},
-	HandleTimer = {'timer'}
+	HandleTimer = {'timer'},
+	HandleDraw = {'bedrock_draw'}
 }
 
 local drawCalls = 0
@@ -3504,7 +3527,7 @@ function Draw(self)
 		print('No loaded view. You need to do program:LoadView first.')
 	end	
 
-	if self:GetActiveObject() and self.CursorPos and type(self.CursorPos[1]) == 'number' and type(self.CursorPos[2]) == 'number' then
+	if self:GetActiveObject() and self.CursorPos and type(self.CursorPos[1]) == 'number' and type(self.CursorPos[2]) == 'number' and self.CursorPos[1] >= 1 and self.CursorPos[1] <= Drawing.Screen.Width and self.CursorPos[2] >= 1 and self.CursorPos[2] <= Drawing.Screen.Height then
 		term.setCursorPos(self.CursorPos[1], self.CursorPos[2])
 		term.setTextColour(self.CursorColour)
 		term.setCursorBlink(true)

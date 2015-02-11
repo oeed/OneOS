@@ -106,3 +106,20 @@ else
 end
 
 os.run(getfenv(), '/System/main.lua')
+
+local _, err = pcall(Initialise)
+-- TODO: error handling
+term.setCursorPos(1, 4)
+-- , function(err)
+-- 	restoreTerm()
+-- 	term.setCursorPos(1, 1)
+-- 	error('bad stuff happended')
+-- 	Log.i('errror')
+-- 	ok = {false, err}
+-- end)
+
+if err then
+	Log.e(err)
+	error(err)
+end
+

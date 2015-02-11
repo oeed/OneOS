@@ -1,908 +1,107 @@
-OneOS.LoadAPI('System/JSON')
-local t={...}
-Settings={
-InstallLocation='/Programs/',
-AlwaysFolder=true,
-}
-local s=false
-local i=''
-local o={}
-local w=true
-local p=0
-local a=nil
-local y=nil
-Values={
-ToolbarHeight=2,
-}
-Current={
-CursorBlink=false,
-CursorPos={},
-CursorColour=colours.black,
-ScrollBar=nil
-}
-local function h(a,e)
-local t,e=e or":",{}
-local t=string.format("([^%s]+)",t)
-a:gsub(t,function(t)e[#e+1]=t end)
-return e
+local bedrockPath='/' if OneOS then OneOS.LoadAPI('/System/API/Bedrock.lua', false)elseif fs.exists(bedrockPath..'/Bedrock')then os.loadAPI(bedrockPath..'/Bedrock')else if http then print('Downloading Bedrock...')local h=http.get('http://pastebin.com/raw.php?i=0MgKNqpN')if h then local f=fs.open(bedrockPath..'/Bedrock','w')f.write(h.readAll())f.close()h.close()os.loadAPI(bedrockPath..'/Bedrock')else error('Failed to download Bedrock. Is your internet working?') end else error('This program needs to download Bedrock to work. Please enable HTTP.') end end if Bedrock then Bedrock.BasePath = bedrockPath Bedrock.ProgramPath = shell.getRunningProgram() end
+
+
+local program = Bedrock:Initialise()
+
+program.AppStoreURL = 'http://appstore.olivercooper.me/'
+
+program:RegisterKeyboardShortcut({'\\'}, function()os.reboot()end)
+
+program.OnKeyChar = function(self, event, keychar)
+	if (keychar == keys.up or keychar == keys.down) then --and not program:GetActiveObject() then
+		local currentPage = self:GetObject('CurrentPage')
+		if currentPage then
+			currentPage:OnScroll('mouse_scroll', (keychar == keys.up) and -1 or 1, 1, 1)
+		end
+	end
 end
-OneOS.LoadAPI('System/API/LegacyDrawing.lua')
-local Drawing = LegacyDrawing
-Drawing.Offset={
-X=0,
-Y=0
-}
-Drawing.SetOffset=function(t,e)
-Drawing.Offset.X=t
-Drawing.Offset.Y=e
+
+program.OpenPage = function(self, pageType, values)
+	program:SetActiveObject()
+
+	local currentPage = self:GetObject('CurrentPage')
+	local previousPage = self:GetObject('PreviousPage')
+
+	if currentPage then
+		currentPage.Name = 'PreviousPage'
+		currentPage.Visible = false
+	end
+
+	if previousPage then
+		self:RemoveObject(previousPage)
+	end
+
+	if not values then
+		values = {}
+	end
+	values.Type = pageType
+	values.Name = 'CurrentPage'
+	values.X = 1
+	values.Y = 1
+	values.Width = '100%'
+	values.Height = '100%'
+	self:GetObject('ContentScrollView'):AddObject(values)
 end
-Drawing.ClearOffset=function()
-Drawing.Offset={
-X=0,
-Y=0
-}
+
+program.OpenPreviousPage = function(self)
+	program:SetActiveObject()
+	
+	local currentPage = self:GetObject('CurrentPage')
+	local previousPage = self:GetObject('PreviousPage')
+	if previousPage then
+		previousPage.Name = 'CurrentPage'
+		previousPage.Visible = true
+		
+		if currentPage then
+			self:RemoveObject(currentPage)
+		end
+	else
+		self:OpenPage('HomePageView')
+	end
 end
-Drawing.WriteToBuffer=function(t,e,o,i,a)
-t=t+Drawing.Offset.X
-e=e+Drawing.Offset.Y
-Drawing.Buffer[e]=Drawing.Buffer[e]or{}
-Drawing.Buffer[e][t]={o,i,a}
-end
-Drawing.LoadImage=function(e)
-local t={
-text={},
-textcol={}
-}
-local e=h(e,'\n')
-for e,a in ipairs(e)do
-table.insert(t,e,{})
-table.insert(t.text,e,{})
-table.insert(t.textcol,e,{})
-local o=1
-local n,s=false,false
-local r,i=nil,nil
-for h=1,#a do
-local a=string.sub(a,h,h)
-if a:byte()==30 then
-n=true
-elseif a:byte()==31 then
-s=true
-elseif n then
-r=Drawing.GetColour(a)
-n=false
-elseif s then
-i=Drawing.GetColour(a)
-s=false
-else
-if a~=" "and i==nil then
-i=colours.white
-end
-t[e][o]=r
-t.textcol[e][o]=i
-t.text[e][o]=a
-o=o+1
-end
-end
-e=e+1
-end
-return t
-end
-SearchPage={
-X=0,
-Y=0,
-Width=0,
-Height=3,
-Text="",
-Placeholder="Search...",
-CursorPos=1,
-Draw=function(e)
-Drawing.DrawBlankArea(e.X+1,e.Y+1,e.Width-6,e.Height,colours.grey)
-Drawing.DrawBlankArea(e.X,e.Y,e.Width-6,e.Height,colours.white)
-Drawing.DrawBlankArea(e.X+e.Width-5+1,e.Y+1,6,e.Height,colours.grey)
-Drawing.DrawBlankArea(e.X+e.Width-5,e.Y,6,e.Height,colours.blue)
-Drawing.DrawCharacters(e.X+e.Width-3,e.Y+1,"GO",colours.white,colours.blue)
-RegisterClick(e.X+e.Width-5,e.Y+2,6,e.Height,function()
-ChangePage('Search Results',e.Text)
+
+program:Run(function()
+	program:RegisterEvent('http_success', function(self, event, url, h)
+		local currentPage = self:GetObject('CurrentPage')
+		if currentPage and not currentPage.Failed and not currentPage.Success and currentPage.RequestURL == url then
+			currentPage.Success = true
+			currentPage:OnDataLoad(url, h.readAll())
+			h.close()
+		end
+	end)
+
+	program:RegisterEvent('http_failure', function(self, event, url)
+		local currentPage = self:GetObject('CurrentPage')
+		if currentPage and not currentPage.Failed and not currentPage.Success and currentPage.RequestURL == url then
+			currentPage.Failed = true
+			currentPage:OnDataFailed(url, 'GENERIC')
+		end
+	end)
+
+	program:GetObject('HomeLabel').OnClick = function(self)
+		program:OpenPage('HomePageView')
+	end
+
+	program:GetObject('CategoriesLabel').OnClick = function(self)
+		program:OpenPage('CategoriesPageView')
+	end
+
+	program:GetObject('SearchLabel').OnClick = function(self)
+		program:OpenPage('SearchPageView')
+	end
+
+	if OneOS then
+		program:GetObject('QuitLabel').Visible = false
+	else
+		program:GetObject('QuitLabel').OnClick = function()
+			term.setCursorPos(1, 1)
+			term.setBackgroundColour(colors.black)
+			term.setTextColor(colours.white)
+			term.clear()
+			print('Thanks for using the App Store!')
+			print('(c) 2013 - 2015 oeed')
+			program:Quit()
+		end
+	end
+
 end)
-if e.Text==""then
-Drawing.DrawCharacters(e.X+1,e.Y+1,e.Placeholder,colours.lightGrey,colours.white)
-else
-Drawing.DrawCharacters(e.X+1,e.Y+1,e.Text,colours.black,colours.white)
-end
-Current.CursorBlink=true
-Current.CursorPos={e.X+e.CursorPos,e.Y+3}
-Current.CursorColour=colours.black
-end,
-Initialise=function(t)
-local e={}
-setmetatable(e,{__index=t})
-e.Y=math.floor((Drawing.Screen.Height-1-e.Height)/2)
-e.X=2
-e.Width=Drawing.Screen.Width-4
-return e
-end
-}
-ListItem={
-X=0,
-Y=0,
-XMargin=1,
-YMargin=1,
-Width=0,
-Height=6,
-AppID=0,
-Title='',
-Author='',
-Rating=0,
-Description={},
-Icon={},
-Downloads=0,
-Category='?',
-Version=1,
-Type=0,
-CalculateWrapping=function(e,t)
-local o=false
-if e.Type==0 then
-o=2
-end
-local i=e.Width-8
-local e={''}
-for a,t in t:gmatch('(%S+)(%s*)')do
-local o=e[#e]..a..t:gsub('\n','')
-if#o>i then
-table.insert(e,'')
-end
-if t:find('\n')then
-e[#e]=e[#e]..a
-t=t:gsub('\n',function()
-table.insert(e,'')
-return''
-end)
-else
-e[#e]=e[#e]..a..t
-end
-end
-if not o then
-return e
-else
-local t={}
-for e,a in ipairs(e)do
-t[e]=a
-if e>=o then
-return t
-end
-end
-return t
-end
-end,
-Draw=function(e)
-if e.Y+Drawing.Offset.Y>=Drawing.Screen.Height+1 or e.Y+Drawing.Offset.Y+e.Height<=1 then
-return
-end
-local t=1
-if e.Type==1 then
-t=2
-end
-RegisterClick(e.Width-7,e.Y+Drawing.Offset.Y+t-1,9,1,function()
-Load("Installing App",function()
-api.installApplication(tonumber(e.AppID),Settings.InstallLocation..'/'..e.Title..".program/",false,Settings.AlwaysFolder,true)
-api.saveApplicationIcon(tonumber(e.AppID),Settings.InstallLocation..'/'..e.Title..".program/icon")
-end)
-Load("Application Installed!",function()
-sleep(1)
-end)
-end)
-if e.Type==0 then
-RegisterClick(e.X,e.Y+Drawing.Offset.Y,e.Width,e.Height,function()
-ChangePage('more-info',e.AppID)
-end)
-elseif e.Type==2 then
-RegisterClick(e.X,e.Y+Drawing.Offset.Y,e.Width,e.Height,function()
-ChangePage('Category Items',e.Title)
-end)
-end
-Drawing.DrawBlankArea(e.X+1,e.Y+1,e.Width,e.Height,colours.grey)
-Drawing.DrawBlankArea(e.X,e.Y,e.Width,e.Height,colours.white)
-Drawing.DrawCharacters(e.X+8,e.Y+1,tostring(e.Title),colours.black,colours.white)
-if e.Type~=2 then
-Drawing.DrawCharacters(e.X+8,e.Y+2,"by "..e.Author,colours.grey,colours.white)
-Drawing.DrawCharacters(e.Width-8,e.Y+t-1," Install ",colours.white,colours.green)
-end
-Drawing.DrawImage(e.X+1,e.Y+1,e.Icon,4,3)
-if e.Type==1 then
-Drawing.DrawCharacters(e.X,e.Y+6,"Category",colours.grey,colours.white)
-Drawing.DrawCharacters(math.ceil(e.X+(8-#e.Category)/2),e.Y+7,e.Category,colours.grey,colours.white)
-Drawing.DrawCharacters(e.X+1,e.Y+9,"Dwnlds",colours.grey,colours.white)
-Drawing.DrawCharacters(math.ceil(e.X+(8-#tostring(e.Downloads))/2),e.Y+10,tostring(e.Downloads),colours.grey,colours.white)
-Drawing.DrawCharacters(e.X+1,e.Y+12,"Version",colours.grey,colours.white)
-Drawing.DrawCharacters(math.ceil(e.X+(8-#tostring(e.Version))/2),e.Y+13,tostring(e.Version),colours.grey,colours.white)
-end
-if e.Type~=2 and e.Rating~=0 then
-local t=colours.yellow
-local i=colours.lightGrey
-local a=colours.lightGrey
-local n=e.X+8+#("by "..e.Author)+1
-local o=e.Y+2
-local u=a
-local h=" "
-local s=a
-local r=" "
-local d=a
-local l=" "
-local c=a
-local m=" "
-local a=a
-local f=" "
-if e.Rating>=.5 then
-u=i
-h="#"
-end
-if e.Rating>=1 then
-u=t
-h=" "
-end
-if e.Rating>=1.5 then
-s=i
-r="#"
-end
-if e.Rating>=2 then
-s=t
-r=" "
-end
-if e.Rating>=2.5 then
-d=i
-l="#"
-end
-if e.Rating>=3 then
-d=t
-l=" "
-end
-if e.Rating>=3.5 then
-c=i
-m="#"
-end
-if e.Rating>=4 then
-c=t
-m=" "
-end
-if e.Rating>=4.5 then
-a=i
-f="#"
-end
-if e.Rating==5 then
-a=t
-f=" "
-end
-Drawing.DrawCharacters(n,o,h,t,u)
-Drawing.DrawCharacters(n+2,o,r,t,s)
-Drawing.DrawCharacters(n+4,o,l,t,d)
-Drawing.DrawCharacters(n+6,o,m,t,c)
-Drawing.DrawCharacters(n+8,o,f,t,a)
-end
-local t=2
-if e.Type==1 then
-t=3
-elseif e.Type==2 then
-t=1
-end
-for o,a in ipairs(e.Description)do
-Drawing.DrawCharacters(e.X+8,e.Y+t+o,tostring(a),colours.lightGrey,colours.white)
-end
-end,
-Initialise=function(o,i,r,n,c,l,u,d,s,h,a,t)
-t=t or 0
-local e={}
-setmetatable(e,{__index=o})
-e.Y=i
-e:UpdateSize()
-e.Type=t
-e.AppID=r
-e.Title=n
-e.Icon=Drawing.LoadImage(c)
-e.Icon[5]=nil
-e.Description=e:CalculateWrapping(l)
-e:UpdateSize()
-e.Author=u
-e.Rating=d
-e.Version=s
-e.Category=h
-e.Downloads=a
-return e
-end,
-UpdateSize=function(e)
-e.X=e.XMargin+1
-e.Width=Drawing.Screen.Width-2*e.XMargin-2
-if e.Type==1 then
-e.Height=15
-if#e.Description+5>e.Height then
-e.Height=#e.Description+5
-end
-end
-end,
-}
-ScrollBar={
-X=1,
-Y=1,
-Width=1,
-Height=1,
-BackgroundColour=colours.grey,
-BarColour=colours.lightBlue,
-Parent=nil,
-Change=nil,
-Scroll=0,
-MaxScroll=0,
-ClickPoint=nil,
-AbsolutePosition=function(e)
-return e.Parent:AbsolutePosition()
-end,
-Draw=function(e)
-local t=math.floor(e.Height/e.MaxScroll)*10
-if t<3 then
-t=3
-end
-local a=(e.Scroll/e.MaxScroll)
-Drawing.DrawBlankArea(e.X,e.Y,e.Width,e.Height,e.BackgroundColour)
-Drawing.DrawBlankArea(e.X,e.Y+math.floor(e.Height*a-t*a),e.Width,t,e.BarColour)
-RegisterClick(e.X,e.Y,e.Width,e.Height,function(n,n,t,a,i,o)
-e:Click(t,a,i,o)
-end)
-end,
-Initialise=function(h,s,r,d,o,t,a,n,i)
-local e={}
-setmetatable(e,{__index=h})
-e.Width=1
-e.Height=d
-e.Y=r
-e.X=s
-e.BackgroundColour=t or colours.grey
-e.BarColour=a or colours.lightBlue
-e.Parent=n
-e.Change=i or function()end
-e.MaxScroll=o
-e.Scroll=0
-return e
-end,
-DoScroll=function(e,t)
-t=math.ceil(t)
-if e.Scroll<0 or e.Scroll>e.MaxScroll then
-return false
-end
-e.Scroll=e.Scroll+t
-if e.Scroll<0 then
-e.Scroll=0
-elseif e.Scroll>e.MaxScroll then
-e.Scroll=e.MaxScroll
-end
-e.Change()
-return true
-end,
-Click=function(e,t,t,i,o)
-local a=(e.Scroll/e.MaxScroll)
-local t=(e.Height-e.MaxScroll)
-if t<3 then
-t=3
-end
-local t=(e.MaxScroll*(i+t*a)/e.Height)
-if not o then
-e.ClickPoint=e.Scroll-t+1
-end
-if e.Scroll-1~=t then
-e:DoScroll(t-e.Scroll-1+e.ClickPoint)
-end
-return true
-end
-}
-Clicks={
-}
-function RegisterClick(o,i,t,a,e)
-table.insert(Clicks,{
-X=o,
-Y=i,
-Width=t,
-Height=a,
-Action=e
-})
-end
-function Load(t,e)
-Drawing.DrawBlankArea(1,1,Drawing.Screen.Width+1,Drawing.Screen.Height+1,colours.lightGrey)
-Drawing.DrawCharactersCenter(nil,nil,nil,nil,t,colours.white,colours.lightGrey)
-isLoading=true
-parallel.waitForAny(function()
-e()
-isLoading=false
-end,DisplayLoader)
-end
-function DisplayLoader()
-local i=200
-local o=0
-local e=0
-while isLoading do
-local t=Drawing.Screen.Height/2+2
-local a=Drawing.Screen.Width/2
-Drawing.DrawCharacters(a-3,t,' ',colours.black,colours.grey)
-Drawing.DrawCharacters(a-1,t,' ',colours.black,colours.grey)
-Drawing.DrawCharacters(a+1,t,' ',colours.black,colours.grey)
-Drawing.DrawCharacters(a+3,t,' ',colours.black,colours.grey)
-if e~=-1 then
-Drawing.DrawCharacters(a-3+(e*2),t,' ',colours.black,colours.white)
-end
-e=e+1
-if e>=4 then
-e=-1
-end
-o=o+1
-if o>=i then
-isLoading=false
-error('Load timeout. Check your internet connection and try again. The server may also be down, try again in 10 minutes.')
-end
-Drawing.DrawBuffer()
-sleep(.15)
-end
-end
-function ChangePage(e,t)
-ClearCurrentPage()
-if e=='Top Charts'then
-LoadList(api.getTopCharts)
-elseif e=='Search Results'then
-LoadList(function()return api.searchApplications(t)end)
-elseif e=="Featured"then
-LoadFeatured()
-elseif e=="Categories"then
-LoadCategories()
-elseif e=="more-info"then
-LoadAboutApp(t)
-elseif e=="Search"then
-LoadSearch()
-elseif e=="Category Items"then
-LoadList(function()return api.getApplicationsInCategory(t)end)
-end
-i=e
-Current.ScrollBar.MaxScroll=getMaxScroll()
-end
-function LoadAboutApp(e)
-Load("Loading Application",function()
-local e=api.getApplication(e)
-local e=ListItem:Initialise(1,e.id,e.name,e.icon,e.description,e.user.username,e.stars,e.version,e.category,e.downloads,1)
-table.insert(o,e)
-end)
-end
-function LoadFeatured()
-Load("Loading",function()
-local e=api.getFeaturedApplications()
-for t,e in ipairs(e)do
-local e=ListItem:Initialise(1+(t-1)*(ListItem.Height+2),
-e.id,e.name,e.icon,e.description,
-e.user.username,e.stars,e.version,
-e.category,e.downloads)
-table.insert(o,e)
-end
-end)
-end
-function LoadCategories()
-Load("Loading",function()
-local t=api.getCategories()
-local e=1
-for a,t in pairs(t)do
-local t=ListItem:Initialise(1+(e-1)*(ListItem.Height+2),
-0,a,t.icon,t.description,nil,nil,nil,nil,nil,2)
-table.insert(o,t)
-e=e+1
-end
-end)
-end
-function LoadSearch(e)
-local e=SearchPage:Initialise()
-a=e
-table.insert(o,e)
-end
-function ClearCurrentPage()
-for e,t in ipairs(o)do o[e]=nil end
-Current.ScrollBar.Scroll=0
-a=nil
-y=nil
-Current.CursorBlink=false
-Draw()
-end
-function LoadList(e)
-Load("Loading",function()
-local e=e()
-if e==nil then
-error('Can not connect to the App Store server.')
-elseif type(e)~='table'then
-error('The server is too busy. Try again in a few minutes.')
-end
-for t,e in ipairs(e)do
-local e=ListItem:Initialise(1+(t-1)*(ListItem.Height+2),
-e.id,e.name,e.icon,e.description,
-e.user.username,e.stars,e.version,
-e.category,e.downloads)
-table.insert(o,e)
-end
-end)
-end
-function Draw()
-Clicks={}
-Drawing.Clear(colours.lightGrey)
-DrawList()
-DrawToolbar()
-Drawing.DrawBuffer()
-if Current.CursorPos and Current.CursorPos[1]and Current.CursorPos[2]then
-term.setCursorPos(unpack(Current.CursorPos))
-end
-term.setTextColour(Current.CursorColour)
-term.setCursorBlink(Current.CursorBlink)
-end
-function DrawList()
-Drawing.SetOffset(0,-Current.ScrollBar.Scroll+2)
-for t,e in ipairs(o)do
-e:Draw()
-end
-Drawing.ClearOffset()
-if getMaxScroll()~=0 then
-Current.ScrollBar:Draw()
-end
-end
-local r=false
-function DrawToolbar()
-if not r then
-return
-end
-Drawing.DrawBlankArea(1,1,Drawing.Screen.Width,1,colours.white)
-local o={
-{
-active=false,
-title="Featured"
-},
-{
-active=false,
-title="Top Charts"
-},
-{
-active=false,
-title="Categories"
-},
-{
-active=false,
-title="Search"
-}
-}
-local e=0
-local t=""
-for o,a in ipairs(o)do
-e=e+#a.title+3
-t=t..a.title.." | "
-end
-e=e-3
-local t=(Drawing.Screen.Width-e)/2
-for n,e in ipairs(o)do
-local a=" | "
-if n==#o then
-a=""
-end
-local o=colours.blue
-if i==e.title then
-o=colours.lightBlue
-end
-Drawing.DrawCharacters(t,1,e.title,o,colours.white)
-Drawing.DrawCharacters(t+#e.title,1,a,colours.blue,colours.white)
-RegisterClick(t-1,1,#e.title+2,1,function()
-ChangePage(e.title)
-end)
-t=t+#(e.title..a)
-end
-if not OneOS then
-Drawing.DrawCharacters(Drawing.Screen.Width,1,"X",colours.white,colours.red)
-RegisterClick(Drawing.Screen.Width,1,1,1,function()
-w=false
-term.setBackgroundColour(colours.black)
-term.setTextColour(colours.white)
-term.clear()
-term.setCursorPos(1,1)
-print=_print
-print('Thanks for using the App Store!')
-print('(c) oeed 2013 - 2014')
-end)
-end
-end
-function getMaxScroll()
-local e=0
-for a,t in ipairs(o)do
-e=e+t.Height+2
-end
-local t=e-Drawing.Screen.Height+2
-if t<0 then
-t=0
-end
-p=e
-return t
-end
-function EventHandler()
-while w do
-local t,e,h,n=os.pullEvent()
-if t=="mouse_scroll"then
-Current.ScrollBar:DoScroll(e*3)
-Draw()
-elseif t=="timer"then
-if e==y and i=='Featured'then
-o[1]:NextPage()
-Draw()
-end
-elseif t=="char"then
-if i=='Search'then
-a.Text=a.Text..e
-a.CursorPos=a.CursorPos+1
-Draw()
-end
-elseif t=="key"then
-if e==keys.down then
-Current.ScrollBar:DoScroll(3)
-Draw()
-elseif e==keys.up then
-Current.ScrollBar:DoScroll(-3)
-Draw()
-end
-if e==keys.backspace and i=='Search'then
-a.Text=string.sub(a.Text,0,#a.Text-1)
-a.CursorPos=a.CursorPos-1
-if a.CursorPos<1 then
-a.CursorPos=1
-end
-Draw()
-elseif e==keys.enter and i=='Search'then
-ChangePage('Search Results',a.Text)
-Draw()
-end
-elseif t=="mouse_click"or t=="mouse_drag"then
-local o=false
-for a=1,#Clicks do
-local a=Clicks[(#Clicks-a)+1]
-if not o and h>=a.X and(a.X+a.Width)>h and n>=a.Y and(a.Y+a.Height)>n then
-o=true
-local o=s
-a:Action(t,e,h,n,t=="mouse_drag")
-if o==s then
-s=false
-end
-Draw()
-end
-end
-if not o then
-s=false
-Draw()
-end
-end
-end
-end
-function TidyPath(e)
-if fs.exists(e)and fs.isDir(e)then
-e=e..'/'
-end
-e,n=e:gsub("//","/")
-while n>0 do
-e,n=e:gsub("//","/")
-end
-return e
-end
-function ConnectionError()
-print=_print
-term.setBackgroundColor(colours.grey)
-term.setTextColor(colours.white)
-term.clear()
-term.setCursorPos(2,2)
-print("Failed to connect to the server!\n\n")
-term.setTextColour(colours.lightGrey)
-term.setCursorPos(2,4)
-print("An error occured while trying to")
-term.setCursorPos(2,5)
-print("connect to the server.")
-term.setCursorPos(2,6)
-print("Check the following things then try again:")
-term.setTextColour(colours.white)
-term.setCursorPos(1,8)
-print(" - Check that your internet is online and working")
-print(" - Ensure that the HTTP API is on")
-print(" - Ensure that ccappstore.com is whitelisted")
-print(" - Try accesing ccappstore.com in your browser")
-term.setCursorPos(2,Drawing.Screen.Height-1)
-term.setTextColour(colours.white)
-print(" Click anywhere to exit...")
-os.pullEvent("mouse_click")
-if OneOS then
-OneOS.Close()
-end
-term.setTextColour(colours.white)
-term.setBackgroundColour(colours.black)
-term.clear()
-term.setCursorPos(1,1)
-end
-function Initialise()
-os.loadAPI('api')
-if t and t[1]then
-if t[1]=='install'and t[2]and tonumber(t[2])then
-if OneOS then
-Load('Connecting',api.testConnection)
-Load("Installing App",function()
-local a=t[3]or''
-local e=api.getApplication(tonumber(t[2]))
-if not e then
-error('Network error')
-end
-api.installApplication(tonumber(t[2]),Settings.InstallLocation..'/'..a..'/'..e.name..".program/",false,Settings.AlwaysFolder,true)
-api.saveApplicationIcon(tonumber(t[2]),Settings.InstallLocation..'/'..a..'/'..e.name..".program/icon")
-if t[4]then
-OneOS.OpenFile(Settings.InstallLocation..'/'..a..'/'..e.name..".program/")
-end
-end)
-OneOS.Close()
-end
-print('Connecting...')
-if api.testConnection()then
-print('Downloading program...')
-local e=t[3]or shell.dir()
-local e=api.installApplication(tonumber(t[2]),e,true)
-if e then
-print('Program installed!')
-print("Type '"..TidyPath(e).."' to run it.")
-else
-printError('Download failed. Check the ID and try again.')
-end
-else
-printError('Could not connect to the App Store.')
-printError('Check your connection and try again.')
-end
-elseif t[1]=='submit'and t[2]and fs.exists(shell.resolve(t[2]))then
-print('Packaging...')
-local e=Package(shell.resolve(t[2]))
-if e then
-print('Connecting...')
-if api.testConnection()then
-print('Uploading...')
-local e=JSON.encode(e)
-e=e:gsub("\\'","'")
-local e=http.post('http://ccappstore.com/submitPreupload.php',
-"file="..textutils.urlEncode(e));
-if e then
-local t=e.readAll()
-if t:sub(1,2)=='OK'then
-print('Your program has been uploaded.')
-print('It\'s unique ID is: '..t:sub(3))
-print('Go to ccappstore.com/submit/ and select "In Game" as the upload option and enter the above code.')
-else
-printError('The server rejected the file. Try again or PM oeed. ('..e.getResponseCode()..' error)')
-end
-else
-printError('Could not submit file.')
-end
-else
-printError('Could not connect to the App Store.')
-printError('Check your connection and try again.')
-end
-end
-else
-print('Useage: appstore install <app id> <path (optional)>')
-print('Or: appstore submit <path>')
-end
-else
-Load('Connecting',api.testConnection)
-Current.ScrollBar=ScrollBar:Initialise(Drawing.Screen.Width,2,Drawing.Screen.Height-1,0,colours.white,colours.blue,nil,function()end)
-ChangePage('Featured')
-r=true
-Draw()
-EventHandler()
-end
-end
-function addFile(e,t,o)
-if o=='.DS_Store'or shell.resolve(t)==shell.resolve(shell.getRunningProgram())then
-return e
-end
-local a=fs.open(t,'r')
-if not a then
-error('Failed reading file: '..t)
-end
-e[o]=a.readAll()
-a.close()
-return e
-end
-function addFolder(o,t,i)
-local e={}
-if t:sub(1,4)=='/rom'then
-return o
-end
-for o,a in ipairs(fs.list(t))do
-if fs.isDir(t..'/'..a)then
-e=addFolder(e,t..'/'..a)
-else
-e=addFile(e,t..'/'..a,a)
-end
-end
-if i then
-o=e
-else
-o[fs.getName(t)]=e
-end
-return o
-end
-function Package(t)
-local e={}
-if fs.isDir(t)then
-e=addFolder(e,t,true)
-else
-e=addFile(e,t,'startup')
-end
-if not e['startup']then
-print('You must have a file named startup in your program. This is the file used to start the program.')
-else
-return e
-end
-end
-if term.isColor and term.isColor()then
-local e=nil
-if http then
-e=true
-end
-if e==nil then
-print=_print
-term.setBackgroundColor(colours.grey)
-term.setTextColor(colours.white)
-term.clear()
-term.setCursorPos(3,3)
-print("Could not connect to the App Store server!\n\n")
-term.setTextColor(colours.white)
-print("Try the following steps:")
-term.setTextColor(colours.lightGrey)
-print(' - Ensure you have enabled the HTTP API')
-print(' - Check your internet connection is working')
-print(' - Retrying again in 10 minutes')
-print(' - Get assistance on the forum page')
-print()
-print()
-print()
-term.setTextColor(colours.white)
-print(" Click anywhere to exit...")
-os.pullEvent("mouse_click")
-OneOS.Close()
-else
-local t,e=pcall(Initialise)
-if e then
-if string.find(e,'Network error')then
-ConnectionError()
-else
-print=_print
-term.setBackgroundColor(colours.lightGrey)
-term.setTextColor(colours.white)
-term.clear()
-term.setBackgroundColor(colours.grey)
-term.setCursorPos(1,2)
-term.clearLine()
-term.setCursorPos(1,3)
-term.clearLine()
-term.setCursorPos(1,4)
-term.clearLine()
-term.setCursorPos(3,3)
-print("The ComputerCraft App Store has crashed!\n\n")
-term.setBackgroundColour(colours.lightGrey)
-print("Try repeating what you just did, if this is the second time you've seen this message go to")
-term.setTextColour(colours.black)
-print("http://ccappstore.com/help#crash/\n")
-term.setTextColour(colours.white)
-if OneOS then
-OneOS.Log.e(tostring(e))
-end
-print("The error was:")
-term.setTextColour(colours.black)
-print(" "..tostring(e).."\n\n")
-term.setTextColour(colours.white)
-print(" Click anywhere to exit...")
-os.pullEvent("mouse_click")
-if OneOS then
-OneOS.Close()
-end
-term.setTextColour(colours.white)
-term.setBackgroundColour(colours.black)
-term.clear()
-term.setCursorPos(1,1)
-end
-end
-end
-else
-print('The App Store requires an Advanced (gold) Computer!')
-end

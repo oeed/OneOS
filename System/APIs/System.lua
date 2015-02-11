@@ -58,18 +58,27 @@ CurrentProgram = function()
 	return System.Bedrock:GetActiveObject()
 end
 
-StartProgram = function(path, args, isHidden)
+StartProgram = function(path, args, isHidden, x, y)
 	args = args or {}
 	local name = System.Bedrock.Helpers.RemoveExtension(fs.getName(path))
 	if fs.isDir(path) then
 		path = path .. '/startup'
 	end
+	local width = '100%'
+	local height = '100%,-1'
+	if x and y then
+		width = 4
+		height = 3
+	end
+
 	local program = System.Bedrock:AddObject({
 		Type = 'ProgramView',
-		X = 1,
-		Y = 2,
-		Width = '100%',
-		Height = '100%',
+		X = x or 1,
+		Y = y or 2,
+		Width = width,
+		Height = height,
+		BufferWidth = '100%',
+		BufferHeight = '100%',
 		Path = path,
 		Title = name,
 		Arguments = args,
@@ -78,7 +87,7 @@ StartProgram = function(path, args, isHidden)
 	program:MakeActive()
 end
 
-OpenFile = function(path, args)
+OpenFile = function(path, args, x, y)
 	Log.i('Opening file: '..path)
 	args = args or {}
 	if fs.exists(path) then
@@ -96,15 +105,15 @@ OpenFile = function(path, args)
 			end
 			h.close()
 
-			OpenFile(shortcutPointer, tArgs)
+			OpenFile(shortcutPointer, tArgs, x, y)
 		elseif extension == 'program' then
-			return StartProgram(path, args)
+			return StartProgram(path, args, nil, x, y)
 		elseif fs.isDir(path) then
-			StartProgram('/System/Programs/Files.program', {path})
+			StartProgram('/System/Programs/Files.program', {path}, nil, x, y)
 		elseif extension then
 			local _path = Indexer.FindFileInFolder(extension, 'Icons')
 			if _path and not _path:find('System/Resources/Icons/') then
-				OpenFile(Helpers.ParentFolder(Helpers.ParentFolder(_path)), {path})
+				OpenFile(Helpers.ParentFolder(Helpers.ParentFolder(_path)), {path}, x, y)
 			else
 				OpenFileWith(path) -- TODO: open file with
 			end

@@ -1,0 +1,66 @@
+{
+	Children = {
+		{
+			X = '50%,-13',
+			Y = 1,
+			Text = 'Home',
+			TextColour = 'grey',
+			Name = 'HomeLabel',
+			Type = 'Label'
+		},
+		{
+			X = '50%,-5',
+			Y = 1,
+			Text = 'Categories',
+			TextColour = 'grey',
+			Name = 'CategoriesLabel',
+			Type = 'Label'
+		},
+		{
+			X = '50%,9',
+			Y = 1,
+			Text = 'Search',
+			TextColour = 'grey',
+			Name = 'SearchLabel',
+			Type = 'Label'
+		},
+		{
+			X = 1,
+			Y = 2,
+			Type = 'Separator',
+			Width = '100%',
+			Colour = 'lightGrey'
+		},
+
+		{
+			X = 1,
+			Y = 3,
+			Width = '100%',
+			Height = '100%,-2',
+			Type = 'ScrollView',
+			Name = 'ContentScrollView',
+			Children = {
+				{
+					X = 1,
+					Y = 1,
+					Type = 'HomePageView',
+					Name = 'CurrentPage',
+					Width = '100%',
+					Height = '100%'
+				}
+			}
+		},
+
+		{
+			X = '100%',
+			Y = 1,
+			Text = 'x',
+			TextColour = 'blue',
+			Name = 'QuitLabel',
+			Type = 'Label'
+		},
+
+		
+	},
+	BackgroundColour = 'white'
+}

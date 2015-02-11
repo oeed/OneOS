@@ -1,5 +1,4 @@
 OneOS.LoadAPI('/System/API/Bedrock.lua')
-
 -- Bedrock.ProgramPath = shell.getRunningProgram()
 
 local program = Bedrock:Initialise()
@@ -210,7 +209,7 @@ program:Run(function()
 			OneOS.Log.i(timer)
 				if timer == dragTimer then
 			OneOS.Log.i('right timer')
-					dragStart = nil
+					xdragStart = nil
 			OneOS.Log.i('trhee')
 					if program.View.ChildOffset.Y >= 3 then
 						showSearch()

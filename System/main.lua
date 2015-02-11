@@ -3,6 +3,8 @@ Bedrock.ProgramPath = shell.getRunningProgram()
 local bedrock = Bedrock:Initialise('/System')
 System.Bedrock = bedrock
 
+-- bedrock.AnimationEnabled = false
+
 bedrock.OnKeyChar = function(self, event, keychar)
 	if keychar == '\\' then
 		os.reboot()
@@ -45,40 +47,42 @@ bedrock.EventHandler = function(self)
 end
 
 
+function Initialise()
+	bedrock:Run(function()
+		FileSystem.Initialise()
+		Indexer.RefreshIndex()
+		-- program:LoadView('main')
+		-- TODO: debug only!
+		bedrock:RegisterKeyboardShortcut({'\\'}, function()os.reboot()end)
 
-bedrock:Run(function()
-	Indexer.RefreshIndex()
-	-- program:LoadView('main')
-	-- TODO: debug only!
-	bedrock:RegisterKeyboardShortcut({'\\'}, function()os.reboot()end)
-
-	-- local clock = bedrock:GetObject('OneButton')
-	local function updateClock()
-		local time = os.time()
-        if time >= 12 then
-            sTOD = "pm"
-        else
-            sTOD = "am"
-        end
-        if time >= 13 then
-            time = time - 12
-        end
-	    local nHour = math.floor(time)
-	    local nMinute = math.floor((time - nHour)*60)
-		clock.Text = string.format( "%d:%02d %s", nHour, nMinute, sTOD )
-	end
-	-- bedrock:StartRepeatingTimer(updateClock, 5/6)
-	-- updateClock()
-
-
-	System.StartProgram('/System/Programs/Desktop.program', nil, true)
-
-	bedrock:GetObject('OneButton').OnClick = function()
-		bedrock:GetObject('ProgramView'):MakeActive()
-	end
-	-- startProgram('/Programs/test.program')
-	-- startProgram('/Programs/Sketch.program')
-end)
+		-- local clock = bedrock:GetObject('OneButton')
+		local function updateClock()
+			local time = os.time()
+	        if time >= 12 then
+	            sTOD = "pm"
+	        else
+	            sTOD = "am"
+	        end
+	        if time >= 13 then
+	            time = time - 12
+	        end
+		    local nHour = math.floor(time)
+		    local nMinute = math.floor((time - nHour)*60)
+			clock.Text = string.format( "%d:%02d %s", nHour, nMinute, sTOD )
+		end
+		-- bedrock:StartRepeatingTimer(updateClock, 5/6)
+		-- updateClock()
 
 
+		System.StartProgram('/System/Programs/Desktop.program', nil, true)
 
+		local desktop = bedrock:GetObject('ProgramView')
+		bedrock:GetObject('OneButton').OnClick = function()
+			Log.i('One click')
+			desktop:MakeActive()
+		end
+
+		-- startProgram('/Programs/test.program')
+		-- startProgram('/Programs/Sketch.program')
+	end)
+end

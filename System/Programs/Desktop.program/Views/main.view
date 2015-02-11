@@ -2,21 +2,21 @@
 	Children = {
 		{
 			X = '100%,-7',
-			Y = '100%,-1',
+			Y = '100%',
 			Text = 'Shutdown',
 			Type = 'FilterLabel',
 			FilterName = 'Highlight'
 		},
 		{
 			X = '100%,-15',
-			Y = '100%,-1',
+			Y = '100%',
 			Text = 'Restart',
 			Type = 'FilterLabel',
 			FilterName = 'Highlight'
 		},
 		{
 			X = '100%,-22',
-			Y = '100%,-1',
+			Y = '100%',
 			Text = 'Search',
 			Type = 'FilterLabel',
 			Name = 'SearchLabel',

@@ -10,7 +10,7 @@ OnLoad = function(self)
 			self.DragY = _.Y + y - 2
 			self.Bedrock.DragIcon = self
 			if self.Selected then
-				OneOS.OpenFile(self.Path)
+				OneOS.OpenFile(self.Path, nil, self.X, self.Y)
 			else
 				self.Selected = not self.Selected
 			end
