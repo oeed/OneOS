@@ -25,10 +25,6 @@ Arguments = nil
 Hidden = false
 
 OnLoad = function(self)
-	self.CursorPos = {1, 1}
-	self.CursorBlink = false
-	self.Buffer = {}
-
 	self.BufferWidth = self.Bedrock.View.Width
 	self.BufferHeight = self.Bedrock.View.Height - 1
 
@@ -50,12 +46,6 @@ OnLoad = function(self)
 			self.Y = 2
 		end
 	end
-
-	self.Term = self:MakeTerm()
-	self.EventQueue = {}
-	self.Timers = {}
-	self.Environment = Environment:Initialise(self, shell, self.Path, self.Bedrock)
-	self.Running = true
 	self:Execute()
 end
 
@@ -118,6 +108,16 @@ Execute = function(self)
 			print(err)
 		end
 	end
+
+	self.CursorPos = {1, 1}
+	self.CursorBlink = false
+	self.Buffer = {}
+	self:ResizeBuffer()
+	self.Term = self:MakeTerm()
+	self.EventQueue = {}
+	self.Timers = {}
+	self.Environment = Environment:Initialise(self, shell, self.Path, self.Bedrock)
+	self.Running = true
 
 	setfenv(executable, self.Environment)
 	self.Process = coroutine.create(executable)
@@ -319,7 +319,7 @@ OnKeyChar = function(self, ...)
 end
 
 Kill = function(self, code)
-	Log.i('Kill program "'..self.Title..'": '..code)
+	Log.i('Killing program: "'..self.Title..'": '..code)
 	term.setBackgroundColour(colours.black)
 	term.setTextColour(colours.white)
 	term.setCursorBlink(false)
@@ -327,6 +327,13 @@ Kill = function(self, code)
 	-- coroutine.yield(self.Process)
 	self.Process = nil
 	self.Running = false
+end
+
+Restart = function(self)
+	Log.i('Restarting program: "'..self.Title)
+	self:Kill(-1)
+	self:Execute()
+	System.UpdateSwitcher()
 end
 
 OnDraw = function(self, x, y)

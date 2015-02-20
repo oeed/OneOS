@@ -4,6 +4,7 @@
 			X = '100%,-7',
 			Y = '100%',
 			Text = 'Shutdown',
+			Name = 'ShutdownButton',
 			Type = 'FilterLabel',
 			FilterName = 'Highlight'
 		},
@@ -11,6 +12,7 @@
 			X = '100%,-15',
 			Y = '100%',
 			Text = 'Restart',
+			Name = 'RestartButton',
 			Type = 'FilterLabel',
 			FilterName = 'Highlight'
 		},
@@ -18,8 +20,8 @@
 			X = '100%,-22',
 			Y = '100%',
 			Text = 'Search',
+			Name = 'SearchButton',
 			Type = 'FilterLabel',
-			Name = 'SearchLabel',
 			FilterName = 'Highlight'
 		},
 		{

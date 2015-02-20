@@ -234,7 +234,16 @@ program:Run(function()
 		closeSearch()
 	end
 
-	program:GetObject('SearchLabel').OnClick = function()
+	program:GetObject('SearchButton').OnClick = function()
 		showSearch()
 	end
+
+	program:GetObject('ShutdownButton').OnClick = function()
+		OneOS.Shutdown()
+	end
+
+	program:GetObject('RestartButton').OnClick = function()
+		OneOS.Restart()
+	end
+
 end)

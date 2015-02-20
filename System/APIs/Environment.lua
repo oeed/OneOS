@@ -15,8 +15,8 @@ local errorHandler = function(program, apiName, name, value)
 					return unpack(response)
 				else
 					for i, err in ipairs(response) do
-						printError(apiName .. ' Error ('..name..'): /System/API/' .. err)
 				    	Log.e('['..program.Title..'] Environment Error: '..apiName .. ' Error ('..name..'): /System/API/' .. err)
+						error(apiName .. ' Error ('..name..'): /System/API/' .. err)
 					end
 						
 				end
@@ -152,6 +152,8 @@ OneOS = function(env, program, path)
 
 	local tAPIsLoading = {}
 	return {
+		-- TODO: clean up these, lots won't be relevant anymore
+		System = System,
 		ToolBarColour = nil,
 		ToolBarColor = nil,
 		ToolBarTextColor = colours.black,
@@ -286,14 +288,7 @@ OneOS = function(env, program, path)
 end
 
 FS = function(env, program, path, bedrock)
-	local function doIndex()
-		bedrock:StartTimer(function()
-			Indexer.RefreshIndex()
-		end, 3)
-		-- Current.Bedrock:StartTimer(d.DoIndex, 4)
-	end
 	local relPath = bedrock.Helpers.RemoveFileName(path)
-	Log.i('rel path ' .. relPath)
 	local list = {}
 	for k, f in pairs(fs) do
 		if k ~= 'open' and k ~= 'combine' and k ~= 'copy' and k ~= 'move' and k ~= 'delete' and k ~= 'makeDir' then
@@ -302,12 +297,10 @@ FS = function(env, program, path, bedrock)
 			end
 		elseif k == 'delete' or k == 'makeDir' then
 			list[k] = function(_path)
-				doIndex()
 				return fs[k](relPath .. _path)
 			end
 		elseif k == 'copy' or k == 'move' then
 			list[k] = function(_path, _path2)
-				doIndex()
 				return fs[k](relPath .. _path, relPath .. _path2)
 			end
 		elseif k == 'combine' then
@@ -316,9 +309,6 @@ FS = function(env, program, path, bedrock)
 			end
 		elseif k == 'open' then
 			list[k] = function(_path, mode)
-				if mode ~= 'r' then 
-					doIndex()
-				end
 				return fs[k](relPath .. _path, mode)
 			end
 		end

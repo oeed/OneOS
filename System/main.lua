@@ -5,11 +5,11 @@ System.Bedrock = bedrock
 
 -- bedrock.AnimationEnabled = false
 
-bedrock.OnKeyChar = function(self, event, keychar)
-	if keychar == '\\' then
-		os.reboot()
-	end
-end
+-- bedrock.OnKeyChar = function(self, event, keychar)
+-- 	if keychar == '\\' then
+-- 		os.reboot()
+-- 	end
+-- end
 
 bedrock.EventHandler = function(self)
 	local programs = self:GetObjects('ProgramView')
@@ -48,8 +48,14 @@ end
 
 
 function Initialise()
+	bedrock.FileSystem = _fileSystem
+	_fileSystem.Bedrock = bedrock
+
+	Log.i(bedrock.FileSystem:ResolveAlias('/Favourites/Programs/Blah'))
+
+	-- do return end
+
 	bedrock:Run(function()
-		FileSystem.Initialise()
 		Indexer.RefreshIndex()
 		-- program:LoadView('main')
 		-- TODO: debug only!
@@ -78,11 +84,10 @@ function Initialise()
 
 		local desktop = bedrock:GetObject('ProgramView')
 		bedrock:GetObject('OneButton').OnClick = function()
-			Log.i('One click')
 			desktop:MakeActive()
 		end
 
-		-- startProgram('/Programs/test.program')
-		-- startProgram('/Programs/Sketch.program')
+		-- System.StartProgram('/Programs/LuaIDE.program')
+		System.StartProgram('/System/Programs/Files.program')
 	end)
 end

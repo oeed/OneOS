@@ -392,11 +392,12 @@ end
 
 GetFlattenedPixels = function(self)
 	local pixels = {}
+	local bg = self:GetBackgroundColour()
 	for x = 1, self.Width do
 		pixels[x] = {}
 		for y = 1, self.Height do
 			pixels[x][y] = {
-				BackgroundColour = self:GetBackgroundColour(),
+				BackgroundColour = bg,
 				TextColour = colours.black,
 				Character = ' '
 			}

@@ -1,0 +1,62 @@
+OneOS.LoadAPI('/System/API/Bedrock.lua')
+
+local program = Bedrock:Initialise()
+
+_fs = OneOS.FS
+
+program.OnKeyChar = function(self, event, keychar)
+	if keychar == '\\' then
+		os.reboot()
+	end
+end
+
+local currentPath = nil
+local showHidden = false
+
+local function openFolder(path)
+	path = program.Helpers.TidyPath(OneOS.System.ResolveAlias(path))
+	currentPath = path
+	local items = {}
+
+	for i, v in ipairs(_fs.list(path)) do
+		if showHidden or v:sub(1, 1) ~= '.' then
+			table.insert(items, 
+				{
+					Type = 'FileIcon',
+					Path = program.Helpers.TidyPath(path .. '/' .. v),
+					OnClick = function(self, event, side, x, y)
+						if side == 2 then
+							if self:ToggleMenu('filemenu', x, y) then
+							end
+						else
+							local extension = OneOS.System.RealExtension(self.Path)
+							if _fs.isDir(self.Path) and (not extension or #extension == 0) then
+								OneOS.Log.i('open folder')
+								openFolder(self.Path)
+							else
+								OneOS.OpenFile(self.Path, nil, self.X, self.Y)
+							end
+						end
+					end,
+					Height = FileIcon.Height,
+					Width = FileIcon.Width
+				}
+			)
+		end
+	end
+
+	program:GetObject('FilesCollectionView').Items = items
+	program:GetObject('PathTextBox').Text = path
+end
+
+program:Run(function()
+	openFolder('/Favourites')
+
+	program:GetObject('UpButton').OnClick = function(self, event, side, x, y)
+		if currentPath == '/' then
+			openFolder('/Favourites')
+		else
+			openFolder(self.Bedrock.Helpers.ParentFolder(currentPath))
+		end
+	end
+end)

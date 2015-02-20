@@ -1,4 +1,4 @@
---Bedrock Build: 487
+--Bedrock Build: 494
 --This code is squished down in to one, rather hard to read file.
 --As such it is not much good for anything other than being loaded as an API.
 --If you want to look at the code to learn from it, copy parts or just take a look,
@@ -505,13 +505,16 @@ Extension = function(path, addDot)
 		if path:sub(#path) == '/' then
 			_path = path:sub(1,#path-1)
 		end
+
 		local extension = _path:gmatch('%.[0-9a-z]+$')()
 		if extension then
 			extension = extension:sub(2)
+		elseif fs.getName(_path):sub(1,1) == '.' then
+			extension = fs.getName(_path):sub(2)
 		else
-			--extension = nil
 			return ''
 		end
+		
 		if addDot then
 			extension = '.'..extension
 		end
@@ -540,6 +543,11 @@ RemoveFileName = function(path)
 		return v
 	end
 	return v[1]
+end
+
+ParentFolder = function(path)
+	local folderName = fs.getName(path)
+	return path:sub(1, #path-#folderName-1)
 end
 
 TruncateString = function(sString, maxLength)
@@ -954,18 +962,19 @@ OnDraw = function(self, x, y)
 end
 
 local function MaxIcons(self, obj)
-	local x, y = 2, 1
 	if not obj.Height or not obj.Width then
 		error('You must provide each object\'s height when adding to a CollectionView.')
 	end
 	local slotHeight = obj.Height + self.SpacingY
 	local slotWidth = obj.Width + self.SpacingX
 	local maxX = math.floor((self.Width - 2) / slotWidth)
-	return x, y, maxX, slotWidth, slotHeight
+	return maxX, slotWidth, slotHeight
 end
 
 local function IconLocation(self, obj, i)
-	local x, y, maxX, slotWidth, slotHeight = MaxIcons(self, obj)
+	local maxX, slotWidth, slotHeight = MaxIcons(self, obj)
+	local y = 2
+	local x = 1 + math.ceil((self.Width - slotWidth * maxX) / 2)
 	local rowPos = ((i - 1) % maxX)
 	local colPos = math.ceil(i / maxX) - 1
 	x = x + (slotWidth * rowPos)
@@ -1000,7 +1009,6 @@ local function AddItem(self, v, i)
    	end
 	self:AddObject(item)
 end
-
 
 UpdateItems = function(self)
 	self:RemoveAllObjects()
@@ -1050,6 +1058,7 @@ TextColour = colours.black
 BackgroundColour = colours.transparent
 Text = ""
 AutoWidth = false
+Wrap = true
 Align = 'Left'
 
 local wrapText = function(text, maxWidth)
@@ -1087,7 +1096,14 @@ OnUpdate = function(self, value)
 end
 
 OnDraw = function(self, x, y)
-	for i, v in ipairs(wrapText(self.Text, self.Width)) do
+    local lines
+    if self.Wrap then
+        lines = wrapText(self.Text, self.Width)
+    else
+        lines = {self.Bedrock.Helpers.TruncateString(self.Text, self.Width)}
+    end
+
+	for i, v in ipairs(lines) do
         local _x = 0
         if self.Align == 'Right' then
             _x = self.Width - #v
@@ -1818,11 +1834,15 @@ end
 ]],
 ["Separator"] = [[
 Colour = colours.grey
+Character = nil
 
 OnDraw = function(self, x, y)
-	local char = "|"
-	if self.Width > self.Height then
-		char = '-'
+	local char = self.Character
+	if not char then
+		char = "|"
+		if self.Width > self.Height then
+			char = '-'
+		end
 	end
 	Drawing.DrawArea(x, y, self.Width, self.Height, char, self.Colour, colours.transparent)
 end
@@ -2167,13 +2187,7 @@ end
 function ReorderObjects(self)
 	if self.Children then
 		table.sort(self.Children, function(a,b)
-			-- if a.Z == nil then error('Z not set for ' .. a.Name) end
-			-- if b.Z == nil then error('Z not set for ' .. b.Name) end
-			-- if not a.Z then a.Z = 1 end
-			-- if not b.Z then b.Z = 1 end
-			-- Log.i(a.Name .. ': ' .. tostring(a.Z))
-			-- Log.i(b.Name .. ': ' .. tostring(b.Z))
-			return a.Z < b.Z
+			return a.Z < b.Z 
 		end)
 		for i, v in ipairs(self.Children) do
 			if v.ReorderObjects then
@@ -2951,8 +2965,8 @@ function DisplayWindow(self, _view, title, canClose)
 	self.Window = self:AddObject({Type = 'Window', Z = 999, Title = title, CanClose = canClose})
 	_view.Type = 'View'
 	_view.Name = 'View'
-	_view.BackgroundColour = _view.BackgroundColour or colours.white
 	_view.Z = 1
+	_view.BackgroundColour = _view.BackgroundColour or colours.white
 	self.Window:SetView(self:ObjectFromFile(_view, self.Window))
 end
 
@@ -3093,7 +3107,7 @@ function DisplayOpenFileWindow(self, title, callback)
 
 	--this is a really, really super bad way of doing it
 	local separator = '                               !'
-
+	
 	local _fs = fs
 	if OneOS then
 		_fs = OneOS.FS
@@ -3107,6 +3121,19 @@ function DisplayOpenFileWindow(self, title, callback)
 				addFolder(fPath, level .. '  ')
 			end
 		end
+	end
+	local function addFolder(path, level)
+		for i, v in ipairs(_fs.list(path)) do
+			local fPath = path .. '/' .. v
+			if fPath ~= '/rom' and _fs.isDir(fPath) then
+				table.insert(sidebarItems, level .. v..separator..fPath)
+				addFolder(fPath, level .. '  ')
+			end
+		end
+	end
+	
+	if OneOS then
+		_fs = OneOS.FS
 	end
 
 	addFolder('','')

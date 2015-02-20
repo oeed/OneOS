@@ -94,8 +94,18 @@ local function loadAPI(_sPath)
 end
 
 
+
 loadAPI('/System/APIs/Log.lua')
 Log.Initialise()
+
+loadAPI('/System/APIs/FileSystem.lua')
+_fileSystem = FileSystem:Initialise()
+fs = _fileSystem.FS
+io = _fileSystem.IO
+loadfile = _fileSystem.LoadFile
+dofile = _fileSystem.DoFile
+paintutils.loadImage = _fileSystem.LoadImage
+
 loadAPI('/System/API/Bedrock.lua')
 
 if type(term.native) == 'function' then
@@ -120,6 +130,7 @@ term.setCursorPos(1, 4)
 
 if err then
 	Log.e(err)
-	error(err)
+	printError(err)
+	assert(err)
 end
 

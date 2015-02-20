@@ -8,19 +8,22 @@ Index = {}
 
 OnIndex = nil
 
+-- Don't index through the sandboxed file system, it's slow and can have some undesired effects
+local _fs = _fileSystem.RawFS
+
 function AddToIndex(path, index)
-	if string.sub(fs.getName(path),1,1) == '.' or string.sub(path,1,string.len("rom"))=="rom" or string.sub(path,1,string.len("/rom"))=="/rom" then
-		if fs.getName(path) == '.DS_Store' then
-			fs.delete(path)
+	if string.sub(_fs.getName(path),1,1) == '.' or string.sub(path,1,string.len("rom"))=="rom" or string.sub(path,1,string.len("/rom"))=="/rom" then
+		if _fs.getName(path) == '.DS_Store' then
+			_fs.delete(path)
 		end
 		return index
-	elseif fs.isDir(path) then
-		index[fs.getName(path)] = {}
-		for i, fileName in ipairs(fs.list(path)) do
-			index[fs.getName(path)] = AddToIndex(path .. '/' .. fileName, index[fs.getName(path)])
+	elseif _fs.isDir(path) then
+		index[_fs.getName(path)] = {}
+		for i, fileName in ipairs(_fs.list(path)) do
+			index[_fs.getName(path)] = AddToIndex(path .. '/' .. fileName, index[_fs.getName(path)])
 		end
 	else
-		index[fs.getName(path)] = true
+		index[_fs.getName(path)] = true
 	end
 	return index
 end

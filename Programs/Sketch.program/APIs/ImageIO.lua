@@ -1,7 +1,7 @@
 local hexnums = { [10] = "a", [11] = "b", [12] = "c", [13] = "d", [14] = "e" , [15] = "f" }
 local function getHexOf(colour)
     if colour == colours.transparent or not colour or not tonumber(colour) then
-            return " "
+        return " "
     end
     local value = math.log(colour)/math.log(2)
     if value > 9 then
@@ -185,13 +185,13 @@ function GetFormat(path)
 	local content = file.readAll()
 	file.close()
 	if type(textutils.unserialize(content)) == 'table' then
-		-- It's a serlized table, asume sketch
+		-- It's a serlized table, assume sketch
 		return '.skch'
 	elseif string.find(content, string.char(30)) or string.find(content, string.char(31)) then
-		-- Contains the characters that set colours, asume nft
+		-- Contains the characters that set colours, assume nft
 		return '.nft'
 	else
-		-- Otherwise asume nfp
+		-- Otherwise assume nfp
 		return '.nfp'
 	end
 end
@@ -202,14 +202,15 @@ function LoadDocument(path, program)
 		_fs = OneOS.FS
 	end
 	if _fs.exists(path) and not _fs.isDir(path) then
-		local format = program.Helpers.Extension(path, true)
-		if (not format or format == '') and (format ~= '.nfp' and format ~= '.nft' and format ~= '.skch') then
+		local format = program.Helpers.Extension(path, true):lower()
+		if (not format or format == '') or (format ~= '.nfp' and format ~= '.nft' and format ~= '.foldericonz' and format ~= '.skch') then
 			format = GetFormat(path)
+			OneOS.Log.i(format)
 		end
 		local layers = {}
 		if format == '.nfp' then
 			layers = ReadNFP(path)
-		elseif format == '.nft' then
+		elseif format == '.nft' or format == '.foldericonz' then
 			layers = ReadNFT(path)		
 		elseif format == '.skch' then
 			layers = ReadSKCH(path)
@@ -235,7 +236,7 @@ function LoadDocument(path, program)
 			end
 
 			if layer.BackgroundColour == nil then
-				layer.BackgroundColour = colours.white
+				layer.BackgroundColour = colours.transparent
 			end
 		end
 

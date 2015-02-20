@@ -1,0 +1,70 @@
+{
+	Children = {
+		{
+			X = 1,
+			Y = 1,
+			Width = '100%',
+			Height = 3,
+			BackgroundColour = 'lightGrey',
+			Type = 'View',
+			Name = 'Toolbar',
+			Children = {
+				{
+					X = 2,
+					Y = 2,
+					Type = 'Button',
+					Text = '<',
+					TextColour = 'grey',
+					BackgroundColour = 'white'
+				},
+				{
+					X = 6,
+					Y = 2,
+					Type = 'Button',
+					Text = '>',
+					TextColour = 'grey',
+					BackgroundColour = 'white'
+				},
+				{
+					X = 10,
+					Y = 2,
+					Type = 'Button',
+					Text = 'Up',
+					Name = 'UpButton',
+					TextColour = 'grey',
+					BackgroundColour = 'white'
+				},
+				{
+					X = 16,
+					Y = 2,
+					Type = 'TextBox',
+					Name = 'PathTextBox',
+					Text = '',
+					Width = '100%,-16',
+					TextColour = 'grey',
+					BackgroundColour = 'white'
+				},
+				-- {
+				-- 	X = 1,
+				-- 	Y = 3,
+				-- 	Type = 'Separator',
+				-- 	Character = '_',
+				-- 	Colour = 'lightGrey',
+				-- 	Width = '100%',
+				-- }
+			}
+		},
+
+		{
+			X = 1,
+			Y = 4,
+			Width = '100%',
+			Height = '100%,-3',
+			BackgroundColour = 'transparent',
+			Type = 'CollectionView',
+			Name = 'FilesCollectionView',
+			Items = {}
+		}
+	},
+	BackgroundColour = 'white',
+}
