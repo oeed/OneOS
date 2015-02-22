@@ -1,0 +1,53 @@
+OneOS.LoadAPI('/System/API/Bedrock.lua')
+
+local program = Bedrock:Initialise()
+
+local currentPage = nil
+
+local function changePage(name)
+	currentPage = name
+	local selectionButtons = program:GetObject('SelectionWrap').Children
+	for i, v in ipairs(selectionButtons) do
+		if v.Text == name then
+			v.Toggle = true
+		else
+			v.Toggle = false
+		end
+	end
+
+	program:RemoveObject('CurrentPageView')
+	program:AddObject({
+        X = 1,
+        Y = 4,
+        Width = '100%',
+        Height = '100%,-3',
+        Type = name .. 'PageView',
+        InheritView = name:lower(),
+        Name = 'CurrentPageView'
+    })
+end
+
+local function updateStorage()
+	if currentPage == 'Storage' then
+		changePage('Storage')
+	end
+end
+
+program:Run(function()
+	program:RegisterEvent('disk', updateStorage)
+	program:RegisterEvent('disk_eject', updateStorage)
+	program:RegisterEvent('peripheral', updateStorage)
+	program:RegisterEvent('peripheral_detach', updateStorage)
+
+	changePage('System')
+
+	local changeFunc = function(self, event, side, x, y)
+		changePage(self.Text)
+	end
+
+	program:GetObject('AboutButton').OnClick = changeFunc
+	program:GetObject('AppearanceButton').OnClick = changeFunc
+	program:GetObject('StorageButton').OnClick = changeFunc
+	program:GetObject('SystemButton').OnClick = changeFunc
+
+end)

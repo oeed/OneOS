@@ -1,4 +1,3 @@
-
 cleanEnvironment = {}
 for k, v in pairs(_G) do
 	cleanEnvironment[k] = v
@@ -15,46 +14,6 @@ anm(colours.grey)
 anm(colours.lightGrey)
 anm(colours.white)
 
-local Extension = function(path, addDot)
-	if not path then
-		return nil
-	elseif not string.find(fs.getName(path), '%.') then
-		if not addDot then
-			return fs.getName(path)
-		else
-			return ''
-		end
-	else
-		local _path = path
-		if path:sub(#path) == '/' then
-			_path = path:sub(1,#path-1)
-		end
-		local extension = _path:gmatch('%.[0-9a-z]+$')()
-		if extension then
-			extension = extension:sub(2)
-		else
-			--extension = nil
-			return ''
-		end
-		if addDot then
-			extension = '.'..extension
-		end
-		return extension:lower()
-	end
-end
-
--- TODO: get a better method
-local removeExtension = function(path)
-	if path:sub(1,1) == '.' then
-		return path
-	end
-	local extension = Extension(path)
-	if extension == path then
-		return fs.getName(path)
-	end
-	return string.gsub(path, extension, ''):sub(1, -2)
-end
-
 local function log(...)
 	if Log then
 		Log.i(...)
@@ -65,9 +24,9 @@ local function log(...)
 end
 
 local function loadAPI(_sPath)
-	local sName = removeExtension(fs.getName( _sPath ))
+	local sName = string.gsub(fs.getName( _sPath ), "%.%w+$", "")
 	log('Loading: '.._sPath)
-	local tEnv = {isStartup = true }
+	local tEnv = { isStartup = true }
 	setmetatable( tEnv, { __index = getfenv()} )
 	local fnAPI, err = loadfile( _sPath )
 	if fnAPI then
@@ -93,8 +52,6 @@ local function loadAPI(_sPath)
 	return true
 end
 
-
-
 loadAPI('/System/APIs/Log.lua')
 Log.Initialise()
 
@@ -109,12 +66,12 @@ paintutils.loadImage = _fileSystem.LoadImage
 loadAPI('/System/API/Bedrock.lua')
 
 if type(term.native) == 'function' then
-	local cur = term.current()
-	restoreTerm = function()term.redirect(cur)end
+	restoreTerm = function()term.redirect(term.native())end
 else
 	restoreTerm = function()term.restore()end
 end
 
+-- os.run(getfenv(), 'n')
 os.run(getfenv(), '/System/main.lua')
 
 local _, err = pcall(Initialise)
@@ -133,4 +90,3 @@ if err then
 	printError(err)
 	assert(err)
 end
-

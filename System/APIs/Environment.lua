@@ -125,6 +125,7 @@ Initialise = function(self, program, shell, path, bedrock)
 	env.shell = addErrorHandler(program, shellEnv, 'Shell')
 	env.OneOS = addErrorHandler(program, self.OneOS(env, program, path), 'OneOS API')
 	env.sleep = env.os.sleep
+	env.term = program.Term
 	return env
 end
 
@@ -154,6 +155,7 @@ OneOS = function(env, program, path)
 	return {
 		-- TODO: clean up these, lots won't be relevant anymore
 		System = System,
+		SetBuffer = function(b) program.Buffer = b end,
 		ToolBarColour = nil,
 		ToolBarColor = nil,
 		ToolBarTextColor = colours.black,

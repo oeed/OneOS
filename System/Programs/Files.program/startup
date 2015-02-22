@@ -2,6 +2,8 @@ OneOS.LoadAPI('/System/API/Bedrock.lua')
 
 local program = Bedrock:Initialise()
 
+local args = {...}
+
 _fs = OneOS.FS
 
 program.OnKeyChar = function(self, event, keychar)
@@ -12,26 +14,137 @@ end
 
 local currentPath = nil
 local showHidden = false
+local showExtensions = false
 
-local function openFolder(path)
+local refresh
+
+local function openFolder(path, selected)
 	path = program.Helpers.TidyPath(OneOS.System.ResolveAlias(path))
 	currentPath = path
 	local items = {}
 
+	if selected then
+		selected = program.Helpers.TidyPath(selected)
+	end
+
 	for i, v in ipairs(_fs.list(path)) do
 		if showHidden or v:sub(1, 1) ~= '.' then
+			local filePath = program.Helpers.TidyPath(path .. '/' .. v)
 			table.insert(items, 
 				{
 					Type = 'FileIcon',
-					Path = program.Helpers.TidyPath(path .. '/' .. v),
-					OnClick = function(self, event, side, x, y)
+					Path = filePath,
+					Selected = filePath == selected,
+					ShowExtension = showExtensions,
+					OnClick = function(self, event, side, x, y, _)
+						if not _ then return end
+						
+						local extension = OneOS.System.RealExtension(self.Path)
 						if side == 2 then
 							if self:ToggleMenu('filemenu', x, y) then
+								local menu = self.Bedrock.Menu
+								local readOnly = OneOS.System.Bedrock.FileSystem.RawFS.isReadOnly(self.Path)
+
+								if not _fs.isDir(self.Path) or (not extension or #extension == 0) then
+									menu:RemoveObject('ViewBundleMenuItem')
+								else
+									menu:GetObject('ViewBundleMenuItem').OnClick = function()
+										openFolder(self.Path)
+									end
+								end
+
+								if extension ~= 'program' then
+									menu:RemoveObject('OpenArgsMenuItem')
+								else
+									menu:GetObject('OpenArgsMenuItem').OnClick = function()
+										OneOS.System.OpenFileArgs(self.Path, program)
+									end
+								end
+
+								if _fs.isDir(self.Path) then
+									menu:RemoveObject('TransmitMenuItem')
+									menu:RemoveObject('OpenWithMenuItem')
+
+									menu:GetObject('CreatePackageMenuItem').OnClick = function()
+										local packrun = loadfile('pkgmake')
+										local env = getfenv()
+										setfenv( packrun, env)
+										local path = self.Path:sub(1,#self.Path-1)
+										packrun(self.Path, program.Helpers.RemoveFileName(path)..program.Helpers.RemoveExtension(fs.getName(path))..'.pkg')
+										refresh()
+									end
+								else
+									menu:RemoveObject('CreatePackageMenuItem')
+
+									menu:GetObject('TransmitMenuItem').OnClick = function()
+										OneOS.System.OpenFile('/Programs/Transmit.program/', {self.Path}, self.X, self.Y)
+									end
+
+									menu:GetObject('OpenWithMenuItem').OnClick = function()
+										OneOS.System.OpenFileWith(self.Path, program)
+									end
+								end
+
+								menu:GetObject('OpenMenuItem').OnClick = function()
+									self:OnClick(event, 1, x, y)
+								end
+
+								if readOnly then
+									menu:RemoveObject('RenameMenuItem')
+									menu:RemoveObject('DeleteMenuItem')
+								else
+									menu:GetObject('RenameMenuItem').OnClick = function()
+										OneOS.System.RenameFile(self.Path, refresh, program)
+									end
+
+									menu:GetObject('DeleteMenuItem').OnClick = function()
+										OneOS.System.DeleteFile(self.Path, refresh, program)
+									end
+								end
+
+								if program.Helpers.TidyPath(self.Path) == program.Helpers.TidyPath(OneOS.System.ResolveAlias(self.Path)) then
+									menu:RemoveObject('ResolveAliasMenuItem')
+
+									menu:GetObject('AddToFavouritesMenuItem').OnClick = function()
+										OneOS.System.AddFavourite(self.Path)
+										refresh()
+									end
+
+									menu:GetObject('MakeAliasMenuItem').OnClick = function()
+										local newPath = program.Helpers.ParentFolder(self.Path) .. '/' .. program.Helpers.RemoveExtension(fs.getName(self.Path)) .. ' Alias'
+										OneOS.System.MakeAlias(newPath, self.Path)
+										refresh()
+									end
+								else
+									menu:RemoveObject('AddToFavouritesMenuItem')
+									menu:RemoveObject('MakeAliasMenuItem')
+
+									menu:GetObject('ResolveAliasMenuItem').OnClick = function()
+										local realPath = OneOS.System.ResolveAlias(self.Path)
+										openFolder(program.Helpers.ParentFolder(realPath), realPath)
+									end
+								end
+
+								menu:GetObject('CopyMenuItem').OnClick = function()
+									-- TODO
+								end
+
+								if readOnly then
+									menu:RemoveObject('CutMenuItem')
+								else
+									menu:GetObject('CutMenuItem').OnClick = function()
+										-- TODO
+									end
+								end
+
+								menu:GetObject('PasteMenuItem').OnClick = function()
+									-- TODO
+								end
+
+								menu:OnUpdate('Children')
 							end
 						else
-							local extension = OneOS.System.RealExtension(self.Path)
 							if _fs.isDir(self.Path) and (not extension or #extension == 0) then
-								OneOS.Log.i('open folder')
 								openFolder(self.Path)
 							else
 								OneOS.OpenFile(self.Path, nil, self.X, self.Y)
@@ -49,14 +162,102 @@ local function openFolder(path)
 	program:GetObject('PathTextBox').Text = path
 end
 
+refresh = function()
+	openFolder(currentPath)
+end
+
+local function saveSettings()
+	local h = fs.open('.Files.settings', 'w')
+	if h then
+		h.write(textutils.serialize({
+			ShowHidden = showHidden,
+			ShowExtensions = showExtensions,
+		}))
+		h.close()
+	end
+end
+
+local function readSettings()
+	local h = fs.open('.Files.settings', 'r')
+	if h then
+		local settings = textutils.unserialize(h.readAll())
+		showHidden = settings.ShowHidden or false
+		showExtensions = settings.ShowExtensions or false
+	end
+end
+
 program:Run(function()
-	openFolder('/Favourites')
+	readSettings()
+
+	if #args == 1 and _fs.exists(args[1]) then
+		openFolder(args[1])
+	else
+		openFolder('/Favourites')
+	end
 
 	program:GetObject('UpButton').OnClick = function(self, event, side, x, y)
 		if currentPath == '/' then
 			openFolder('/Favourites')
 		else
 			openFolder(self.Bedrock.Helpers.ParentFolder(currentPath))
+		end
+	end
+
+	program:GetObject('PathTextBox').OnChange = function(self, event, keychar)
+		if keychar == keys.enter then
+			local path = program.Helpers.TidyPath(self.Text)
+			if _fs.exists(path) then
+				if _fs.isDir(path) then
+					openFolder(path)
+				else
+					openFolder(program.Helpers.ParentFolder(path), path)
+				end
+			else
+				refresh()
+			end
+			program:SetActiveObject()
+		end
+	end
+
+	program:GetObject('FilesCollectionView').OnClick = function(self, event, side, x, y)
+		if side == 2 and self:ToggleMenu('bgmenu', x, y) then
+			local menu = self.Bedrock.Menu
+
+			menu:GetObject('PasteMenuItem').OnClick = function()
+				-- TODO
+			end
+
+			if showHidden then
+				menu:GetObject('ToggleHiddenMenuItem').Text = 'Hide Hidden Files'
+			end
+			menu:GetObject('ToggleHiddenMenuItem').OnClick = function()
+				showHidden = not showHidden
+				saveSettings()
+				refresh()
+			end
+
+			if showExtensions then
+				menu:GetObject('ToggleExtensionMenuItem').Text = 'Hide Extensions'
+			end
+			menu:GetObject('ToggleExtensionMenuItem').OnClick = function()
+				showExtensions = not showExtensions
+				saveSettings()
+				refresh()
+			end
+
+			menu:GetObject('NewFileMenuItem').OnClick = function()
+				OneOS.System.NewFile(currentPath, refresh, program)
+			end
+
+			menu:GetObject('NewFolderMenuItem').OnClick = function()
+				OneOS.System.NewFolder(currentPath, refresh, program)
+			end
+
+			menu:GetObject('RefreshMenuItem').OnClick = function()
+				refresh()
+			end
+
+			menu:OnUpdate('Children')
 		end
 	end
 end)

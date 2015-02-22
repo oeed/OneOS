@@ -74,7 +74,7 @@ program:Run(function()
 		local currentPage = self:GetObject('CurrentPage')
 		if currentPage and not currentPage.Failed and not currentPage.Success and currentPage.RequestURL == url then
 			currentPage.Failed = true
-			currentPage:OnDataFailed(url, 'GENERIC')
+			currentPage:OnDataFailed(url, 'Unknown error')
 		end
 	end)
 

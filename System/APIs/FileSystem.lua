@@ -88,7 +88,7 @@ end
 
 function SandboxFunction(self, k, v)
 	local f
-	if k == 'getName' or k == 'getDir' or k == 'find' then
+	if k == 'getName' or k == 'getDir' or k == 'find' or k == 'delete' then
 		f = function(_path)
 			return v(_path)
 		end
@@ -123,12 +123,12 @@ end
 AliasIdentifier = string.char(1) .. 'ALIAS' .. string.char(2)
 
 function ResolveAlias(self, path)
-	if path:sub(1,1) ~= '/' then
-		path = '/' .. path
+	if not path or path == '/System/OneOS.log' or type(path) ~= 'string' then
+		return path
 	end
 
-	if path == '/System/OneOS.log' then
-		return path
+	if path:sub(1,1) ~= '/' then
+		path = '/' .. path
 	end
 
 	local function split(a,e)
@@ -178,8 +178,6 @@ function ResolveAlias(self, path)
 	end
 
 	tmpPath = resolveFolders()
-	-- Log.i('In: ' .. path .. '; Out: '..tmpPath)
-
 
 	-- if it's not an alias just return the original path
 	return tmpPath
@@ -189,6 +187,7 @@ function MakeAlias(self, path, pointer)
 	if self.Bedrock then
 		pointer = self.Bedrock.Helpers.TidyPath(pointer)
 	end
+	pointer = self:ResolveAlias(pointer)
 
 	if not fs.exists(pointer) then
 		return false
@@ -198,6 +197,7 @@ function MakeAlias(self, path, pointer)
 	if h then
 		h.write(self.AliasIdentifier .. pointer)
 		h.close()
+		return true
 	end
 	return false
 end

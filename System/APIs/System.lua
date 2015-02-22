@@ -80,7 +80,6 @@ GetIcon = function(path)
 	local extension = System.RealExtension(path)
 
 	local unknownIconPath = 'System/Resources/Icons/unknown'
-
 	if extension and iconCache[extension] then
 		return iconCache[extension]
 	elseif extension and extension == 'shortcut' then
@@ -97,22 +96,24 @@ GetIcon = function(path)
 		elseif not fs.isDir(path) or (fs.isDir(path) and fs.exists(path..'/startup') and not fs.exists(path..'/icon')) then
 			return readIcon('System/Resources/Icons/program')
 		else
-			return readIcon('System/Resources/Icons/folder')
+			return readIcon('System/Resources/Icons/bundle')
+		end
+	elseif extension and fs.exists('System/Resources/Icons/'..extension) and not fs.isDir('System/Resources/Icons/'..extension) then
+		return readIcon('System/Resources/Icons/'..extension)
+	elseif extension and #extension ~= 0 then
+		local _path = Indexer.FindFileInFolder(extension, 'Icons')
+		if _path then
+			return readIcon(_path, extension)
+		elseif fs.isDir(path) then
+			return readIcon('System/Resources/Icons/bundle')
+		else
+			return readIcon('System/Resources/Icons/unknown')
 		end
 	elseif fs.isDir(path) then
 		if fs.exists(path..'/.FolderIcon') then
 			return readIcon(path..'/.FolderIcon')
 		else
 			return readIcon('System/Resources/Icons/folder')
-		end
-	elseif extension and fs.exists('System/Resources/Icons/'..extension) and not fs.isDir('System/Resources/Icons/'..extension) then
-		return readIcon('System/Resources/Icons/'..extension)
-	elseif extension then
-		local _path = Indexer.FindFileInFolder(extension, 'Icons')
-		if _path then
-			return readIcon(_path, extension)
-		else
-			return readIcon('System/Resources/Icons/unknown')
 		end
 	else
 		return readIcon('System/Resources/Icons/unknown')
@@ -160,7 +161,7 @@ OpenFile = function(path, args, x, y)
 	Log.i('Opening file: '..path)
 	args = args or {}
 	if fs.exists(path) then
-		local extension = System.Bedrock.Helpers.Extension(path)
+		local extension = System.RealExtension(path)
 		Log.i(extension)
 		if extension == 'shortcut' then
 			h = fs.open(path, 'r')
@@ -279,4 +280,185 @@ end
 
 ResolveAlias = function(path)
 	return System.Bedrock.FileSystem:ResolveAlias(path)
+end
+
+MakeAlias = function(path, pointer)
+	return System.Bedrock.FileSystem:MakeAlias(path, pointer)
+end
+
+AddFavourite = function(path)
+	local newPath = '/Favourites/' .. System.Bedrock.Helpers.RemoveExtension(fs.getName(path))
+	System.MakeAlias(newPath, path)
+end
+
+RenameFile = function(path, done, bedrock)
+	bedrock = bedrock or System.Bedrock
+	path = bedrock.Helpers.TidyPath(path)
+	local function showRename()
+		local ext = ''
+		if fs.getName(path):find('%.') then
+			ext = '.'..bedrock.Helpers.Extension(path)
+		end
+
+		Log.i('blah')
+		Log.i(ext)
+		bedrock:DisplayTextBoxWindow('Rename '..fs.getName(path), "Enter the new file name.", function(success, value)
+			if success and #value ~= 0 then
+				local _, err = pcall(function()fs.move(path, bedrock.Helpers.RemoveFileName(path)..value) if done then done() end end)
+				if err then
+					bedrock:DisplayAlertWindow('Rename Failed!', 'Error: '..err, {'Ok'})
+				end
+			end
+		end, ext)
+	end
+	
+	if path == '/startup' or path:find('/System/') or path == '/Desktop/Documents/' or path == '/Desktop/' then
+		bedrock:DisplayAlertWindow('Important File!', 'Renaming this file might cause your computer to stop working. Are you sure you want to rename it?', {'Rename', 'Cancel'}, function(text)
+			if text == 'Rename' then
+				showRename()
+			end
+		end)
+	else
+		showRename()
+	end
+end
+
+DeleteFile = function(path, done, bedrock)
+	bedrock = bedrock or System.Bedrock
+	path = bedrock.Helpers.TidyPath(path)
+	local function doDelete()
+		local _, err = pcall(function()fs.delete(path) if done then done() end end)
+		if err then
+			bedrock:DisplayAlertWindow('Delete Failed!', 'Error: '..err, {'Ok'})
+		end
+	end
+	
+	if path == '/startup' or path:find('/System/') or path == '/Desktop/Documents/' or path == '/Desktop/' then
+		bedrock:DisplayAlertWindow('Important File!', 'Deleting this file might cause your computer to stop working. Are you sure you want to delete it?', {'Delete', 'Cancel'}, function(text)
+			if text == 'Delete' then
+				doDelete()
+			end
+		end)
+	else
+		bedrock:DisplayAlertWindow('Delete File?', 'Are you sure you want to permanently "' .. fs.getName(path) .. '"?', {'Delete', 'Cancel'}, function(text)
+			if text == 'Delete' then
+				doDelete()
+			end
+		end)
+	end
+end
+
+NewFile = function(basePath, done, bedrock)
+	bedrock = bedrock or System.Bedrock
+	basePath = bedrock.Helpers.TidyPath(basePath)
+	bedrock:DisplayTextBoxWindow('Create New File', "Enter the new file name.", function(success, value)
+		if success and #value ~= 0 then
+			local _, err = pcall(function()
+				local h = fs.open(basePath..value, 'w')
+				h.close()
+				if done then done() end
+			end)
+			if err then
+				bedrock:DisplayAlertWindow('File Creation Failed!', 'Error: '..err, {'Ok'})
+			end
+		end
+	end)
+end
+
+NewFolder = function(basePath, done, bedrock)
+	bedrock = bedrock or System.Bedrock
+	basePath = bedrock.Helpers.TidyPath(basePath)
+	bedrock:DisplayTextBoxWindow('Create New Folder', "Enter the new folder name.", function(success, value)
+		if success and #value ~= 0 then
+			local _, err = pcall(function()
+				fs.makeDir(basePath..value)
+				if done then done() end
+			end)
+			if err then
+				bedrock:DisplayAlertWindow('File Creation Failed!', 'Error: '..err, {'Ok'})
+			end
+		end
+	end)
+end
+
+OpenFileWith = function(path, bedrock)
+	bedrock = bedrock or System.Bedrock
+	path = bedrock.Helpers.TidyPath(path)
+	local text = 'Choose the program you want to open this file with.'
+	local height = #bedrock.Helpers.WrapText(text, 26)
+
+	local items = {}
+
+	for i, v in ipairs(fs.list('Programs/')) do
+		if string.sub( v, 1, 1 ) ~= '.' then
+			table.insert(items, v)
+		end
+	end
+
+	local children = {
+		{
+			Y = "100%,-1",
+			X = "100%,-6",
+			Name = "OpenButton",
+			Type = "Button",
+			Text = "Open",
+			OnClick = function()
+				local selected = bedrock.Window:GetObject('ListView').Selected
+				if selected then
+					System.OpenFile('Programs/' .. selected.Text, {path})
+					bedrock.Window:Close()
+				end
+			end
+		},
+		{
+			Y = "100%,-1",
+			X = "100%,-15",
+			Name = "CancelButton",
+			Type = "Button",
+			Text = "Cancel",
+			OnClick = function()
+				bedrock.Window:Close()
+			end
+		},
+	    {
+			Y = 6,
+			X = 2,
+			Height = "100%,-8",
+			Width = "100%,-2",
+			Name = "ListView",
+			Type = "ListView",
+			TextColour = 128,
+			BackgroundColour = 0,
+			CanSelect = true,
+			Items = items,
+	    },
+	    {
+			Y = 2,
+			X = 2,
+			Width = "100%,-2",
+			Height = height,
+			Name = "Label",
+			Type = "Label",
+			Text = text
+		}
+	}
+
+	local view = {
+		Children=children,
+		Width=28,
+		Height=10+height
+	}
+	bedrock:DisplayWindow(view, 'Open With')
+end
+
+OpenFileArgs = function(path, bedrock)
+	bedrock = bedrock or System.Bedrock
+	path = bedrock.Helpers.TidyPath(path)
+
+					
+	bedrock:DisplayTextBoxWindow('Open With Arguments', "Enter the command line arguments.", function(success, value)
+		if success and #value ~= 0 then
+			System.OpenFile(path, bedrock.Helpers.Split(value, ' '))
+		end
+	end, ext)
 end

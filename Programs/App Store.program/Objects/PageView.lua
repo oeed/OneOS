@@ -27,22 +27,26 @@ FetchData = function(self)
 	local reason
 
 	if not http then
-		reason = 'NOHTTP'
+		reason = 'Please enabled HTTP'
 	elseif http.checkURL and not http.checkURL(url) then
-		reason = 'BLOCKED'
+		reason = 'Please set HTTP whitelist to "*"'
 	end
 
 	if not reason then
-		local ok = http.request(url)
-		if ok then
+		local ok, err = http.request(url)
+		if ok ~= false then -- on earlier versions ok will be nil regardless
 			self.TimeoutTimer = self.Bedrock:StartTimer(function()
 				if not self.Failed and not self.Success then
 					self.Failed = true
-					self:OnDataFailed(url, 'TIMEOUT')
+					self:OnDataFailed(url, 'Request timeout')
 				end
-			end, self.TimeoutLength)
+			end, 0)
 		else
-			reason = 'REQUEST'
+			if err then
+				reason = err
+			else
+				reason = 'HTTP request error'
+			end
 		end
 	end
 
@@ -58,10 +62,20 @@ OnDataFailed = function(self, url, reason)
 		X = 1,
 		Width = '100%',
 		Align = 'Center',
+		Y = '50%,-2',
+		Type = 'Label',
+		Text = 'Loading Failed',
+		TextColour = 'red'
+	})
+
+	self:AddObject({
+		X = 1,
+		Width = '100%',
+		Align = 'Center',
 		Y = '50%,-1',
 		Type = 'Label',
-		Text = 'Loading Failed '..reason,
-		TextColour = 'red'
+		Text = reason,
+		TextColour = 'orange'
 	})
 
 	self:AddObject({

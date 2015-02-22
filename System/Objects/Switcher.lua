@@ -127,7 +127,6 @@ UpdateButtons = function(self)
 					Text = v.Title,
 					ProgramView = v,
 					OnClick = function(_, event, side)
-						Log.i('Switch')
 						if side == 1 then
 							v:MakeActive()
 						elseif side == 3 then

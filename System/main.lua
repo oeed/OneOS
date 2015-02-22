@@ -2,6 +2,7 @@ Bedrock.ProgramPath = shell.getRunningProgram()
 
 local bedrock = Bedrock:Initialise('/System')
 System.Bedrock = bedrock
+System.Settings = Settings:Initialise()
 
 -- bedrock.AnimationEnabled = false
 
@@ -87,7 +88,14 @@ function Initialise()
 			desktop:MakeActive()
 		end
 
+		if System.Settings.StartupProgram then
+			System.OpenFile(System.Settings.StartupProgram)
+		end
+
 		-- System.StartProgram('/Programs/LuaIDE.program')
-		System.StartProgram('/System/Programs/Files.program')
+		-- System.StartProgram('/System/Programs/Files.program')
+		-- System.StartProgram('/Programs/Sketch.program')
+		-- System.StartProgram('/System/Programs/Settings.program')
+		-- System.StartProgram('/Programs/test.program')
 	end)
 end

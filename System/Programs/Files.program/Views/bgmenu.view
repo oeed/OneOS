@@ -2,22 +2,14 @@
   Type = 'Menu',
   Children = {
     {
-      Name = 'OpenMenuItem',
+      Name = 'ToggleHiddenMenuItem',
       Type = 'MenuItem',
-      Text = 'Open'
+      Text = 'Show Hidden Files'
     },
     {
-      Type = 'Separator'
-    },
-    {
-      Name = 'RenameMenuItem',
+      Name = 'ToggleExtensionMenuItem',
       Type = 'MenuItem',
-      Text = 'Rename...'
-    },
-    {
-      Name = 'DeleteMenuItem',
-      Type = 'MenuItem',
-      Text = 'Delete...'
+      Text = 'Show Extensions'
     },
     {
       Type = 'Separator'
@@ -31,6 +23,15 @@
       Name = 'NewFolderMenuItem',
       Type = 'MenuItem',
       Text = 'New Folder...'
+    },
+    {
+      Type = 'Separator'
+    },
+    {
+      Name = 'PasteMenuItem',
+      Type = 'MenuItem',
+      Text = 'Paste',
+      Enabled = false
     },
     {
       Type = 'Separator'

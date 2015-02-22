@@ -5,6 +5,7 @@ TextColour = colours.white
 BackgroundColour = colours.black
 CursorBlink = false
 Buffer = {}
+Buffer = {}
 UpdateDrawBlacklist = {
 	['EventQueue'] = true
 }
@@ -24,9 +25,10 @@ Environment = nil
 Arguments = nil
 Hidden = false
 
-OnLoad = function(self)
+OnLoad = function(self)	
 	self.BufferWidth = self.Bedrock.View.Width
 	self.BufferHeight = self.Bedrock.View.Height - 1
+	self:Execute()
 
 	if self.BufferWidth ~= self.Width or self.BufferHeight ~= self.Height then
 		if self.Bedrock.AnimationEnabled then
@@ -46,7 +48,6 @@ OnLoad = function(self)
 			self.Y = 2
 		end
 	end
-	self:Execute()
 end
 
 Execute = function(self)
@@ -72,6 +73,8 @@ Execute = function(self)
 				term.setBackgroundColour(colours.black)
 				if err2 then
 					print(err2)
+				else
+					print('The program doesn\'t exist.')
 				end
 				if err2 == 'File not found' then
 					term.clear()
@@ -87,6 +90,9 @@ Execute = function(self)
 			end
 
 			local ok, err3 = pcall( function()
+				if type(self.Arguments) ~= 'table' then
+					self.Arguments = {self.Arguments}
+				end
 	        	fnFile( unpack( self.Arguments ) )
 	        end )
 	        if not ok then
@@ -170,7 +176,7 @@ MakeActive = function(self, previous, done)
 		end
 		System.UpdateSwitcher()
 		self.Visible = true
-		if previous then
+		if previous and previous.Index then
 			local newIndex = self:Index()
 			local oldIndex = previous:Index()
 
@@ -247,7 +253,8 @@ Resume = function(self, ...)
 		    	Log.e(err)
 		    	error(err)
 			end
-		end)		
+		end)
+
 	self:ForceDraw(nil, nil, true)
 	self.Bedrock:Draw()
 	if result then
@@ -277,9 +284,16 @@ Close = function(self, force)
 			self.Bedrock:RemoveObject(self)
 
 			local programs = self.Bedrock:GetObjects('ProgramView')
-			if programs[programIndex] then
+			for i, v in ipairs(programs) do
+				Log.i(i .. ': '..v.Title)
+			end
+			Log.i('Closing, was active')		
+			Log.i('Index was '..programIndex)
+			if programs[programIndex] then		
+			Log.i('make active '..programs[programIndex].Title)
 				programs[programIndex]:MakeActive(self)
 			elseif programs[programIndex - 1] then
+			Log.i('make active1 '..programs[programIndex-1].Title)
 				programs[programIndex - 1]:MakeActive(self)
 			end
 		else
@@ -295,19 +309,20 @@ Close = function(self, force)
 end
 
 QueueEvent = function(self, ...)
-	table.insert(self.EventQueue, {...})
+	local t = {...}
+	table.insert(self.EventQueue, t)
 end
 
 OnClick = function(self, ...)
 	if self.Running then
-		self:QueueEvent(...)
+		self:Resume(...)
 	else
 		self:Close()
 	end
 end
 
 OnDrag = function(self, ...)
-	self:QueueEvent(...)
+	self:Resume(...)
 end
 
 OnScroll = function(self, ...)
@@ -417,10 +432,18 @@ end
 
 MakeTerm = function(self)
 	local _term = {}
-	_term.native = _term
+	local native = _term
+	local redirectTarget = _term
+
+	_term.native = function()
+		return native
+	end
+
+	_term.current = function()
+	    return redirectTarget
+	end
 
 	_term.write = function(characters)
-		-- Log.i('write')
 		if type(characters) == 'number' then
 			characters = tostring(characters)
 		end
@@ -433,6 +456,24 @@ MakeTerm = function(self)
 		end
 		
 		self.CursorPos[1] = self.CursorPos[1] + 1
+	end
+
+	_term.redirect = function( target )
+		if target == nil or type( target ) ~= "table" then
+			error( "Invalid redirect target", 2 )
+		end
+		for k,v in pairs( native ) do
+			if type( k ) == "string" and type( v ) == "function" then
+				if type( target[k] ) ~= "function" then
+					target[k] = function()
+						error( "Redirect object is missing method "..k..".", 2 )
+					end
+				end
+			end
+		end
+		local oldRedirectTarget = redirectTarget
+		redirectTarget = target
+		return oldRedirectTarget
 	end
 
 	_term.clear = function()
@@ -518,6 +559,10 @@ MakeTerm = function(self)
 		for i, v in ipairs(lines) do
 			self:ClearLine(v, self.BackgroundColour)
 		end
+	end
+
+	_term.restore = function()
+		_term.redirect(native)
 	end
 
 	_term.clear()

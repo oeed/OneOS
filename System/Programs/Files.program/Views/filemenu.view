@@ -19,7 +19,7 @@
     {
       Name = 'OpenWithMenuItem',
       Type = 'MenuItem',
-      Text = 'Open With Arguments...'
+      Text = 'Open With...'
     },
     {
       Type = 'Separator'
@@ -48,14 +48,19 @@
       Text = 'Delete...'
     },
     {
-      Name = 'AddToDesktopMenuItem',
+      Name = 'AddToFavouritesMenuItem',
       Type = 'MenuItem',
-      Text = 'Add To Desktop'
+      Text = 'Add To Favourites'
     },
     {
       Name = 'MakeAliasMenuItem',
       Type = 'MenuItem',
       Text = 'Make Alias'
+    },
+    {
+      Name = 'ResolveAliasMenuItem',
+      Type = 'MenuItem',
+      Text = 'Show Real File'
     },
     {
       Type = 'Separator'
@@ -75,27 +80,6 @@
       Type = 'MenuItem',
       Text = 'Paste',
       Enabled = false
-    },
-    {
-      Type = 'Separator'
-    },
-    {
-      Name = 'NewFileMenuItem',
-      Type = 'MenuItem',
-      Text = 'New File...'
-    },
-    {
-      Name = 'NewFolderMenuItem',
-      Type = 'MenuItem',
-      Text = 'New Folder...'
-    },
-    {
-      Type = 'Separator'
-    },
-    {
-      Name = 'RefreshMenuItem',
-      Type = 'MenuItem',
-      Text = 'Refresh'
     },
   },
 }

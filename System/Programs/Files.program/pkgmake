@@ -1,0 +1,24 @@
+sPackage=[[local _fs = fs if OneOS then _fs = OneOS.FS end local pkg=%@1
+local function makeFile(_path,_content)
+ local file=OneOS.FS.open(_path,"w")
+ file.write(_content)
+ file.close()
+end
+local function makeFolder(_path,_content)
+ OneOS.FS.makeDir(_path)
+ for k,v in pairs(_content) do
+  if type(v)=="table" then
+   makeFolder(_path.."/"..k,v)
+  else
+   makeFile(_path.."/"..k,v)
+  end
+ end
+end
+local sDest= installLocation or '/'
+if sDest=="root" then
+ sDest="/"
+end
+sDest = sDest .. %@2
+local tPackage=pkg
+makeFolder(sDest,tPackage)
+]]function addFile(a,b)if OneOS.FS.getName(b)==".DS_Store"then return a end;local c,d=OneOS.FS.open(b,"r")local e=c.readAll()e=e:gsub("%%","%%%%")a[OneOS.FS.getName(b)]=e;c.close()return a end;function addFolder(a,b)if string.sub(b,1,string.len("rom"))=="rom"or string.sub(b,1,string.len("/rom"))=="/rom"then return end;a=a or{}for f,g in ipairs(OneOS.FS.list(b))do local h=b.."/"..g;if OneOS.FS.isDir(h)then a[OneOS.FS.getName(g)]=addFolder(a[OneOS.FS.getName(g)],h)else a=addFile(a,h)end end;return a end;local i={...}local j=OneOS.Shell.resolve(i[1])local k=OneOS.Shell.resolve(i[2])if OneOS.FS.exists(j)and OneOS.FS.isDir(j)then tPackage={}tPackage=addFolder(tPackage,j)fPackage=OneOS.FS.open(k,"w")if fPackage then sPackage=string.gsub(sPackage,"%%@1",textutils.serialize(tPackage))sPackage=string.gsub(sPackage,"%%@2",textutils.serialize(OneOS.FS.getName(i[1])))fPackage.write(sPackage)fPackage.close()else error(k)end else error(j)error("Source does not exist or is not a folder.")end

@@ -1,0 +1,62 @@
+{
+    Children = {
+        {
+            X = 2,
+            Y = 2,
+            Width = 6,
+            Height = 4,
+            BackgroundColour = 'blue',
+            Type = 'View'
+        },
+        {
+            X = 9,
+            Y = 3,
+            TextColour = 'grey',
+            Type = 'Label',
+            Text = 'OneOS'
+        },
+        {
+            X = 15,
+            Y = 3,
+            TextColour = 'lightGrey',
+            Type = 'Label',
+            Text = 'The all in one operating system.'
+        },
+        {
+            X = 9,
+            Y = 4,
+            TextColour = 'lightGrey',
+            Type = 'Label',
+            Text = 'Version v2.0.0. Powered by Bedrock'
+        },
+
+        {
+            X = 2,
+            Y = 7,
+            Width = '100%,-2',
+            TextColour = 'grey',
+            Type = 'Label',
+            Text = 'The ultimate ComputerCraft experience is powered by the intensely powerful Bedrock framework and forty two and half hamsters. Thank you for supporting and using OneOS!'
+        },
+
+        {
+            X = 1,
+            Y = '100%,-1',
+            Width = '100%',
+            Align = 'Center',
+            TextColour = 'lightGrey',
+            Type = 'Label',
+            Text = '(c) Oliver \'oeed\' Cooper 2013-15'
+        },
+        {
+            X = 1,
+            Y = '100%',
+            Width = '100%',
+            Align = 'Center',
+            TextColour = 'lightGrey',
+            Type = 'Label',
+            Text = 'Under CC BY-NC-ND 4.0 License'
+        },
+    },
+    BackgroundColour = 'white',
+}

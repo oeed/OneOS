@@ -1,0 +1,28 @@
+OneOS.LoadAPI('/System/API/Bedrock.lua')
+
+local program = Bedrock:Initialise()
+
+local tArgs = {...}
+
+if not tArgs[1] or not OneOS.FS.exists(tArgs[1]) then
+	OneOS.Close()
+end
+
+program:Run(function()
+	local packrun, err = OneOS.LoadFile(tArgs[1])
+	local env = getfenv()
+	env['installLocation'] = program.Helpers.RemoveFileName(tArgs[1])..'/'
+	setfenv( packrun, env)
+
+	if packrun then
+		packrun()
+		program:GetObject('Label').Text = 'Package Extracted'
+	else
+		program:GetObject('Label').Text = 'The package appears to be corrupt.'
+		program:GetObject('Label').TextColour = colours.red
+	end
+
+	program:StartTimer(function()
+		OneOS.Close()
+	end, 1)
+end)

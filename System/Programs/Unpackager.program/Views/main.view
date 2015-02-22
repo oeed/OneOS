@@ -1,0 +1,14 @@
+{
+    Children = {
+        {
+            X = 1,
+            Y = '50%',
+            Width = '100%',
+            Align = 'Center',
+            Text = 'Extracting Package...',
+            Type = 'Label',
+            TextColour = 'blue'
+        },
+    },
+    BackgroundColour = 'white',
+}

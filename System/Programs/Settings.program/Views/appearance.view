@@ -1,0 +1,46 @@
+{
+    Children = {
+        {
+            X = 3,
+            Y = 2,
+            TextColour = 'grey',
+            Type = 'Label',
+            Text = 'Desktop Background'
+        },
+        {
+            X = 3,
+            Y = 3,
+            TextColour = 'lightGrey',
+            Type = 'Label',
+            Text = 'The colour of the desktop.'
+        },
+        {
+            X = 3,
+            Y = 5,
+            Type = 'ColourPicker',
+            Name = 'DesktopBackgroundColourPicker',
+        },
+
+        {
+            X = 3,
+            Y = 8,
+            TextColour = 'grey',
+            Type = 'Label',
+            Text = 'Animations'
+        },
+        {
+            X = 3,
+            Y = 9,
+            TextColour = 'lightGrey',
+            Type = 'Label',
+            Text = 'Toggle animations system-wide.'
+        },
+        {
+            X = 3,
+            Y = 11,
+            Type = 'Switch',
+            Name = 'UseAnimationsSwitch',
+        },
+    },
+    BackgroundColour = 'white',
+}

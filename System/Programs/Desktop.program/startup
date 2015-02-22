@@ -170,6 +170,13 @@ OneOS.Indexer.OnIndex = function()
 end
 
 program:Run(function()
+	program.View.BackgroundColour = OneOS.System.Settings.DesktopColour
+	OneOS.System.Settings:OnUpdate(function(key)
+		if key == 'DesktopColour' then
+			program.View.BackgroundColour = OneOS.System.Settings.DesktopColour
+		end
+	end)
+
 	loadSettings()
 	updateIcons()
 	program.View.ChildOffset = {X = 0, Y = 0}

@@ -2,9 +2,11 @@ Inherit = 'View'
 Width = 10
 Height = 4
 Selected = false
+ShowExtension = false
+ClickCount = 0
+ClickResetTimer = nil
 
 OnLoad = function(self)
-	-- TODO: make the text truncate
 	self:AddObject({
 		X = '50%,-1',
 		Y = 1,
@@ -16,7 +18,7 @@ OnLoad = function(self)
 	})
 	
 	local fileName = fs.getName(self.Path)
-	if fileName:sub(1,1) ~= '.' then
+	if not self.ShowExtension and fileName:sub(1,1) ~= '.' then
 		fileName = self.Bedrock.Helpers.RemoveExtension(fileName)
 	end
 
@@ -41,17 +43,41 @@ OnLoad = function(self)
 			BackgroundColour =colours.white
 		})
 	end
+
+	self:OnUpdate('Selected')
+end
+
+
+OnUpdate = function(self, value)
+	if value == 'Selected' then
+		local label = self:GetObject('NameLabel')
+		if label then
+			label.BackgroundColour = (self.Selected and colours.blue or colours.transparent)
+			label.TextColour = (self.Selected and colours.white or colours.black)
+		end
+	end
 end
 
 OnClick = function(self, event, side, x, y, _)
+	if not _ then return end
+	
 	if side == 1 then
-		self.DragX = _.X + x  - 2
-		self.DragY = _.Y + y - 2
-		self.Bedrock.DragIcon = self
-		if self.Selected then
-			OneOS.OpenFile(self.Path, nil, self.X, self.Y)
+		self.ClickCount = self.ClickCount + 1
+
+		if self.ClickCount >= 3 then
+			self.Selected = false
+			self.ClickCount = 0
 		else
-			self.Selected = not self.Selected
+			OneOS.Log.i('Hi')
+			OneOS.Log.i(_)
+			self.DragX = _.X + x - 2
+			self.DragY = _.Y + y - 2
+			self.Bedrock.DragIcon = self
+			if self.Selected then
+				OneOS.OpenFile(self.Path, nil, self.X, self.Y)
+			else
+				self.Selected = not self.Selected
+			end
 		end
 	elseif side == 2 then
 		self:ToggleMenu('filemenu', x, y)

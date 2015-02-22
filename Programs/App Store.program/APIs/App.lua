@@ -4,6 +4,7 @@ Category = nil
 Name = nil
 Description = nil
 Icon = nil
+IconRaw = nil
 
 Bedrock = nil
 
@@ -67,6 +68,7 @@ Initialise = function(self, data, bedrock)
 	new.Name = tostring(data.name)
 	new.Description = tostring(data.description)
 	new.Icon = parseNFT(split(data.icon, '\n'))
+	new.IconRaw = data.icon
 
 	new.Bedrock = bedrock
 
@@ -81,13 +83,13 @@ end
 
 InstallData = function(self, data)
 	if type(data) ~= 'string' or #data == 0 then
-		return false, 'EMPTY'
+		return false, 'Empty package (Very bad!! Let oeed know!)'
 	end
 
 	local pack = JSON.decode(data)
 
 	if not pack then
-		return false, 'PACKAGE'
+		return false, 'Corrupted package'
 	end
 
 	local _fs = fs
@@ -120,12 +122,14 @@ InstallData = function(self, data)
 	local fullPath = false
 
 	if OneOS then
-		installPath = '/Programs/' .. self.Name .. '.program/'
+		if self.Category == 'Game' or self.Category == 'Games' then
+			installPath = '/Programs/Games/' .. self.Name .. '.program/'
+		else
+			installPath = '/Programs/' .. self.Name .. '.program/'
+		end
 		removeSpaces = false
 		alwaysFolder = true
 		fullPath = true
-
-		-- TODO: app icon
 	end
 
 	local appName = self.Name
@@ -145,7 +149,15 @@ InstallData = function(self, data)
 		makeFile(location, pack['startup'])
 	else
 		makeFolder(location, pack)
-		location = location .. '/startup'
+		location = location
+	end
+
+	if OneOS then
+		local h = _fs.open(location .. '/icon', 'w')
+		if h then
+			h.write(self.IconRaw)
+			h.close()
+		end
 	end
 
 	return self.Bedrock.Helpers.TidyPath(location)
