@@ -12,12 +12,12 @@ log = function(msg, state)
 	local h = fs.open('/System/OneOS.log', 'a')
 	h.write('['..os.clock()..state..'] '..tostring(msg) .. '\n')
 	h.close()
-	-- TODO: not so sure about this
-	-- os.queueEvent('log_flush')
-	-- os.pullEvent()
 end
 
+Errors = {}
+
 e = function(msg)
+	table.insert(Errors, 1, msg)
 	log(msg, 'Error')
 end
 

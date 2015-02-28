@@ -1,0 +1,61 @@
+{
+    Children = {
+        {
+            X = 3,
+            Y = 2,
+            TextColour = 'grey',
+            Type = 'Label',
+            Text = 'OneOS'
+        },
+        {
+            X = 9,
+            Y = 2,
+            TextColour = 'lightGrey',
+            Type = 'Label',
+            Text = 'Setup'
+        },
+
+        {
+            X = 3,
+            Y = 5,
+            TextColour = 'grey',
+            Type = 'Label',
+            Text = 'Computer Name'
+        },
+        {
+            X = 3,
+            Y = 6,
+            Width = '100%,-4',
+            TextColour = 'lightGrey',
+            Type = 'Label',
+            Text = 'Enter the name of this computer.'
+        },
+
+
+        {
+            X = '25%',
+            Y = 9,
+            Width = '50%',
+            Type = 'TextBox',
+            Name = 'NameTextBox',
+            Text = 'OneOS Computer',
+            Placeholder = 'No Name'
+        },
+
+
+        {
+            X = 3,
+            Y = '100%,-1',
+            Type = 'Button',
+            Name = 'BackButton',
+            Text = 'Back'
+        },
+        {
+            X = '100%,-7',
+            Y = '100%,-1',
+            Type = 'Button',
+            Name = 'NextButton',
+            Text = 'Next'
+        },
+    },
+}

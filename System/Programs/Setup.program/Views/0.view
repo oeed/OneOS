@@ -6,7 +6,7 @@
             Width = 6,
             Height = 4,
             Type = 'ImageView',
-            Path = '/Resources/logo.nft'
+            Path = '/System/Programs/Setup.program/Resources/logo.nft'
         },
         {
             X = 9,
@@ -27,36 +27,34 @@
             Y = 4,
             TextColour = 'lightGrey',
             Type = 'Label',
-            Text = 'Version v2.0.0. Powered by Bedrock'
+            Text = 'by oeed'
         },
 
         {
-            X = 2,
-            Y = 7,
-            Width = '100%,-2',
+            X = 5,
+            Y = 8,
+            Width = '100%,-5',
             TextColour = 'grey',
             Type = 'Label',
-            Text = 'The ultimate ComputerCraft experience is powered by the intensely powerful Bedrock framework and forty two and half hamsters. Thank you for supporting and using OneOS!'
+            Align = 'Center',
+            Text = 'Welcome to the ultimate ComputerCraft experience.'
         },
 
         {
             X = 1,
-            Y = '100%,-1',
+            Y = '100%,-3',
             Width = '100%',
             Align = 'Center',
             TextColour = 'lightGrey',
             Type = 'Label',
-            Text = '(c) Oliver \'oeed\' Cooper 2013-15'
+            Text = 'Click \'Next\' to get started.'
         },
         {
-            X = 1,
-            Y = '100%',
-            Width = '100%',
-            Align = 'Center',
-            TextColour = 'lightGrey',
-            Type = 'Label',
-            Text = 'Under CC BY-NC-ND 4.0 License'
+            X = '100%,-7',
+            Y = '100%,-1',
+            Type = 'Button',
+            Name = 'NextButton',
+            Text = 'Next'
         },
     },
-    BackgroundColour = 'white',
 }

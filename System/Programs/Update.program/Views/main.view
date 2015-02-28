@@ -1,0 +1,48 @@
+{
+	Children = {
+		{
+			X = '50%,-10',
+			Y = '50%,-3',
+			Width = 20,
+			Height = 9,
+			Type = 'FilterView',
+			FilterName = 'Darker'
+		},
+		{
+			X = '50%,-11',
+			Y = '50%,-4',
+			Width = 20,
+			Height = 9,
+			Type = 'View',
+			BackgroundColour = 'white',
+			Children = {
+				{
+					X = '50%,-3',
+					Y = '50%,-3',
+					Type = 'LoadingIndicator',
+					Text = ''
+				},
+				{
+					X = 1,
+					Y = '50%, 1',
+					Width = '100%',
+					Align = 'Center',
+					Type = 'Label',
+					Text = 'Updating OneOS',
+					TextColour = 'blue'
+				},
+				{
+					X = 1,
+					Y = '50%, 3',
+					Width = '100%',
+					Align = 'Center',
+					Type = 'Label',
+					Name = 'StatusLabel',
+					Text = 'Preparing...',
+					TextColour = 'lightBlue'
+				},
+			}
+		},
+	},
+	BackgroundColour = 'lightGrey',
+}

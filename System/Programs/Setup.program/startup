@@ -1,0 +1,47 @@
+Bedrock.ProgramPath = '/System/Programs/Setup.program/startup'
+
+local program = Bedrock:Initialise()
+program.Settings = Settings:Initialise()
+System.Bedrock = program
+
+local currentPage
+
+local function changePage(name)
+	currentPage = name
+
+	name = tostring(name)
+	program:RemoveObject('CurrentPageView')
+	program:AddObject({
+        X = 3,
+		Y = 2,
+		Width = '100%,-4',
+		Height = '100%,-3',
+		Type = 'View',
+		BackgroundColour = 'white',
+        Type = name .. 'PageView',
+        InheritView = name:lower(),
+        Name = 'CurrentPageView'
+    })
+end
+
+program.ChangePage = changePage
+program.NextPage = function()
+	changePage(currentPage + 1)
+end
+
+program.ChangePage = function()
+	changePage(currentPage - 1)
+end
+
+program.SettingsValues = {}
+
+function Initialise()
+	program:Run(function()
+		changePage(0)
+
+		-- TODO: debug only
+		program:RegisterKeyboardShortcut({'\\'}, function()os.reboot()end)
+		
+
+	end)
+end

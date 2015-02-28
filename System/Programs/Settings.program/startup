@@ -39,7 +39,7 @@ program:Run(function()
 	program:RegisterEvent('peripheral', updateStorage)
 	program:RegisterEvent('peripheral_detach', updateStorage)
 
-	changePage('System')
+	changePage('About')
 
 	local changeFunc = function(self, event, side, x, y)
 		changePage(self.Text)

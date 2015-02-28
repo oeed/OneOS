@@ -111,6 +111,12 @@ function SandboxFunction(self, k, v)
 	else
 		f = function(_path)
 			self:UpdateIndex()
+
+			if k == 'list' then
+				Log.i('list')
+				Log.i(_path)
+			end
+
 			return v(self:ResolveAlias(_path))
 		end
 	end

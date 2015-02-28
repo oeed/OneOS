@@ -1,0 +1,58 @@
+{
+    Children = {
+        {
+            X = 3,
+            Y = 2,
+            TextColour = 'grey',
+            Type = 'Label',
+            Text = 'OneOS'
+        },
+        {
+            X = 9,
+            Y = 2,
+            TextColour = 'lightGrey',
+            Type = 'Label',
+            Text = 'Setup'
+        },
+
+        {
+            X = 3,
+            Y = 5,
+            TextColour = 'grey',
+            Type = 'Label',
+            Text = 'Done!'
+        },
+        {
+            X = 3,
+            Y = 6,
+            Width = '100%,-4',
+            TextColour = 'lightGrey',
+            Type = 'Label',
+            Text = 'OneOS is all setup and ready to go.'
+        },
+        {
+            X = 1,
+            Y = '100%,-3',
+            Width = '100%',
+            Align = 'Center',
+            TextColour = 'lightGrey',
+            Type = 'Label',
+            Text = 'Click \'Reboot\' to start using OneOS.'
+        },
+
+        {
+            X = 3,
+            Y = '100%,-1',
+            Type = 'Button',
+            Name = 'BackButton',
+            Text = 'Back'
+        },
+        {
+            X = '100%,-9',
+            Y = '100%,-1',
+            Type = 'Button',
+            Name = 'NextButton',
+            Text = 'Reboot'
+        },
+    },
+}

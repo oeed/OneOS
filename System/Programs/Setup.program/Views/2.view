@@ -1,0 +1,60 @@
+{
+    Children = {
+        {
+            X = 3,
+            Y = 2,
+            TextColour = 'grey',
+            Type = 'Label',
+            Text = 'OneOS'
+        },
+        {
+            X = 9,
+            Y = 2,
+            TextColour = 'lightGrey',
+            Type = 'Label',
+            Text = 'Setup'
+        },
+
+        {
+            X = 3,
+            Y = 5,
+            TextColour = 'grey',
+            Type = 'Label',
+            Text = 'Desktop Background'
+        },
+        {
+            X = 3,
+            Y = 6,
+            Width = '100%,-4',
+            TextColour = 'lightGrey',
+            Type = 'Label',
+            Text = 'Choose a colour for your desktop.'
+        },
+
+
+        {
+            X = '50%,-17',
+            Y = 9,
+            Width = 34,
+            Type = 'ColourPicker',
+            Name = 'DesktopColourPicker',
+            ActiveColour = 'cyan'
+        },
+
+
+        {
+            X = 3,
+            Y = '100%,-1',
+            Type = 'Button',
+            Name = 'BackButton',
+            Text = 'Back'
+        },
+        {
+            X = '100%,-7',
+            Y = '100%,-1',
+            Type = 'Button',
+            Name = 'NextButton',
+            Text = 'Next'
+        },
+    },
+}

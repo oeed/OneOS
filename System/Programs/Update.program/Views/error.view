@@ -1,0 +1,64 @@
+{
+	Children = {
+		{
+			X = '50%,-11',
+			Y = '50%,-3',
+			Width = 24,
+			Height = 7,
+			Type = 'FilterView',
+			FilterName = 'Darker'
+		},
+		{
+			X = '50%,-12',
+			Y = '50%,-4',
+			Width = 24,
+			Height = 7,
+			Type = 'View',
+			BackgroundColour = 'white',
+			Children = {
+				{
+					X = 1,
+					Y = '50%,-1',
+					Width = '100%',
+					Align = 'Center',
+					Type = 'Label',
+					Text = 'An Error Occured',
+					TextColour = 'red'
+				},
+				{
+					X = 1,
+					Y = '50%',
+					Width = '100%',
+					Align = 'Center',
+					Type = 'Label',
+					Name = 'ErrorLabel',
+					Text = 'Unknown',
+					TextColour = 'orange'
+				},
+
+
+				{
+					X = '50%, -10',
+					Y = '50%, 2',
+					Align = 'Center',
+					Type = 'Button',
+					Name = 'SkipUpdateButton',
+					Text = 'Skip Update',
+					BackgroundColour = 'red',
+					TextColour = 'white'
+				},
+				{
+					X = '50%, 5',
+					Y = '50%, 2',
+					Align = 'Center',
+					Type = 'Button',
+					Name = 'RetryButton',
+					Text = 'Retry',
+					BackgroundColour = 'red',
+					TextColour = 'white'
+				},
+			}
+		},
+	},
+	BackgroundColour = 'lightGrey',
+}

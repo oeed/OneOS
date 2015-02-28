@@ -2,7 +2,7 @@ Bedrock.ProgramPath = shell.getRunningProgram()
 
 local bedrock = Bedrock:Initialise('/System')
 System.Bedrock = bedrock
-System.Settings = Settings:Initialise()
+System.Initialise()
 
 -- bedrock.AnimationEnabled = false
 
@@ -57,6 +57,7 @@ function Initialise()
 	-- do return end
 
 	bedrock:Run(function()
+
 		Indexer.RefreshIndex()
 		-- program:LoadView('main')
 		-- TODO: debug only!

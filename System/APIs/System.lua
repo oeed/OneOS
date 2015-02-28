@@ -76,6 +76,23 @@ local function readIcon(path, cacheName)
 	return iconCache[cacheName]
 end
 
+Initialise = function()
+	System.Settings = Settings:Initialise()
+	System.Clipboard = Clipboard:Initialise(System.Bedrock)
+
+	local h = fs.open('/System/.version', 'r')
+	if h then
+		System.Version = h.readAll()
+		h.close()
+	end
+
+	System.Settings:OnUpdate(function(key)
+		if key == 'UseAnimations' then
+			System.Bedrock.AnimationEnabled = System.Settings.UseAnimations
+		end
+	end)
+end
+
 GetIcon = function(path)
 	local extension = System.RealExtension(path)
 
@@ -185,7 +202,7 @@ OpenFile = function(path, args, x, y)
 			if _path and not _path:find('System/Resources/Icons/') then
 				OpenFile(Helpers.ParentFolder(Helpers.ParentFolder(_path)), {path}, x, y)
 			else
-				OpenFileWith(path) -- TODO: open file with
+				OpenFileWith(path)
 			end
 		else
 			OpenFileWith(path)
@@ -223,8 +240,22 @@ end
 function AnimateShutdown(restart, animate)
 	Log.w('System safely stopping.')
 	if System.Bedrock.AnimationEnabled and animate then
+		System.Bedrock:AddObject({
+			X = 1,
+			Y = 1,
+			Height = '100%',
+			Width = '100%',
+			BackgroundColour = 'black',
+			Type = 'View'
+		})
+
+		System.Bedrock:RemoveObjects()
+		System.Bedrock:Draw()
+
+		term.setBackgroundColour(colours.black)
+		term.clear()
 		Log.i('Animating')
-		Drawing.Clear(colours.white)
+		Drawing.Clear(colours.black)
 		Drawing.DrawBuffer()
 		sleep(0)
 		local x = 0
@@ -288,6 +319,11 @@ end
 
 AddFavourite = function(path)
 	local newPath = '/Favourites/' .. System.Bedrock.Helpers.RemoveExtension(fs.getName(path))
+	System.MakeAlias(newPath, path)
+end
+
+AddToDesktop = function(path)
+	local newPath = '/Desktop/' .. System.Bedrock.Helpers.RemoveExtension(fs.getName(path))
 	System.MakeAlias(newPath, path)
 end
 
@@ -461,4 +497,16 @@ OpenFileArgs = function(path, bedrock)
 			System.OpenFile(path, bedrock.Helpers.Split(value, ' '))
 		end
 	end, ext)
+end
+
+SetBootArgs = function(value)
+	local h = fs.open('/System/.bootargs', 'w')
+	if h then
+		h.write(value)
+		h.close()
+	end
+end
+
+ClearBootArgs = function()
+	fs.delete('/System/.bootargs')
 end

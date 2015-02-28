@@ -1,5 +1,6 @@
 Width = 7
 Height = 5
+Text = 'Loading'
 
 Step = 1
 
@@ -26,7 +27,7 @@ OnDraw = function(self, x, y)
 		Drawing.WriteToBuffer(x + i * 2, y + _y - 1, ' ', colours.black, colour)
 	end
 
-	Drawing.DrawCharacters(x, y + 4, 'Loading', colours.blue, colours.transparent)
+	Drawing.DrawCharacters(x, y + 4, self.Text, colours.blue, colours.transparent)
 
 	self.Bedrock:StartTimer(function()
 		self:ForceDraw()

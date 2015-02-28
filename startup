@@ -1,0 +1,20 @@
+-- Comment out these lines if you *really* want to try OneOS in TLCO
+dofile('/System/API/Bootstrap.lua')
+do return end
+
+-- TLCO
+os.queueEvent("modem_message")
+local r = rednet.run
+function rednet.run()
+    error("", 0)
+end
+
+local s = shell
+local p = printError
+function _G.printError()
+    _G.printError = p
+    _G.shell = s
+    rednet.run = r
+    local ok, err = pcall(function() dofile('/System/API/Bootstrap.lua') end)
+    if not ok then printError(err) end
+end

@@ -1,0 +1,48 @@
+Bedrock.ProgramPath = '/System/Programs/Update.program/startup'
+
+local program = Bedrock:Initialise()
+program.Settings = Settings:Initialise()
+System.Bedrock = program
+
+local function setStatus(text)
+	program:GetObject('StatusLabel').Text = text
+end
+
+function Initialise()
+	-- do return end
+	program:Run(function()
+		-- TODO: debug only
+		program:RegisterKeyboardShortcut({'\\'}, function()os.reboot()end)
+
+		local gitHub = GitHub:Initialise('oeed', 'OneOS', program)
+
+		gitHub.OnDataFailed = function(self, reason)
+			program:LoadView('error')
+			program:GetObject('RetryButton').OnClick = os.reboot
+			program:GetObject('SkipUpdateButton').OnClick = function()
+				System.ClearBootArgs()
+				os.reboot()
+			end
+			program:GetObject('ErrorLabel').Text = reason
+		end
+		
+		setStatus('Fetching Version')
+		-- gitHub:LatestRelease(program.Settings.UsePreReleases, function(release)
+			release = 'v1.3.4'
+			setStatus('Downloading Files')
+			gitHub:DownloadFiles(release, function(raw)
+				Log.i('Downloaded')
+				setStatus('Installing Update')
+				gitHub:InstallFiles(raw, function()
+					gitHub:SaveVersion(release)
+					setStatus('Update Complete')
+					program:StartTimer(function()
+						System.ClearBootArgs()
+						os.reboot()
+					end, 3)
+				end)
+			end)
+		-- end)
+	end)
+end
+

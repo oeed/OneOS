@@ -1,0 +1,60 @@
+{
+    Children = {
+        {
+            X = 3,
+            Y = 2,
+            TextColour = 'grey',
+            Type = 'Label',
+            Text = 'OneOS'
+        },
+        {
+            X = 9,
+            Y = 2,
+            TextColour = 'lightGrey',
+            Type = 'Label',
+            Text = 'Setup'
+        },
+
+        {
+            X = 3,
+            Y = 5,
+            TextColour = 'grey',
+            Type = 'Label',
+            Text = 'Use Animations?'
+        },
+        {
+            X = 3,
+            Y = 6,
+            Width = '100%,-4',
+            TextColour = 'lightGrey',
+            Type = 'Label',
+            Text = 'Do not use animations on servers or slow computers.'
+        },
+
+        {
+            X = 3,
+            Y = '100%,-1',
+            Type = 'Button',
+            Name = 'BackButton',
+            Text = 'Back'
+        },
+        {
+            X = '100%,-12',
+            Y = '100%,-1',
+            Type = 'Button',
+            Name = 'NoButton',
+            BackgroundColour = 'red',
+            TextColour = 'white',
+            Text = 'No'
+        },
+        {
+            X = '100%,-6',
+            Y = '100%,-1',
+            Type = 'Button',
+            Name = 'YesButton',
+            BackgroundColour = 'green',
+            TextColour = 'white',
+            Text = 'Yes'
+        },
+    },
+}

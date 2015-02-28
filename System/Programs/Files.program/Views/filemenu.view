@@ -53,6 +53,11 @@
       Text = 'Add To Favourites'
     },
     {
+      Name = 'AddToDesktopMenuItem',
+      Type = 'MenuItem',
+      Text = 'Add To Desktop'
+    },
+    {
       Name = 'MakeAliasMenuItem',
       Type = 'MenuItem',
       Text = 'Make Alias'

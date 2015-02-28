@@ -98,7 +98,7 @@ Initialise = function(self, program, shell, path, bedrock)
 	end
 
 	env.paintutils.loadImage = function( sPath )
-		local relPath = Helpers.RemoveFileName(path) .. sPath
+		local relPath = Bedrock.Helpers.RemoveFileName(path) .. sPath
 		local tImage = {}
 		if fs.exists( relPath ) then
 			local file = io.open(relPath, "r" )
@@ -119,7 +119,7 @@ Initialise = function(self, program, shell, path, bedrock)
 
 	env.shell = {}
 	local shellEnv = {}
-	setmetatable( shellEnv, { __index = env } )
+	setmetatable( shellEnv, { __index = env, fs = fs } )
 	setfenv(self.Shell, shellEnv)
 	self.Shell(env, program, shell, path, Helpers, os.run)
 	env.shell = addErrorHandler(program, shellEnv, 'Shell')
@@ -130,7 +130,7 @@ Initialise = function(self, program, shell, path, bedrock)
 end
 
 IO = function(env, program, path)
-	local relPath = Helpers.RemoveFileName(path)
+	local relPath = Bedrock.Helpers.RemoveFileName(path)
 	return {
 		input = io.input,
 		output = io.output,
@@ -164,11 +164,11 @@ OneOS = function(env, program, path)
 		GetIcon = System.GetIcon,
 		Settings = Settings,
 		Version = version,
-		Restart = function(f)System.Restart(f, false)end,
-		Reboot = function(f)System.Restart(f, false)end,
+		Restart = function(f)System.Restart(f, true)end,
+		Reboot = function(f)System.Restart(f, true)end,
 		Shutdown = function(f)System.Shutdown(f, false, true)end,
 		KillSystem = function()os.reboot()end,
-		Clipboard = Clipboard,
+		Clipboard = System.Clipboard,
 		FS = fs,
 		OSRun = os.run,
 		Shell = shell,
@@ -177,23 +177,21 @@ OneOS = function(env, program, path)
 			if title and type(title) == 'string' then
 				program.Title = title
 			end
-			UpdateOverlay()
 		end,
 		CanClose = function()end,
 		Close = function()
-			Log.i('here')
 			program:Close(true)
 		end,
 		Run = function(path, ...)
 			local args = {...}
 			if fs.isDir(path) and fs.exists(path..'/startup') then
-				Program:Initialise(shell, path..'/startup', Helpers.RemoveExtension(fs.getName(path)), args)
+				Program:Initialise(shell, path..'/startup', Bedrock.Helpers.RemoveExtension(fs.getName(path)), args)
 			elseif not fs.isDir(path) then
-				Program:Initialise(shell, path, Helpers.RemoveExtension(fs.getName(path)), args)
+				Program:Initialise(shell, path, Bedrock.Helpers.RemoveExtension(fs.getName(path)), args)
 			end
 		end,
 		LoadAPI = function(_sPath, global)
-			local sName = Helpers.RemoveExtension(fs.getName( _sPath))
+			local sName = Bedrock.Helpers.RemoveExtension(fs.getName( _sPath))
 			if tAPIsLoading[sName] == true then
 				env.printError( "API "..sName.." is already being loaded" )
 				return false
@@ -236,13 +234,13 @@ OneOS = function(env, program, path)
 		LoadString = loadstring,
 		IO = io,
 		DoesRunAtStartup = function()
-			if not Settings:GetValues()['StartupProgram'] then
+			if not System.Settings.StartupProgram then
 				return false
 			end
-			return Helpers.TidyPath('/Programs/'..Settings:GetValues()['StartupProgram']..'/startup') == Helpers.TidyPath(path)
+			return Bedrock.Helpers.TidyPath('/Programs/'..System.Settings.StartupProgram..'/startup') == Bedrock.Helpers.TidyPath(path)
 		end,
 		RequestRunAtStartup = function()
-			if Settings:GetValues()['StartupProgram'] and Helpers.TidyPath('/Programs/'..Settings:GetValues()['StartupProgram']..'/startup') == Helpers.TidyPath(path) then
+			if System.Settings.StartupProgram and Bedrock.Helpers.TidyPath('/Programs/'..System.Settings.StartupProgram..'/startup') == Bedrock.Helpers.TidyPath(path) then
 				return
 			end
 			local settings = Settings:GetValues()
@@ -252,17 +250,17 @@ OneOS = function(env, program, path)
 				local blacklist = textutils.unserialize(h.readAll())
 				h.close()
 				for i, v in ipairs(blacklist) do
-					if v == Helpers.TidyPath(path) then
+					if v == Bedrock.Helpers.TidyPath(path) then
 						onBlacklist = true
 						return
 					end
 				end
 			end
 
-			if not settings['StartupProgram'] or not Helpers.TidyPath('/Programs/'..settings['StartupProgram']..'/startup') == Helpers.TidyPath(path) then
-				Current.Bedrock:DisplayAlertWindow("Run at startup?", "Would you like run "..Helpers.RemoveExtension(fs.getName(Helpers.RemoveFileName(path))).." when you turn your computer on?", {"Yes", "No", "Never Ask"}, function(value)
+			if not settings['StartupProgram'] or not Bedrock.Helpers.TidyPath('/Programs/'..settings['StartupProgram']..'/startup') == Bedrock.Helpers.TidyPath(path) then
+				System.Bedrock:DisplayAlertWindow("Run at startup?", "Would you like run "..Bedrock.Helpers.RemoveExtension(fs.getName(Bedrock.Helpers.RemoveFileName(path))).." when you turn your computer on?", {"Yes", "No", "Never Ask"}, function(value)
 					if value == 'Yes' then
-						Settings:SetValue('StartupProgram', fs.getName(Helpers.RemoveFileName(path)))
+						Settings:SetValue('StartupProgram', fs.getName(Bedrock.Helpers.RemoveFileName(path)))
 					elseif value == 'Never Ask' then
 						local h = fs.open('/System/.StartupBlacklist.settings', 'r')
 						local blacklist = {}
@@ -270,7 +268,7 @@ OneOS = function(env, program, path)
 							blacklist = textutils.unserialize(h.readAll())
 							h.close()
 						end
-						table.insert(blacklist, Helpers.TidyPath(path))
+						table.insert(blacklist, Bedrock.Helpers.TidyPath(path))
 						local h = fs.open('/System/.StartupBlacklist.settings', 'w')
 						if h then
 							h.write(textutils.serialize(blacklist))
@@ -332,7 +330,7 @@ OS = function(env, program, path)
 
 		run = function( _tEnv, _sPath, ... )
 		    local tArgs = { ... }
-		    local fnFile, err = loadfile( Helpers.RemoveFileName(path) .. '/' .. _sPath )
+		    local fnFile, err = loadfile( Bedrock.Helpers.RemoveFileName(path) .. '/' .. _sPath )
 		    if fnFile then
 		        local tEnv = _tEnv
 		        --setmetatable( tEnv, { __index = function(t,k) return _G[k] end } )
@@ -496,7 +494,7 @@ Shell = function(env, program, nativeShell, appPath, Helpers, osrun)
 	local function _run( _sCommand, ... )
 		local sPath = nativeShell.resolveProgram(_sCommand)
 		if sPath == nil or sPath:sub(1,3) ~= 'rom' then
-			sPath = nativeShell.resolveProgram(Helpers.RemoveFileName(appPath) .. '/' ..  _sCommand )
+			sPath = nativeShell.resolveProgram(Bedrock.Helpers.RemoveFileName(appPath) .. '/' ..  _sCommand )
 		end
 
 		if sPath ~= nil then
@@ -556,82 +554,42 @@ Shell = function(env, program, nativeShell, appPath, Helpers, osrun)
 		end
 	end
 
-	function resolveProgram( _sCommand)
-		-- Substitute aliases firsts
-		if tAliases[ _sCommand ] ~= nil then
-			_sCommand = tAliases[ _sCommand ]
-		end
+	resolveProgram = nativeShell.resolveProgram
 
-	    -- If the path is a global path, use it directly
-	    local sStartChar = string.sub( _sCommand, 1, 1 )
-	    if sStartChar == "/" or sStartChar == "\\" then
-	    	local sPath = fs.combine( "", _sCommand )
-	    	if fs.exists( sPath) and not fs.isDir( sPath) then
-				return sPath
-	    	end
-			return nil
-	    end
+	programs = nativeShell.programs
 
-	    function lookInFolder(_fPath)
-	    	for i, f in ipairs(fs.list(_fPath, true)) do
-	    		if not fs.isDir( fs.combine( _fPath, f), true) then
-					if f == _sCommand then
-						return fs.combine( _fPath, f)
-					end
-				end
-	    	end
-	    end
+	-- function programs( _bIncludeHidden )
+	-- 	local tItems = {}
 
-	    local list = {Helpers.RemoveFileName(appPath), '/rom/programs/', '/rom/programs/color/', '/rom/programs/computer/'}
-	    if http then
-	    	table.insert(list, '/rom/programs/http/')
-	    end
-	    if turtle then
-	    	table.insert(list, '/rom/programs/turtle/')
-	    end
-	    for i, p in ipairs(list) do
-	    	local r = lookInFolder(p)
-	    	if r then
-	    		return r
-	    	end
-	    end
+	--     local function addFolder(_fPath)
+	--     	for i, f in ipairs(fs.list(_fPath, true)) do
+	--     		if not fs.isDir( fs.combine( _fPath, f), true) then
+	-- 				if (_bIncludeHidden or string.sub( f, 1, 1 ) ~= ".") then
+	-- 					tItems[ f ] = true
+	-- 				end
+	-- 			end
+	--     	end
+	--     end
 
-		-- Not found
-		return nil
-	end
+	--     addFolder('/rom/programs/')
+	--     addFolder('/rom/programs/color/')
+	--     addFolder('/rom/programs/computer/')
+	--     if http then
+	--     	addFolder('/rom/programs/http/')
+	--     end
+	--     if turtle then
+	--     	addFolder('/rom/programs/turtle/')
+	--     end
+	--     addFolder(Bedrock.Helpers.RemoveFileName(appPath))
 
-	function programs( _bIncludeHidden )
-		local tItems = {}
-
-	    local function addFolder(_fPath)
-	    	for i, f in ipairs(fs.list(_fPath, true)) do
-	    		if not fs.isDir( fs.combine( _fPath, f), true) then
-					if (_bIncludeHidden or string.sub( f, 1, 1 ) ~= ".") then
-						tItems[ f ] = true
-					end
-				end
-	    	end
-	    end
-
-	    addFolder('/rom/programs/')
-	    addFolder('/rom/programs/color/')
-	    addFolder('/rom/programs/computer/')
-	    if http then
-	    	addFolder('/rom/programs/http/')
-	    end
-	    if turtle then
-	    	addFolder('/rom/programs/turtle/')
-	    end
-	    addFolder(Helpers.RemoveFileName(appPath))
-
-		-- Sort and return
-		local tItemList = {}
-		for sItem, b in pairs( tItems ) do
-			table.insert( tItemList, sItem )
-		end
-		table.sort( tItemList )
-		return tItemList
-	end
+	-- 	-- Sort and return
+	-- 	local tItemList = {}
+	-- 	for sItem, b in pairs( tItems ) do
+	-- 		table.insert( tItemList, sItem )
+	-- 	end
+	-- 	table.sort( tItemList )
+	-- 	return tItemList
+	-- end
 
 	function getRunningProgram()
 		if #tProgramStack > 0 then
@@ -640,20 +598,7 @@ Shell = function(env, program, nativeShell, appPath, Helpers, osrun)
 		return nil
 	end
 
-	function setAlias( _sCommand, _sProgram )
-		tAliases[ _sCommand ] = _sProgram
-	end
-
-	function clearAlias( _sCommand )
-		tAliases[ _sCommand ] = nil
-	end
-
-	function aliases()
-		-- Add aliases
-		local tCopy = {}
-		for sAlias, sCommand in pairs( tAliases ) do
-			tCopy[sAlias] = sCommand
-		end
-		return tCopy
-	end
+	setAlias = nativeShell.setAlias
+	clearAlias = nativeShell.clearAlias
+	aliases = nativeShell.aliases
 end

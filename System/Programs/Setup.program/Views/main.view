@@ -1,0 +1,13 @@
+{
+	Children = {
+		{
+			X = 4,
+			Y = 3,
+			Width = '100%,-4',
+			Height = '100%,-3',
+			Type = 'FilterView',
+			FilterName = 'Darker'
+		},
+	},
+	BackgroundColour = 'lightGrey',
+}

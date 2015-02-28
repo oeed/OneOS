@@ -346,9 +346,8 @@ end
 
 Restart = function(self)
 	Log.i('Restarting program: "'..self.Title)
-	self:Kill(-1)
-	self:Execute()
-	System.UpdateSwitcher()
+	self:Close(-1)
+	System.StartProgram(self.Path:gsub('/startup', ''))
 end
 
 OnDraw = function(self, x, y)

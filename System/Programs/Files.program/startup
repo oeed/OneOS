@@ -38,7 +38,7 @@ local function openFolder(path, selected)
 					ShowExtension = showExtensions,
 					OnClick = function(self, event, side, x, y, _)
 						if not _ then return end
-						
+
 						local extension = OneOS.System.RealExtension(self.Path)
 						if side == 2 then
 							if self:ToggleMenu('filemenu', x, y) then
@@ -102,23 +102,27 @@ local function openFolder(path, selected)
 									end
 								end
 
+
+								menu:GetObject('AddToFavouritesMenuItem').OnClick = function()
+									OneOS.System.AddFavourite(OneOS.System.ResolveAlias(self.Path))
+									refresh()
+								end
+
+								menu:GetObject('AddToDesktopMenuItem').OnClick = function()
+									OneOS.System.AddToDesktop(OneOS.System.ResolveAlias(self.Path))
+									refresh()
+								end
+
+								menu:GetObject('MakeAliasMenuItem').OnClick = function()
+									local realPath = OneOS.System.ResolveAlias(self.Path)
+									local newPath = program.Helpers.ParentFolder(realPath) .. '/' .. program.Helpers.RemoveExtension(fs.getName(self.Path)) .. ' Alias'
+									OneOS.System.MakeAlias(newPath, realPath)
+									refresh()
+								end
+
 								if program.Helpers.TidyPath(self.Path) == program.Helpers.TidyPath(OneOS.System.ResolveAlias(self.Path)) then
 									menu:RemoveObject('ResolveAliasMenuItem')
-
-									menu:GetObject('AddToFavouritesMenuItem').OnClick = function()
-										OneOS.System.AddFavourite(self.Path)
-										refresh()
-									end
-
-									menu:GetObject('MakeAliasMenuItem').OnClick = function()
-										local newPath = program.Helpers.ParentFolder(self.Path) .. '/' .. program.Helpers.RemoveExtension(fs.getName(self.Path)) .. ' Alias'
-										OneOS.System.MakeAlias(newPath, self.Path)
-										refresh()
-									end
 								else
-									menu:RemoveObject('AddToFavouritesMenuItem')
-									menu:RemoveObject('MakeAliasMenuItem')
-
 									menu:GetObject('ResolveAliasMenuItem').OnClick = function()
 										local realPath = OneOS.System.ResolveAlias(self.Path)
 										openFolder(program.Helpers.ParentFolder(realPath), realPath)

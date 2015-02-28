@@ -5,6 +5,7 @@ local program = Bedrock:Initialise()
 
 local settings = nil
 local dontSave = false
+local lastCheck = {}
 
 local function saveSettings()
 	if not dontSave then
@@ -165,7 +166,8 @@ function ViewClick(self, event, side, x, y)
 	end
 end
 
-OneOS.Indexer.OnIndex = function()
+OneOS.Indexer.OnIndex = function()		
+	OneOS.Log.i('Files changed')
 	updateIcons()
 end
 
@@ -204,29 +206,29 @@ program:Run(function()
 			end, 1)
 		end
 	end
+	-- TODO: search
+	-- program.View.OnDrag = function(self, event, side, x, y)
+	-- 	if dragStart then
+	-- 		program.View.ChildOffset.Y = y - dragStart
+	-- 		program.View:ForceDraw()
 
-	program.View.OnDrag = function(self, event, side, x, y)
-		if dragStart then
-			program.View.ChildOffset.Y = y - dragStart
-			program.View:ForceDraw()
-
-			OneOS.Log.i('drag')
-			dragTimer = program:StartTimer(function(_, timer)
-			OneOS.Log.i('times up')
-			OneOS.Log.i(timer)
-				if timer == dragTimer then
-			OneOS.Log.i('right timer')
-					xdragStart = nil
-			OneOS.Log.i('trhee')
-					if program.View.ChildOffset.Y >= 3 then
-						showSearch()
-					else
-						closeSearch()
-					end
-				end
-			end, 1)
-		end
-	end
+	-- 		OneOS.Log.i('drag')
+	-- 		dragTimer = program:StartTimer(function(_, timer)
+	-- 		OneOS.Log.i('times up')
+	-- 		OneOS.Log.i(timer)
+	-- 			if timer == dragTimer then
+	-- 		OneOS.Log.i('right timer')
+	-- 				xdragStart = nil
+	-- 		OneOS.Log.i('trhee')
+	-- 				if program.View.ChildOffset.Y >= 3 then
+	-- 					showSearch()
+	-- 				else
+	-- 					closeSearch()
+	-- 				end
+	-- 			end
+	-- 		end, 1)
+	-- 	end
+	-- end
 
 	program.View.OnKeyChar = function(self, event, keychar)
 		if keychar == keys.space and not program:GetObject('SearchView').Visible then
@@ -252,5 +254,36 @@ program:Run(function()
 	program:GetObject('RestartButton').OnClick = function()
 		OneOS.Restart()
 	end
+
+	-- local function check()
+	-- 	local newCheck = OneOS.FS.list('/Desktop/')
+	-- 	if #newCheck ~= #lastCheck then
+	-- 		return true
+	-- 	end
+
+	-- 	for i, v in ipairs(newCheck) do
+	-- 		if lastCheck[i] ~= v then
+	-- 			local ok = false
+	-- 			for i2, v2 in ipairs(lastCheck) do
+	-- 				if v == v2 then
+	-- 					ok = true
+	-- 					break
+	-- 				end
+	-- 			end
+	-- 			if not ok then
+	-- 				return true
+	-- 			end
+	-- 		end
+	-- 	end
+	-- 	return false
+	-- end
+
+	-- lastCheck = OneOS.FS.list('/Desktop/')
+
+	-- program:StartRepeatingTimer(function()
+	-- 	if check() then
+	-- 		refresh()
+	-- 	end
+	-- end, 5)
 
 end)

@@ -40,7 +40,7 @@ FetchData = function(self)
 					self.Failed = true
 					self:OnDataFailed(url, 'Request timeout')
 				end
-			end, 0)
+			end, self.TimeoutLength)
 		else
 			if err then
 				reason = err
