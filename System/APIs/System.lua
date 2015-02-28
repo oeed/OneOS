@@ -80,6 +80,10 @@ Initialise = function()
 	System.Settings = Settings:Initialise()
 	System.Clipboard = Clipboard:Initialise(System.Bedrock)
 
+
+	System.Bedrock:RegisterEvent('http_success', System.OnHTTPSuccess)
+	System.Bedrock:RegisterEvent('http_failure', System.OnHTTPFailure)
+
 	local h = fs.open('/System/.version', 'r')
 	if h then
 		System.Version = h.readAll()
@@ -172,6 +176,126 @@ StartProgram = function(path, args, isHidden, x, y)
 		Hidden = isHidden or false
 	})
 	program:MakeActive()
+end
+
+local requestBedrock
+local _showWindow
+
+CheckUpdates = function(showWindow, bedrock)
+	bedrock = bedrock or System.Bedrock
+	_showWindow = showWindow
+	requestBedrock = bedrock
+	if http then
+		if showWindow then
+			bedrock:DisplayAlertWindow("Update OneOS", "Checking for updates, this may take a moment.", {'Ok'})
+		end
+		http.request('https://api.github.com/repos/oeed/OneOS/releases#')
+	elseif showWindow then
+		Log.e('Update failed. HTTP is not enabled.')
+		bedrock:DisplayAlertWindow("HTTP Not Enabled!", "Turn on the HTTP API to update.", {'Ok'})		
+	else
+		Log.e('Update failed. HTTP is not enabled.')
+	end
+end
+
+function GetSematicVersion(tag)
+	tag = tag:sub(2)
+	return System.Bedrock.Helpers.Split(tag, '.')
+end
+
+--Returns true if the FIRST version is NEWER
+function SematicVersionIsNewer(version, otherVersion)
+	if version[1] < otherVersion[1] then
+		return false
+	elseif version[2] < otherVersion[2] then
+		return false
+	elseif version[3] < otherVersion[3] then
+		return false
+	end
+	return true
+end
+
+OnHTTPSuccess = function(bedrock, event, url, data)		
+	Log.i('http success '..url)
+	if url == 'https://api.github.com/repos/oeed/OneOS/releases#' then
+		if not data then
+			Log.w('Auto update failed. (no data handle)')
+			if _showWindow then
+				requestBedrock:DisplayAlertWindow("Update Check Failed", "Check your connection and try again.", {'Ok'})
+			end
+			return
+		end
+
+		local releases = JSON.decode(data.readAll())
+		if not releases or not releases[1] or not releases[1].tag_name then
+			Log.w('Auto update failed. (misformatted)')
+			if _showWindow then
+				if requestBedrock.Window then
+					requestBedrock.Window:Close()
+				end
+				requestBedrock:DisplayAlertWindow("Update Check Failed", "Check your connection and try again.", {'Ok'})
+			end
+			return
+		end
+		local latestReleaseTag = releases[1].tag_name
+
+		if not System.Settings.UsePreReleases then
+			Log.i('Not downloading prereleases')
+			for i, v in ipairs(releases) do
+				if not v.prerelease then
+					latestReleaseTag = v.tag_name
+					break
+				end
+			end
+		end
+		Log.i('Latest tag: '..latestReleaseTag)
+
+		local h = fs.open('/System/.version', 'r')
+		local version = 'v1.0.0'
+		if h then
+			version = h.readAll()
+			h.close()
+		end
+
+		if version == latestReleaseTag then
+			--using latest version
+			Log.i('OneOS is up to date.')
+			if _showWindow then
+				if requestBedrock.Window then
+					requestBedrock.Window:Close()
+				end
+				requestBedrock:DisplayAlertWindow("Up to date!", "OneOS is up to date!", {'Ok'})
+			end
+			return
+		elseif SematicVersionIsNewer(GetSematicVersion(latestReleaseTag), GetSematicVersion(version)) then			
+			Log.i('New version of OneOS available. (from '..version..' to '..latestReleaseTag..')')
+			if requestBedrock.Window then
+				requestBedrock.Window:Close()
+			end
+			requestBedrock:DisplayAlertWindow("Update OneOS", "There is a new version of OneOS available, do you want to update?", {'Yes', 'No'}, function(value)
+				if value == 'Yes' then
+					SetBootArgs('update')
+					if requestBedrock.Window then
+						requestBedrock.Window:Close()
+					end
+					requestBedrock:DisplayAlertWindow("Update OneOS", "To finish updating reboot your computer.", {'Ok'})
+				end
+			end)
+		else
+			Log.i('OneOS is neither up to date or behind. (.version probably edited)')
+		end
+	end
+end
+
+OnHTTPFaliure = function(bedrock, event, url)
+	if url == 'https://api.github.com/repos/oeed/OneOS/releases#' then
+		if _showWindow then
+			if requestBedrock.Window then
+				requestBedrock.Window:Close()
+			end
+			requestBedrock:DisplayAlertWindow("Update Check Failed", "Check your connection and try again.", {'Ok'})
+		end
+	end
 end
 
 OpenFile = function(path, args, x, y)

@@ -72,10 +72,12 @@ else
 end
 
 local mode = '?'
+local modePath
 
 -- os.run(getfenv(), 'n')
 if not fs.exists('/System/.OneOS.settings') then
 	mode = 'Setup'
+	modePath = '/System/Programs/Setup.program/startup'
 	os.run(getfenv(), '/System/Programs/Setup.program/startup')
 else
 	local h = fs.open('/System/.bootargs', 'r')
@@ -85,6 +87,7 @@ else
 		h.close()
 		if args == 'update' then
 			mode = 'Update'
+			modePath = '/System/Programs/Update.program/startup'
 			os.run(getfenv(), '/System/Programs/Update.program/startup')
 			main = false
 		end
@@ -92,6 +95,7 @@ else
 
 	if main then
 		mode = 'Standard'
+		modePath = '/System/main.lua'
 		os.run(getfenv(), '/System/main.lua')
 	end
 end
@@ -104,40 +108,48 @@ else
 	err = 'Unable to initialise (nil): ' .. mode
 end
 
-if err then
-	Log.e(err)
-	printError(err)
+restoreTerm()
 
-	term.setBackgroundColour(colours.grey)
-	term.clear()
-
-	term.setTextColor(colours.white)
-	term.setCursorPos(2, 2)
-	print('OneOS Crashed :(')
-
-	term.setTextColor(colours.lightGrey)
-	term.setCursorPos(2, 4)
-	print('Sorry about that!')
-
-	term.setTextColor(colours.white)
-	term.setCursorPos(2, 6)
-	print('Please inform oeed with this information:')
-	print()
-	term.setTextColor(colours.lightGrey)
-
-	local h = fs.open('/System/.version', 'r')
-	if h then
-		print('Version: ' .. h.readAll())
-		h.close()
-	else
-		print('Version: No .version file')
-	end
-	print()
-
-	for i, v in ipairs(Log.Errors) do
-		print(v)
-	end
-
-	local w, h = term.getSize()
-	term.setCursorPos(1, h)
+if modePath and err then
+	xpcall(function()loadfile('/System/main.lua')end, function(_err)
+		if _err then
+			err = err .. '\n' .. _err
+		end
+	end)
 end
+
+Log.e(err)
+printError(err)
+
+term.setBackgroundColour(colours.grey)
+term.clear()
+
+term.setTextColor(colours.white)
+term.setCursorPos(2, 2)
+print('OneOS Crashed :(')
+
+term.setTextColor(colours.lightGrey)
+term.setCursorPos(2, 4)
+print('Sorry about that!')
+
+term.setTextColor(colours.white)
+term.setCursorPos(2, 6)
+print('Please inform oeed with this information:')
+print()
+term.setTextColor(colours.lightGrey)
+
+local h = fs.open('/System/.version', 'r')
+if h then
+	print('Version: ' .. h.readAll())
+	h.close()
+else
+	print('Version: No .version file')
+end
+print()
+
+for i, v in ipairs(Log.Errors) do
+	print(v)
+end
+
+local w, h = term.getSize()
+term.setCursorPos(1, h)

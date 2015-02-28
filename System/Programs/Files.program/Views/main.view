@@ -13,17 +13,21 @@
 					X = 2,
 					Y = 2,
 					Type = 'Button',
+					Name = 'BackButton',
 					Text = '<',
 					TextColour = 'grey',
-					BackgroundColour = 'white'
+					BackgroundColour = 'white',
+					Enabled = false
 				},
 				{
 					X = 6,
 					Y = 2,
 					Type = 'Button',
+					Name = 'ForwardButton',
 					Text = '>',
 					TextColour = 'grey',
-					BackgroundColour = 'white'
+					BackgroundColour = 'white',
+					Enabled = false
 				},
 				{
 					X = 10,

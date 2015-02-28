@@ -4,7 +4,7 @@ IsCut = false
 
 Bedrock = nil
 
-LastChar = 0
+LastPaste = 0
 
 function Initialise(self, bedrock)
 	local new = {}    -- the new instance
@@ -12,8 +12,12 @@ function Initialise(self, bedrock)
 
 	new.Bedrock = bedrock
 
-	new.Bedrock:RegisterEvent('char', function()
-		new.LastChar = os.clock()
+	new.Bedrock:RegisterEvent('paste', function(bedrock, event, text)
+
+		Log.i('paste event!')
+
+		Log.i(text)
+		new.LastPaste = os.clock()
 	end)
 
 
@@ -45,11 +49,26 @@ end
 function Paste(self, callback)
 	-- This is to allow for the user's real OS clipboard to do it's thing first
 	self.Bedrock:StartTimer(function()
-		-- if self.LastChar + 0.4 > 
-		local c, t = self.Content, self.Type
-		if self.IsCut then
-			self.Empty()
+		if self.LastPaste + 0.15 < os.clock() then
+			local c, t, is = self.Content, self.Type, self.IsCut
+			if self.IsCut then
+				self.Empty()
+			end
+			callback(c, t, is)
 		end
-		return c, t
-	end, 0.4)
+	end, 0.2)
+end
+
+function PasteToActiveObject(self, bedrock)
+	bedrock = bedrock or self.Bedrock
+	local obj = bedrock:GetActiveObject()
+	if obj then
+		self:Paste(function(content, _type)
+			if type(content) == 'string' then
+				if obj.OnPaste then
+					obj:OnPaste('oneos_paste', content)
+				end
+			end
+		end)
+	end
 end

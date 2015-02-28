@@ -18,9 +18,67 @@ local showExtensions = false
 
 local refresh
 
+local function paste()
+	OneOS.System.Clipboard:Paste(function(path, _type, isCut)
+		if _type == 'path' then
+			if _fs.exists(path) then
+				local destPath
+				local n = 0
+				while not destPath or _fs.exists(destPath) do
+					destPath = currentPath .. program.Helpers.RemoveExtension(fs.getName(path)) .. (n == 0 and '' or ' ' .. n) .. program.Helpers.Extension(fs.getName(path), true)
+					n = n + 1
+				end
+
+				if isCut then
+					_fs.move(path, destPath)
+				else
+					_fs.copy(path, destPath)
+				end
+				refresh()
+			end
+		end
+	end)
+end
+
+local history = {}
+local historyItem = 0
+
+local function updateHistoryButtons()
+	if history[historyItem-1] then
+		program:GetObject('BackButton').Enabled = true
+	else
+		program:GetObject('BackButton').Enabled = false
+	end
+
+	if history[historyItem+1] then
+		program:GetObject('ForwardButton').Enabled = true
+	else
+		program:GetObject('ForwardButton').Enabled = false
+	end
+end
+
+local function addHistoryPath(path)
+	for i, v in ipairs(history) do
+		if i > historyItem then
+			history[i] = nil
+		end
+	end
+	table.insert(history, path)
+	historyItem = #history
+	updateHistoryButtons()
+end
+
 local function openFolder(path, selected)
 	path = program.Helpers.TidyPath(OneOS.System.ResolveAlias(path))
 	currentPath = path
+	-- addHistoryPath(currentPath)
+	-- updateHistoryButtons()
+
+
+	OneOS.Log.i(historyItem)
+
+	OneOS.Log.i(textutils.serialize(history))
+
 	local items = {}
 
 	if selected then
@@ -130,20 +188,22 @@ local function openFolder(path, selected)
 								end
 
 								menu:GetObject('CopyMenuItem').OnClick = function()
-									-- TODO
+									OneOS.System.Clipboard:Copy(self.Path, 'path')
 								end
 
 								if readOnly then
 									menu:RemoveObject('CutMenuItem')
 								else
 									menu:GetObject('CutMenuItem').OnClick = function()
-										-- TODO
+										OneOS.System.Clipboard:Cut(self.Path, 'path')
 									end
 								end
 
 								menu:GetObject('PasteMenuItem').OnClick = function()
-									-- TODO
+								 	paste()
 								end
+					
+								menu:GetObject('PasteMenuItem').Enabled = OneOS.System.Clipboard.Type == 'path'
 
 								menu:OnUpdate('Children')
 							end
@@ -228,8 +288,10 @@ program:Run(function()
 			local menu = self.Bedrock.Menu
 
 			menu:GetObject('PasteMenuItem').OnClick = function()
-				-- TODO
+				paste()
 			end
+
+			menu:GetObject('PasteMenuItem').Enabled = OneOS.System.Clipboard.Type == 'path'
 
 			if showHidden then
 				menu:GetObject('ToggleHiddenMenuItem').Text = 'Hide Hidden Files'
@@ -264,4 +326,18 @@ program:Run(function()
 			menu:OnUpdate('Children')
 		end
 	end
+
+	-- program:GetObject('BackButton').OnClick = function(self)
+	-- 	if history[historyItem-1] then
+	-- 		openFolder(history[historyItem])
+	-- 		historyItem = historyItem - 1
+	-- 	end
+	-- end
+
+	-- program:GetObject('ForwardButton').OnClick = function(self)
+	-- 	if history[historyItem+1] then
+	-- 		openFolder(history[historyItem - 1])
+	-- 		historyItem = historyItem + 1
+	-- 	end
+	-- end
 end)

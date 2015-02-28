@@ -1,6 +1,6 @@
 Defaults = {
 	AutomaticUpdates = true,
-	UsePreReleases = false,
+	UsePreReleases = true, -- TODO: set this false when the beta ends
 	StartupProgram = false,
 	UseAnimations = true,
 	DesktopColour = colours.cyan

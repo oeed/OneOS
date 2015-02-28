@@ -30,7 +30,6 @@ bedrock.EventHandler = function(self)
 	for i, v in ipairs(event) do
 		s = s..tostring(v)..', '
 	end
-	-- Log.i(s)
 
 	local name = event[1]
 	if name ~= 'char' and name ~= 'key' and name ~= 'mouse_click' and name ~= 'mouse_scroll' and name ~= 'mouse_drag' then
@@ -62,6 +61,10 @@ function Initialise()
 		-- program:LoadView('main')
 		-- TODO: debug only!
 		bedrock:RegisterKeyboardShortcut({'\\'}, function()os.reboot()end)
+		bedrock:RegisterKeyboardShortcut({keys.leftCtrl, 'v'}, function() 		
+			Log.i('Pasting woot!')
+			System.Clipboard:PasteToActiveObject()
+		end)
 
 		-- local clock = bedrock:GetObject('OneButton')
 		local function updateClock()
@@ -91,6 +94,10 @@ function Initialise()
 
 		if System.Settings.StartupProgram then
 			System.OpenFile(System.Settings.StartupProgram)
+		end
+
+		if System.Settings.AutomaticUpdates then
+			System.CheckUpdates()
 		end
 
 		-- System.StartProgram('/Programs/LuaIDE.program')

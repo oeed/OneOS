@@ -15,8 +15,7 @@ OnPageLoad = function(self)
 	end
 
 	self:GetObject('UpdateNowButton').OnClick = function()
-		-- TODO
-		error('TODO')
+		OneOS.System.CheckUpdates(true)
 	end
 
 	self:GetObject('UsePreReleasesSwitch').OnChange = function(_, value)

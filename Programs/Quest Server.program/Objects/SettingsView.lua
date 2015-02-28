@@ -1,1 +1,0 @@
-Inherit = 'View'
